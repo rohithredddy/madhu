@@ -48,7 +48,7 @@ Not used (do not add): Kafka, Docker, Kubernetes, Prometheus, Grafana, Jaeger, O
 
 ```
 xai-rca/
-  PROJECT_RULES.md  PROGRESS.md  README.md  HOW_TO_USE_THIS_KIT.md
+  PROJECT_RULES.md  PROGRESS.md  README.md
   docs/              specs (read before coding)
   analyzer/          Python: package "pare" + service/ (FastAPI) + tests/ + samples/
   experiments/       Python: adapters, configs, run_*.py, make_tables.py, make_figures.py

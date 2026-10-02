@@ -59,7 +59,7 @@ Rule: the frontend never calls Python. Python never stores anything. Java is the
 ### 3.2 Replay (looks live)
 1. Frontend `POST /api/replay` with `{caseId, speed}` -> returns `sessionId`.
 2. Java `ReplayService` advances one row per tick (tick = 1000 ms / speed). Each new row goes to the Java `OnlineDetector`.
-3. The detector learns a baseline from the first rows (before the fault), then raises an alarm when the score stays above the threshold for 3 rows.
+3. The detector learns a baseline from the first `replay.baseline-rows` rows of the case (default 300). It is never told the injection time, so the alarm is produced the way a real detector would produce it. It raises an alarm when the score stays above the threshold for 3 rows.
 4. After the alarm plus a short wait (default 20 rows), Java runs flow 3.1 using the data seen so far (no peeking at the future).
 5. Frontend polls `GET /api/replay/{sessionId}` every second to draw the chart, the detector score, the alarm marker, and finally the explanation.
 
@@ -99,5 +99,10 @@ data/cases/<caseId>/data.csv
 data/cases/<caseId>/meta.json
 data/uploads/<caseId>/...           (same format)
 data/db/                            (H2 database files)
+data/RCAEval/RE1, RE2, RE3          (benchmark data, research side only)
+data/cache/                         (parquet cache for the experiments)
 ```
+The backend finds this folder through the `XAIRCA_DATA_DIR` environment variable; the default is
+`../data` relative to the backend working directory, resolved to an absolute path and logged at
+startup (`03_JAVA_BACKEND_SPEC.md` section 1).
 Format in `06_DATA_CONTRACTS.md` section 2.

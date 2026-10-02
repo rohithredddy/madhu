@@ -6,6 +6,10 @@ General rules:
 - Times in cases are epoch seconds (`...Sec`) unless a field says `Ms`.
 - Missing numbers are JSON `null` (never 0, never the string "NaN").
 - JSON field names are camelCase. Python pydantic models use aliases.
+- Enum-like string values are UPPERCASE in JSON: `faultType`, `source`, `graph.source`, `role`,
+  `verdict`, `confidence`, `state`, `mode`, and the synthetic `noise` level. The Python library may
+  use lowercase internally (for example `fault="latency"`); the FastAPI service layer converts at
+  the boundary (`05_PYTHON_ANALYZER_SPEC.md` section 5).
 
 ## 1. Columns
 
@@ -41,6 +45,10 @@ data/cases/<caseId>/
 }
 ```
 - `source`: `RCAEVAL_RE1`, `RCAEVAL_RE2`, `RCAEVAL_RE3`, `SYNTHETIC`, `UPLOAD`.
+- `faultType` is always UPPERCASE. Synthetic cases use `LATENCY`, `CPU`, `MEM`, `ERROR`. RCAEval
+  cases keep the dataset's own names, uppercased: `CPU`, `MEM`, `DISK`, `DELAY`, `LOSS`, plus the
+  RE3 code-level fault names. `export_cases.py` and `SyntheticService` are the only places that
+  write this field, so the uppercasing happens in exactly two places.
 - `groundTruth` may be `null` for uploads.
 - `graph.source`: `TRACES`, `STATIC_ARCHITECTURE`, `CORRELATION`, `SYNTHETIC_TRUE`, `USER`, `NONE`.
 - Edge direction: caller -> callee.
@@ -62,11 +70,15 @@ Synthetic cases returned by Python `/v1/synthetic` use the same content as JSON:
   "normal": { "timeSec": [1704999000, 1704999001], "values": [[210.5, 31.2], [211.0, 30.8]] },
   "recent": { "timeSec": [1704999730, 1704999731], "values": [[212.0, 31.0], [390.2, 88.1]] },
   "graph": { "source": "STATIC_ARCHITECTURE", "edges": [ { "from": "frontend", "to": "cartservice" } ] },
-  "params": { "useChangePoint": true, "traversal": true, "topK": 5, "seed": 42 }
+  "params": { "useChangePoint": true, "traversal": true, "topK": 10, "seed": 42 }
 }
 ```
 - `values` is row-major; each inner list has exactly `columns.length` entries in the same order.
-- `params` optional; missing keys use `PareConfig` defaults.
+- `params` optional; missing keys use `PareConfig` defaults (listed in `05_PYTHON_ANALYZER_SPEC.md`
+  section 1.1).
+- `topK` (default 10) is only the number of indicators returned in `indicators`. It is a different
+  thing from the internal `cpTopK` (default 5), which is how many columns the change-point step
+  looks at. Both can be set here.
 - Ground truth is NEVER part of this request.
 
 ### POST /v1/analyze - response (AnalyzeResponse)
@@ -76,6 +88,7 @@ Synthetic cases returned by Python `/v1/synthetic` use the same content as JSON:
   "engine": "PARE",
   "engineVersion": "0.1.0",
   "tookMs": 312,
+  "verdict": "ROOT_CAUSE_FOUND",
   "alarmTimeSec": 1705000030,
   "changePointSec": 1705000002,
   "windowStartSec": 1705000002,
@@ -93,15 +106,33 @@ Synthetic cases returned by Python `/v1/synthetic` use the same content as JSON:
   "warnings": [ "dropped constant column emailservice_disk" ]
 }
 ```
-`role`: `CAUSE`, `SYMPTOM`, `ALSO_ABNORMAL`, `NORMAL`.
+`verdict`: `ROOT_CAUSE_FOUND` or `NO_CLEAR_CAUSE`. It is `NO_CLEAR_CAUSE` when the rank-1 service
+score is below `minCauseScore` (default 3.0). In that case the ranked list is still returned as the
+best guess available, but **no service has role `CAUSE`**, and the Java side words the headline
+accordingly (`03_JAVA_BACKEND_SPEC.md` section 4.6).
+
+`role`: `CAUSE`, `SYMPTOM`, `ALSO_ABNORMAL`, `NORMAL`. Assigned in strict precedence order, so a
+service has exactly one role; see `05_PYTHON_ANALYZER_SPEC.md` section 3, step 4.
+
+`inheritedFraction` is in [0, 1] and is computed in the metric's raw units
+(`1 - self_dev / marginal_dev`), not from the normalised scores. `selfScore` stays normalised by
+the residual MAD, because that is the ranking score.
+
+`indicators` has at most `params.topK` entries (default 10).
+
 For engines without residuals: `score == marginalScore`, `inheritedFraction = 0`, `explainedBy = null`.
 
 ### POST /v1/synthetic - request
 ```json
-{ "nServices": 10, "faultType": "latency", "rootService": null, "propagation": 0.8,
-  "noise": "medium", "nNormal": 600, "nAbnormal": 180, "seed": 7 }
+{ "nServices": 10, "faultType": "LATENCY", "rootService": null, "propagation": 0.8,
+  "noise": "MEDIUM", "nNormal": 600, "nAbnormal": 180, "seed": 7 }
 ```
-Response: synthetic case JSON (section 2).
+- `faultType`: `LATENCY` | `CPU` | `MEM` | `ERROR` (UPPERCASE).
+- `noise`: `LOW` | `MEDIUM` | `HIGH`. The service layer maps these to the float the library wants:
+  LOW -> 0.5, MEDIUM -> 1.0, HIGH -> 2.0.
+- Anything else in these two fields is HTTP 422 with a clear message.
+
+Response: synthetic case JSON (section 2), with the UPPERCASE `faultType` in `meta`.
 
 ### GET /v1/engines - response
 ```json
@@ -160,9 +191,22 @@ Per-case results `experiments/results/<run_id>/cases.csv`, one row per (case, me
 ```
 run_id, dataset, system, case_id, fault_type, gt_service, gt_indicator,
 method, delay_s, seed, rank_gt_service, rank_gt_indicator,
-top1_service, top1_indicator, symptom_error, faithfulness_auc, runtime_s
+top1_service, top1_indicator, symptom_error, verdict, runtime_s
 ```
 - `rank_gt_*`: 1-based, empty if not ranked.
 - `symptom_error`: true if top-1 is wrong AND top-1 calls the true root cause directly or indirectly; empty if no graph.
+
+- `verdict`: `ROOT_CAUSE_FOUND` or `NO_CLEAR_CAUSE`, as returned by the engine.
+
+E5 (faithfulness and stability) does not write into `cases.csv`. It writes its own files in the
+same run folder, because it has a different shape (one row per case, method and k, or per
+perturbation):
+
+```
+experiments/results/<run_id>/faithfulness.csv
+  run_id, dataset, system, case_id, method, k, score_after_deletion, auc_normalized, random_auc_normalized
+experiments/results/<run_id>/stability.csv
+  run_id, dataset, system, case_id, method, seed, subsample, window_shift_s, top5_jaccard, kendall_tau
+```
 
 Each run folder also has `config.yaml`, `env.txt` (Python and package versions, CPU) and `log.txt`.

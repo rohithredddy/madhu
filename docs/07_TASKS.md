@@ -13,7 +13,7 @@ If a working application is needed early: do M0, M1, M7, M8, M9, M10 (using synt
 ---
 
 ## M0 - Project skeleton
-- [ ] M0.1 Create folders: `analyzer/`, `experiments/`, `backend/`, `frontend/`, `scripts/`, `data/` (git-ignored), `paper/` (with `tables/`, `figures/`, `notes/`). Each gets a 2 to 5 line README.
+- [ ] M0.1 Create folders: `analyzer/`, `experiments/`, `backend/`, `frontend/`, `scripts/`, `data/` (git-ignored), `paper/` (with `tables/`, `figures/`, `notes/`). Each gets a 2 to 5 line README, **except `data/`**: it is git-ignored, so a README inside it would never be committed. The `data/` layout is described in the root `README.md` instead.
 - [ ] M0.2 Check `.gitignore` covers Java, Python, Node (`node_modules/`, `dist/`), `data/`, results.
 - [ ] M0.3 Fill "Environment" in `PROGRESS.md` (Java, Maven, Python, Node, npm versions).
 - Done when: first commit is clean.
@@ -25,7 +25,8 @@ If a working application is needed early: do M0, M1, M7, M8, M9, M10 (using synt
 - [ ] M1.4 `graph.py` + tests.
 - [ ] M1.5 `changepoint.py` + tests.
 - [ ] M1.6 `residual.py` + tests.
-- [ ] M1.7 `rank.py` + `engine.py` with `PARE`, `PARE_NO_RESIDUAL`, `PARE_NO_CP`, `NSIGMA`.
+- [ ] M1.7 `rank.py` + `engine.py` with `PARE`, `PARE_NO_RESIDUAL`, `PARE_NO_CP`, `NSIGMA`. Includes the `verdict` rule (`min_cause_score`) and the strict role precedence from `05_PYTHON_ANALYZER_SPEC.md` section 3, step 4, with tests for both.
+- [ ] M1.7b `PARE_LGBM` engine (LightGBM dependency model, `dependency_model="lgbm"`) + test that it returns a valid result and that its ranking is sane on one synthetic latency case.
 - [ ] M1.8 `explainers.py`: `SHAP_IFOREST`, `ECDF`, `PCA_RECON`; register them.
 - [ ] M1.9 `eval_metrics.py` + tests.
 - [ ] M1.10 `analyzer/scripts/synthetic_check.py`: 50 seeds x 4 fault types -> CSV of top-1 accuracy per engine.

@@ -135,7 +135,7 @@ Two lightweight models, both trained only on the normal period:
 
 ### Step 4: Re-anchor the time window (handles late detection)
 
-- After an alarm, take the top-scoring metrics and run a change-point detector (PELT from the `ruptures` library, or Bayesian online change-point detection) on a look-back window.
+- After an alarm, take the top-scoring metrics and look for a single change point in a look-back window with `ruptures.Binseg(model="l2")`, `n_bkps=1`. This is the implementation (see `05_PYTHON_ANALYZER_SPEC.md` section 3, step 2). PELT and Bayesian online change-point detection are optional ablations if time allows.
 - Use the estimated change point as the start of the "abnormal" window and recompute scores. This directly targets the drop that NSigma-style methods show when detection is late.
 
 ### Step 5: Rank root causes
@@ -159,7 +159,7 @@ The symptom vs cause split is the core message of the paper and is easy to show 
 - Ridge regression and robust statistics: milliseconds per metric.
 - Isolation Forest + TreeSHAP (exact, tree-based): fast on CPU; the `shap` library supports scikit-learn Isolation Forest directly.
 - ECOD and COPOD from PyOD: parameter-free and give per-feature contributions natively.
-- PELT change-point detection: fast on short windows.
+- Change-point detection (Binseg, one change point): fast on short windows.
 - Expected cost: a few seconds per incident; the whole RCAEval benchmark should run in hours on a laptop. Log and trace files in RE2/RE3 are large (millions of lines), so process them in chunks and start with one system.
 
 ---
@@ -198,7 +198,7 @@ Root cause (as in RCAEval):
 
 Explanation quality (contribution C3):
 - **Grounding**: ExpAC@k = fraction of cases where the ground-truth indicator is in the top-k explained features.
-- **Symptom rate**: fraction of wrong top-1 explanations that point to a downstream service of the true root cause.
+- **Symptom rate**: fraction of wrong top-1 explanations that point to an ancestor (a direct or indirect caller) of the true root cause. With call-graph edges directed caller -> callee, a fault travels from the called service up to its callers, so the services that only feel the effect are the ancestors of the real cause.
 - **Faithfulness**: deletion test, i.e. replace the top-k explained features by their normal median and measure how much the anomaly score drops (area under the deletion curve).
 - **Stability**: Jaccard overlap / Kendall tau of top-k features across random seeds, bootstrap samples of the normal period, and small window shifts.
 - **Compactness**: number of features needed to reach 80% of the attribution mass.

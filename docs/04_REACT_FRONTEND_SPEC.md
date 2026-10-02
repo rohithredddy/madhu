@@ -19,6 +19,7 @@ A clean explainable-AI web app. Its job is to make one idea obvious: ordinary ex
 | SYMPTOM | orange `#e69a28` |
 | ALSO_ABNORMAL | purple `#8a5cd1` |
 | NORMAL | grey `#9aa3ad` |
+| NO_CLEAR_CAUSE verdict | grey `#9aa3ad` (no red anywhere) |
 | Ground truth marker | green outline `#2f9e44` |
 
 ## 3. Pages
@@ -38,9 +39,13 @@ Layout top to bottom:
 1. Header: case id, system, fault type, ground truth (can be hidden with a "hide answer" toggle, useful when presenting).
 2. Controls: engine dropdown (default PARE), detection delay slider (0 to 120 s), "Analyze" button, "Compare engines" button (PARE vs SHAP_IFOREST vs NSIGMA).
 3. **Explanation card**: headline, confidence badge, cause sentences, symptom sentences, evidence sentences, notes. Correct/incorrect badge versus ground truth.
+   - When the response `verdict` is `NO_CLEAR_CAUSE`, the card shows the backend's "No clear root
+     cause found" headline, no cause sentences, and a neutral grey badge instead of the red CAUSE
+     styling. No node is coloured red in the call graph in that case. This must not look like a
+     confident accusation.
 4. **Call graph**: nodes coloured by role; ground truth node with green outline; edge direction caller -> callee; hover shows scores.
 5. **Cause vs symptom chart** (the key chart): grouped bar per service, "marginal score" (how strange it looks) next to "self score" (how much is its own problem). Sorted by self score.
-6. **Indicator table**: top 10 indicators with self score, marginal score, inherited %.
+6. **Indicator table**: the returned indicators (up to `topK`, default 10) with self score, marginal score, inherited %.
 7. **Time series**: the top 3 indicators plus the ground-truth indicator, with vertical lines for injection time (if shown), alarm time and estimated change point.
 8. "Download report" (Markdown).
 
@@ -56,7 +61,9 @@ Compare mode: the explanation card, graph and bar chart appear side by side for 
 - When EXPLAINED: the explanation card and the cause vs symptom chart slide in, with a link "open full analysis".
 
 ### 3.5 Synthetic lab `/lab`
-- Sliders and selects: number of services (5 to 40), fault type, propagation strength (0.2 to 1.0), noise (low/medium/high), root service (random or chosen), seed.
+- Sliders and selects: number of services (5 to 40), fault type (`LATENCY`, `CPU`, `MEM`, `ERROR`), propagation strength (0.2 to 1.0), noise (`LOW` / `MEDIUM` / `HIGH`), root service (random or chosen), seed.
+- The API values are the UPPERCASE strings listed above, sent exactly as in `06_DATA_CONTRACTS.md`
+  section 3. The UI may show them in a friendlier case, but it must not invent other values.
 - "Generate and analyze": creates the case, then runs compare with PARE, PARE_NO_RESIDUAL and SHAP_IFOREST.
 - Shows the three call graphs side by side with correct/incorrect badges.
 - Text hint: "Try increasing propagation strength and watch the ordinary methods start blaming the callers."

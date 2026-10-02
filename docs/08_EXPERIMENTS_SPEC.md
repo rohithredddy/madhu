@@ -17,8 +17,8 @@ experiments/
   configs/                YAML configs, one per run
   run_c1_grounding.py     RQ1, RQ2
   run_rca.py              RQ3, RQ4 (PARE variants + baselines, delay sweep)
-  run_stability.py        stability part of C3
-  run_faithfulness.py     faithfulness part of C3
+  run_stability.py        stability part of C3 (writes stability.csv)
+  run_faithfulness.py     faithfulness part of C3 (writes faithfulness.csv)
   run_synthetic_study.py  E6 controlled synthetic study
   export_cases.py    converts RCAEval cases into the case format read by the Java backend
   build_graph_from_traces.py
@@ -64,7 +64,22 @@ load_case(case, delay_s, normal_minutes=None) -> CaseData
 
 ### E3 - Detection delay sweep (RQ4)
 - Same as E2 with `delay_s` in {0, 30, 60, 120}. The methods only know the alarm time `inject_time + delay`, not the true injection time.
-- Normal period for every method = data before `inject_time` minus a 30 s safety gap. This is a slightly optimistic choice (a real system would not know the injection time), so also run one variant where the normal period ends at `alarm_time - cp_lookback` and report both. Document this in the paper.
+- Normal period for every method = data before `inject_time` minus a 30 s safety gap.
+
+#### Stated assumption: the normal window uses the injection time
+
+This is the standard RCAEval protocol and we keep it, but it must be stated openly in the paper,
+because a real system would not know when the fault was injected:
+
+- Every method gets exactly the same windows, so no method is favoured by it.
+- It is optimistic. So E3 also runs a **second variant** in which the normal period ends at
+  `alarm_time - cp_lookback_s` (no use of `inject_time` anywhere), and both sets of numbers are
+  reported side by side. The gap between them is itself a result worth showing.
+- It is a time boundary only. The root-cause service and indicator are never given to any method
+  (hard rule 4 in `PROJECT_RULES.md`).
+- The application's replay detector is stricter: it never uses `inject_time` at all
+  (`03_JAVA_BACKEND_SPEC.md` section 4.7). Offline scoring follows the benchmark protocol; the live
+  demo does not need to.
 - Main figure: Avg@5 vs delay, one line per method. Expect simple methods to fall; PARE with change point should fall less.
 
 ### E4 - Call-graph ablation
@@ -72,6 +87,9 @@ load_case(case, delay_s, normal_minutes=None) -> CaseData
 
 ### E5 - Explanation quality (C3) - `run_faithfulness.py`, `run_stability.py`
 - Faithfulness (deletion test): system anomaly score = mean over the analysis window of the max robust z over columns. For k = 0..10, replace the top-k columns of a method's indicator ranking by their normal medians and recompute the score. Report the normalized area under this curve (lower = more faithful) and compare with a random ranking (average of 10 random orders).
+  - Output goes to its own `faithfulness.csv` in the run folder, not into `cases.csv`: the shape is
+    different (one row per case, method and k). Same for `stability.csv`. Columns are in
+    `06_DATA_CONTRACTS.md` section 5.
 - Stability: for each case run each method under 5 seeds x 3 normal-window subsamples (random contiguous 90%) x 3 window shifts (-10 s, 0, +10 s). Report mean Jaccard of the top-5 indicators and mean Kendall tau of the service ranking.
 - Compactness: number of indicators needed to reach 80% of the total positive score mass.
 
@@ -80,7 +98,7 @@ load_case(case, delay_s, normal_minutes=None) -> CaseData
 - Vary one factor at a time, 50 seeds per setting, 4 fault types:
   - graph size: 5, 10, 20, 40 services
   - propagation strength (weight from callee to caller): 0.2, 0.5, 0.8, 1.0
-  - noise level: low, medium, high
+  - noise level: LOW, MEDIUM, HIGH (the float multipliers 0.5 / 1.0 / 2.0)
   - graph quality: true graph, 20% edges removed, 20% wrong edges added, no graph
   - detection delay: 0, 10, 30, 60 rows
 - Methods: PARE, PARE_NO_RESIDUAL, PARE_NO_CP, NSIGMA, SHAP_IFOREST, ECDF.
