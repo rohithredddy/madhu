@@ -5,6 +5,15 @@ This is the main application backend of the final project. It must be clean, tes
 ## 1. Project setup
 
 - Folder: `backend/`. Maven, Java 21, latest stable Spring Boot 3.x.
+- **Build with the Maven Wrapper, not a system Maven.** The project is created from
+  `start.spring.io`, whose zip already contains `mvnw`, `mvnw.cmd` and
+  `.mvn/wrapper/maven-wrapper.properties`. All three are committed. Every build command in the docs
+  is therefore `./mvnw ...` (`.\mvnw.cmd ...` on Windows), never `mvn ...`.
+  - Why: the wrapper pins the exact Maven version in a committed file, which is what hard rule 10
+    (reproducible) asks for, and it needs nothing but a JDK on the machine.
+  - Note the ordering this forces: the wrapper cannot be generated with `mvn wrapper:wrapper`,
+    because that would need a Maven we do not have. So M8.1 must start from the Spring Initializr
+    zip (or an equivalent that already carries the wrapper files).
 - Dependencies: spring-boot-starter-web, spring-boot-starter-validation, spring-boot-starter-data-jpa, h2 (runtime), springdoc-openapi-starter-webmvc-ui, spring-boot-starter-test.
 - Database: H2 in file mode, `spring.jpa.hibernate.ddl-auto=update`. H2 console enabled only in the `dev` profile.
   - The database lives under `app.data-dir` (see section 3), so the JDBC URL is built from it:

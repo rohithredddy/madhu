@@ -84,7 +84,7 @@ Three terminals:
 # 1 - Python engine
 cd analyzer && uvicorn service.app:app --port 8000
 # 2 - Java backend
-cd backend && mvn spring-boot:run
+cd backend && ./mvnw spring-boot:run
 # 3 - React frontend
 cd frontend && npm run dev
 ```

@@ -81,9 +81,9 @@ cd analyzer && pip install -e ".[dev]" && pytest -q
 cd analyzer && uvicorn service.app:app --port 8000
 cd experiments && python run_c1_grounding.py --config configs/c1_re1_ob.yaml
 
-# Java
-cd backend && mvn -q clean verify
-cd backend && mvn spring-boot:run
+# Java  (mvnw = the Maven Wrapper that ships inside backend/; no system Maven needed)
+cd backend && ./mvnw -q clean verify
+cd backend && ./mvnw spring-boot:run
 
 # React
 cd frontend && npm install && npm run dev
@@ -119,7 +119,7 @@ Git: one commit per finished task, message like `M8.5: explanation renderer with
 
 ## 9. Definition of done
 
-- Builds with no errors (`pytest`, `mvn clean verify`, `npm run build` as relevant).
+- Builds with no errors (`pytest`, `./mvnw clean verify`, `npm run build` as relevant).
 - New code has tests that pass.
 - The task's "done when" check is met.
 - `PROGRESS.md` updated (what, how tested, files, open points).

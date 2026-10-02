@@ -6,18 +6,70 @@ Human: read this before every session to know where things stand.
 ## Current status
 - Current milestone: M0
 - Next task: M0.1 (then M0.3 in the same commit), then M1.1 onward
-- Blockers: none
+- Blockers: none for M0.1. Before M1.1 we need Python 3.10 installed (`uv python install 3.10`)
+  and a project virtual environment; see "Environment" for why 3.14 will not work.
 
-## Environment (fill in during M0.3)
-- OS:
-- Java / Maven:
-- Python:
-- Node / npm:
-- CPU / RAM:
+## Environment (measured 2026-10-03)
+
+Everything below was read off this machine, not assumed.
+
+| Thing | Status |
+|---|---|
+| OS | Windows 11 Home Single Language, 10.0.26200 |
+| CPU | 12th Gen Intel Core i5-1235U, 10 cores / 12 threads (no GPU used) |
+| RAM | 15.7 GB total |
+| Disk C: | **11.7 GB free of 237.7 GB - the tightest resource we have** |
+| Java | 21.0.12.1 LTS (Oracle), `C:\Program Files\Java\jdk-21.0.12.1`; `javac` 21.0.12.1 |
+| JAVA_HOME | set to the path above on 2026-10-03 (it was empty) |
+| Maven | **not installed, and deliberately not going to be** - we use the Maven Wrapper, see decision 18 |
+| Python | 3.14.4 only, at `C:\Users\hp\AppData\Local\Programs\Python\Python314`. **3.10 is not installed yet and is required** |
+| uv | 0.11.20 - this is how Python 3.10 will be installed (`uv python install 3.10`) |
+| Node / npm | 24.15.0 / 11.12.1 |
+| Git | 2.54.0.windows.1 |
+
+Python packages in the global 3.14 environment: `numpy 2.4.4`, `scipy 1.17.1`, `pyyaml`, `joblib`,
+`pytest`, `fastapi`, `uvicorn`, `pydantic` are present; **`pandas`, `scikit-learn`, `shap`,
+`lightgbm`, `ruptures`, `networkx`, `statsmodels`, `matplotlib`, `pyarrow` are missing**. That
+environment also holds ~190 unrelated packages (pipecat, google-genai, openai, playwright, boto3),
+so the project will use its own virtual environment regardless.
+
+Why Python 3.14 cannot be used for `analyzer/` (checked against PyPI, not guessed):
+- `ruptures` 1.1.10 declares `requires_python = <3.14,>=3.9` and ships Windows wheels for cp39-cp313
+  only. There is no cp314 wheel. Change-point detection is core to PARE.
+- `shap` 0.52.0 needs >= 3.12, but its only 3.14 artifact is a `cp314t` (free-threaded) manylinux
+  wheel. There is no Windows cp314 wheel.
+- `dowhy` also caps at `<3.14`.
+
+The whole stack does resolve cleanly for Python 3.10 on Windows (checked with
+`uv pip compile --python-version 3.10 --python-platform windows`): numpy 2.2.6, pandas 2.3.3,
+scikit-learn 1.7.2, scipy 1.15.3, shap 0.49.1, lightgbm 4.7.0, ruptures 1.1.10, networkx 3.4.2,
+statsmodels 0.15.0, matplotlib 3.10.9, pyarrow 25.0.1, fastapi 0.142.2, uvicorn 0.54.0,
+pydantic 2.13.5, pytest 9.1.1. So pip picks the last 3.10-compatible versions by itself and no
+pinning work is needed.
 
 ## Open questions (for the human)
-- (none; the 16 points raised in the first spec review were all answered on 2026-10-03 and are
-  recorded under "Decisions made" below)
+
+1. **RCAEval pulls PyTorch. Does hard rule 1 allow it inside the isolated venv?**
+   `pip install RCAEval` installs nothing by itself: all 414 dependencies sit behind extras
+   (`default` 164, `rcd` 170, `eventadl` 80), so the real install is `RCAEval[default]`, and that
+   extra requires `torch>=1.12.1`, plus `numpy<2` and `networkx==2.5` for Python < 3.13.
+   - This confirms the separate-venv instruction in `PROJECT_RULES.md` section 4 and
+     `08_EXPERIMENTS_SPEC.md` section 2 is mandatory, not optional: `numpy<2` and `networkx==2.5`
+     cannot coexist with our resolved stack (numpy 2.2.6, networkx 3.4.2).
+   - But hard rule 1 says "No PyTorch/TensorFlow". Reproducing their baselines (M2.4, M4.2) means
+     torch lands in `experiments/.venv-rcaeval`, roughly 200-800 MB of wheels.
+   - Proposed reading: the rule is about **our** method, which stays scikit-learn only; torch is
+     allowed in the isolated baseline venv and nowhere else. Needs the human's yes before M2.
+   - Not blocking anything before M2.
+
+2. **Disk space.** 11.7 GB free. Maven's `~/.m2` (300-500 MB once Spring Boot, JPA, H2 and springdoc
+   are pulled), the two Python venvs, torch, and the RCAEval RE1/RE2/RE3 downloads all land on C:.
+   RE2 and RE3 carry logs and traces and are the big ones. Worth freeing space or planning to keep
+   only one RCAEval system on disk at a time (which `08_EXPERIMENTS_SPEC.md` section 2 already
+   suggests for memory reasons).
+
+The 16 points raised in the first spec review were all answered on 2026-10-03 and are recorded
+under "Decisions made" below.
 
 ## Decisions made
 
@@ -139,6 +191,22 @@ written into the spec files. One line of reason each.
     Reason: `data/` is git-ignored, so a README there would never be committed. M0.1 was changed to
     say so explicitly.
 
+### Build tooling
+
+18. **Java builds use the Maven Wrapper (`./mvnw`), not a system Maven.** Maven is not installed on
+    this machine and will not be: it is also not available through winget (only unrelated packages
+    match `Apache.Maven`). The Spring Initializr zip already contains `mvnw`, `mvnw.cmd` and
+    `.mvn/wrapper/maven-wrapper.properties`, and all three get committed. `PROJECT_RULES.md` section 6,
+    `docs/02` section 4 and the definition of done now say `./mvnw`.
+    Reason: the wrapper pins the exact Maven version in a committed file, which is what hard rule 10
+    (reproducible) asks for, and it needs nothing on the machine but the JDK. It also avoids editing
+    the user PATH.
+    Consequence to remember at M8.1: the wrapper cannot be created with `mvn wrapper:wrapper`,
+    because that needs the Maven we do not have. M8.1 must start from the Spring Initializr zip.
+    Also done at the same time: `JAVA_HOME` was empty and is now set to
+    `C:\Program Files\Java\jdk-21.0.12.1` (user-level), because some IDE Java tooling expects it
+    even though the wrapper copes without it.
+
 ### Order of work
 
 17. **Normal order: research first.** M0 -> M1 -> M2 ... The "application early" shortcut in
@@ -161,6 +229,40 @@ written into the spec files. One line of reason each.
 - Files changed:
 - Left open / next:
 -->
+
+### 2026-10-03 - Environment check and build tooling - no code yet
+- What was done: checked every requirement in `PROJECT_RULES.md` section 4 against the actual machine and
+  recorded the result in "Environment" above. Java 21, Node 24.15.0, npm 11.12.1, git and uv are all
+  present and fine. Three gaps found: Maven missing, Python 3.10 missing (only 3.14, which this stack
+  cannot use), and the Python libraries not installed. Decided on the Maven Wrapper instead of a
+  system Maven (decision 18) and set `JAVA_HOME`, which was empty. Two findings need the human and
+  are written up under "Open questions": RCAEval's `default` extra requires PyTorch, and the disk has
+  only 11.7 GB free.
+- How it was tested (commands + result):
+  - `java -version` / `javac -version` -> 21.0.12.1 LTS; `node -v` -> v24.15.0; `npm -v` -> 11.12.1;
+    `git --version` -> 2.54.0; `uv --version` -> 0.11.20.
+  - `mvn -v` -> not found. Confirmed it is genuinely absent, not a stale PATH: no `mvn.cmd` anywhere
+    under `C:\`, Program Files, the user profile, LocalAppData or ProgramData; no `MAVEN_HOME` or
+    `M2_HOME`; the live registry PATH (machine and user) contains only the Oracle javapath entry.
+    `winget search Apache.Maven` -> no package.
+  - `py -0p` -> only 3.14 present; `py -3.10 --version` -> no suitable runtime.
+  - Package presence checked with `importlib.util.find_spec` in the 3.14 environment: pandas,
+    sklearn, shap, lightgbm, ruptures, networkx, statsmodels, matplotlib, pyarrow all missing.
+  - 3.14 incompatibility verified from PyPI metadata and wheel filenames, not from memory: ruptures
+    1.1.10 is capped `<3.14` with Windows wheels only up to cp313; shap 0.52.0 has no Windows cp314
+    wheel; dowhy is capped `<3.14`.
+  - `uv pip compile --python-version 3.10 --python-platform windows` on the full stack -> resolves
+    cleanly; the chosen versions are listed in "Environment".
+  - RCAEval metadata read from PyPI: 414 `requires_dist` entries, all behind the extras
+    `default` / `rcd` / `eventadl`; `default` requires `torch>=1.12.1`, `numpy<2`, `networkx==2.5`.
+  - `setx JAVA_HOME "C:\Program Files\Java\jdk-21.0.12.1"` -> verified by reading it back from
+    `HKCU:\Environment` and confirming `bin\java.exe` exists at that path.
+  - Nothing was installed. All of the above was read-only apart from setting `JAVA_HOME`.
+- Files changed: `PROJECT_RULES.md` (section 6 and definition of done now use `./mvnw`),
+  `docs/02_ARCHITECTURE.md` (run command), `docs/03_JAVA_BACKEND_SPEC.md` (section 1 explains the
+  wrapper and the M8.1 ordering constraint), `PROGRESS.md`.
+- Left open / next: the human's answer on the PyTorch question (not needed until M2) and on disk
+  space. Then `uv python install 3.10`, the `analyzer/` virtual environment, and M0.1 + M0.3.
 
 ### 2026-10-03 - Spec fixes after first review - no code yet
 - What was done: read `PROJECT_RULES.md`, `PROGRESS.md` and all nine files in `docs/`, reported 6
