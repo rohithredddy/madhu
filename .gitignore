@@ -1,0 +1,23 @@
+# Java
+target/
+*.class
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+# Node
+node_modules/
+frontend/dist/
+# Built frontend copied into backend
+backend/src/main/resources/static/
+# Data and results
+data/
+experiments/results/*
+!experiments/results/.gitkeep
+# IDE / OS
+.idea/
+*.iml
+.DS_Store
