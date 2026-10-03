@@ -28,15 +28,29 @@ from pare.columns import (
     validate_columns,
 )
 from pare.config import PareConfig
+from pare.scores import (
+    RobustBaseline,
+    ecdf_tail_score,
+    mad,
+    robust_baseline,
+    robust_z,
+    window_score,
+)
 
 __all__ = [
     "__version__",
     "ColumnInfo",
     "PareConfig",
+    "RobustBaseline",
     "columns_from_dicts",
     "columns_of_service",
+    "ecdf_tail_score",
     "group_by_service",
+    "mad",
     "name_to_index",
+    "robust_baseline",
+    "robust_z",
     "services",
     "validate_columns",
+    "window_score",
 ]

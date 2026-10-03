@@ -8,8 +8,8 @@ anything waiting on you, then the machine setup and the full list of decisions a
 
 ## Current status
 - Current milestone: M1 (Python PARE core)
-- Next task: M1.3 (`scores.py` + tests)
-- Blockers: none for M1.3, but **open question 3 below needs an answer before M1.7/M1.10**. The
+- Next task: M1.4 (`graph.py` + tests)
+- Blockers: none for M1.4, but **open question 3 below needs an answer before M1.7/M1.10**. The
   synthetic generator as specified cannot produce the cause-versus-symptom confusion the paper is
   about. M1.3 to M1.6 are unaffected and can proceed either way.
 
@@ -21,6 +21,46 @@ anything waiting on you, then the machine setup and the full list of decisions a
 - Files changed:
 - Left open / next:
 -->
+
+### 2026-10-03 - M1.3 - scores.py, the shared scoring building blocks
+- What was done: `pare/scores.py` with the three functions the spec names - `robust_z`,
+  `window_score` and `ecdf_tail_score` - plus `robust_baseline()` and `mad()`, which they all share
+  and which `residual.py` will reuse at M1.6. This is step 1 of the method: how strange a column
+  looks on its own, before anything about the call graph is considered. Exported from `pare`.
+  - `robust_baseline(normal)` measures the median and the scaled MAD per column, applying the
+    epsilon rule from `05` step 1 (`1.4826 * MAD + 1e-6 * (|median| + 1)`) in one place, so a
+    perfectly flat column can never divide by zero anywhere in the project.
+  - `robust_z` keeps the sign, because the explanation text needs to say whether something went up
+    or down.
+  - `window_score` is the marginal score: `|median(abnormal) - median(normal)| / scale`. The median
+    of the window rather than its maximum, so a single wild reading is not mistaken for an incident.
+  - `ecdf_tail_score` is the ECOD-style baseline for the `ECDF` engine: `-log` of the two-sided
+    empirical tail probability, floored at `1/(n+1)` so a value beyond anything ever seen gives a
+    large but finite score rather than infinity. The ceiling is therefore `log(n+1)`.
+  - Decisions 31 and 32 below cover the two judgement calls: what to do with an all-missing column,
+    and accepting both one column and a whole window in the same function.
+- How it was tested (commands + result):
+  - `pytest -q` -> **132 passed** (30 new) in 0.8 s. `ruff check .` -> clean.
+  - `05` section 6 asks for "robust z and window score on hand-made arrays", so the expected numbers
+    are worked out by hand in the test and written there, not copied from what the code printed. For
+    example the baseline of `[1,2,3,4,5]` is median 3 and MAD 1, so a value of 5 must score
+    `2 / (1.4826 + 4e-6)`.
+  - The two design claims are tested directly rather than assumed: an extreme value in the normal
+    period moves the median by less than 0.1 while it moves the mean by more than 5x and the standard
+    deviation by more than 100x; and a single spike of 10,000 inside an otherwise quiet window leaves
+    the window score below 0.5, while a sustained shift pushes it above 3.
+  - Also covered: a flat column gets a positive scale instead of zero, scores are never negative in
+    either direction, several columns at once, scattered NaN, an entirely missing column scoring 0
+    rather than NaN, empty inputs raising clearly, and integers not being truncated.
+  - One test of mine failed first time and the test was at fault, not the code (hard rule 12). It
+    built "clean" data as fifty 10s followed by fifty 12s, whose median sits in the gap at 11.0;
+    appending one more value makes the count odd and the median jumps a whole level to 12.0. That is
+    an artefact of bimodal toy data with an even count, not a weakness of the median. Replaced with a
+    normal sample, where the claim holds properly.
+- Files changed: new `analyzer/pare/scores.py`, `analyzer/tests/test_scores.py`;
+  `analyzer/pare/__init__.py` (exports), `docs/07_TASKS.md` (M1.3 ticked), `PROGRESS.md`.
+- Left open / next: M1.4 (`graph.py`), which is also unaffected by open question 3. That question
+  still needs an answer before M1.7 and M1.10.
 
 ### 2026-10-03 - M1.2 - synthetic generator, and a problem with the model it implements
 - What was done: `pare/synthetic.py` with `make_case()` and `SyntheticCase`,
@@ -564,6 +604,22 @@ written into the spec files. One line of reason each.
     Reason: honesty. With `--fault mem` the callers barely move on the chart, for the reason in open
     question 4. The latency figure shows what the generator genuinely does - cause jumps, caller
     follows, unrelated service flat. The memory version is still one flag away.
+
+### M1.3 choices
+
+31. **A column with no readings at all scores 0, not NaN.** `window_score` and `ecdf_tail_score`
+    both turn an all-missing column into a score of zero.
+    Reason: missing data is not evidence of a fault. Returning NaN would spread through a ranking and
+    could knock out an entire result, and `05` section 6 requires every engine to return a valid
+    result for a case that has NaN columns. The deliberate "All-NaN slice" warnings numpy raises are
+    silenced at the point where they are expected, rather than left to train the reader to ignore
+    warnings.
+
+32. **Every scoring function takes either one column or a whole window** - shape `(n_rows,)` or
+    `(n_rows, n_columns)` - and reduces down the rows.
+    Reason: the engines work on a whole window at once for speed, while the tests and the spec talk
+    about a single column. numpy's `axis=0` gives both from the same code, so there is no second
+    implementation to keep in step.
 
 ### Order of work
 
