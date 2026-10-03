@@ -273,3 +273,47 @@ def test_a_typical_case_is_answered_quickly():
     started = time.perf_counter()
     analyze(request)
     assert (time.perf_counter() - started) < 2.0
+
+
+# --- the PARE_LGBM ablation (M1.7b) ----------------------------------------
+
+
+def test_pare_lgbm_ranks_sanely_on_a_synthetic_latency_case():
+    """M1.7b: the LightGBM dependency model produces a usable, sensible answer.
+
+    On a straightforward case - a latency fault, no congestion, so there is no
+    trap to fall into - the ablation must find the culprit just as the ridge
+    version does. Where it stops being equal is measured in PROGRESS.md rather
+    than asserted here, because that is a research result, not a contract.
+    """
+    case = make_case(
+        n_services=8, n_normal=400, n_abnormal=200, fault="latency", seed=21
+    )
+    result = analyze(request_for(case, "PARE_LGBM"))
+
+    assert result.engine == "PARE_LGBM"
+    assert result.verdict == ROOT_CAUSE_FOUND
+    assert result.services[0].service == case.gt_service
+    assert result.services[0].role == CAUSE
+    assert result.change_point_sec is not None, "the ablation keeps the re-anchoring"
+
+    # a complete, well-formed answer
+    assert all(np.isfinite(s.score) for s in result.services)
+    assert all(0.0 <= s.inherited_fraction <= 1.0 for s in result.services)
+    assert result.indicators
+    assert result.services[0].top_indicator == case.gt_column
+
+
+def test_pare_lgbm_differs_from_pare_only_in_its_dependency_model():
+    """The ablation has to isolate one variable, or it measures nothing."""
+    pare = ENGINES["PARE"]
+    lgbm = ENGINES["PARE_LGBM"]
+
+    assert lgbm.dependency_model == "lgbm"
+    assert pare.dependency_model is None
+    assert (lgbm.use_change_point, lgbm.use_residuals, lgbm.robust, lgbm.window_to_end) == (
+        pare.use_change_point,
+        pare.use_residuals,
+        pare.robust,
+        pare.window_to_end,
+    )

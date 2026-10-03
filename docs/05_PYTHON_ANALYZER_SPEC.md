@@ -216,7 +216,7 @@ estimated change point, the window bounds, at most `top_k` indicators, timing (`
 | `PARE` | Full method above | Proposed method |
 | `PARE_NO_RESIDUAL` | Ranking by marginal scores only (+ change point) | Ablation |
 | `PARE_NO_CP` | Full method, window starts at alarm time | Ablation |
-| `PARE_LGBM` | LightGBM dependency model | Ablation |
+| `PARE_LGBM` | LightGBM dependency model | Ablation (measured: no better, and much slower - see below) |
 | `NSIGMA` | Mean of abnormal vs mean/std of normal, max per service. Abnormal window is `[alarm_time, end of recent]`; it **never** uses the change point | Baseline (must match Java FallbackRanker) |
 | `SHAP_IFOREST` | IsolationForest(n_estimators=200, random_state=seed) on normal rows; TreeSHAP on abnormal rows; mean absolute SHAP per column; service score = sum over its columns (GAL-MAD style) | Baseline / C1 explainer |
 | `ECDF` | ECOD-style per-column tail score: `-log` of the empirical two-sided tail probability of the abnormal median under the normal ECDF; service score = max | C1 explainer |

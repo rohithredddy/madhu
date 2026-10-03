@@ -51,6 +51,44 @@ anything waiting on you, then the machine setup and the full list of decisions a
   the normal data it is fitted on. That is a limitation to measure and report in E6, not a bug to
   tune away.
 
+### 2026-10-03 - M1.7b - measuring the PARE_LGBM ablation
+- What was done: the `PARE_LGBM` engine itself was registered during M1.7, and the "returns a valid
+  result" half of the task was already covered by the test that runs every engine. What was missing
+  was the half the task names specifically - that its **ranking is sane on one synthetic latency
+  case** - and any measurement of how the ablation actually performs, which is the result the paper
+  needs. Both are now done.
+  - `test_pare_lgbm_ranks_sanely_on_a_synthetic_latency_case`: on a straightforward latency case the
+    ablation finds the culprit, gives it the CAUSE role, keeps the change-point re-anchoring, names
+    the right top indicator, and returns finite scores with inherited fractions inside [0, 1].
+  - `test_pare_lgbm_differs_from_pare_only_in_its_dependency_model`: asserts the two engine
+    specifications are identical apart from the model. An ablation that changes two things at once
+    measures nothing, and that is easy to break later by editing the registry.
+- How it was tested (commands + result):
+  - `pytest -q` -> **264 passed** (2 new) in 25.9 s. `ruff check .` -> clean.
+  - Measured as a whole engine, 20 seeds, 8 services, latency fault, delay 30 s:
+
+    | amplification | PARE | PARE_LGBM | mean ms, ridge / lgbm |
+    |---|---|---|---|
+    | 0.00 | 1.00 | 1.00 | 233 / 1391 |
+    | 0.25 | 0.95 | 0.90 | 369 / 2196 |
+    | 0.50 | 0.70 | 0.55 | 401 / 2397 |
+
+    **The ablation is a clean negative result.** With no congestion there is nothing to get wrong and
+    both are perfect. As soon as there is a trap to fall into, LightGBM is worse - five points behind
+    at amplification 0.25 and fifteen behind at 0.50 - and it is about six times slower throughout.
+
+    The reason was already found in M1.6 and this confirms it at the engine level: a tree ensemble
+    cannot extrapolate. A fault pushes a callee far outside anything in the normal period, where the
+    model's prediction is flat, so the caller is predicted at its normal level and its entire
+    inherited rise lands in its own residual. The method needs a model that extrapolates; tree
+    ensembles do not, however well they interpolate.
+  - Worth noting for `05` section 7: at 2.2 to 2.4 seconds `PARE_LGBM` is **over the 2 second
+    response budget**. That is acceptable for an offline ablation and not for a default engine, which
+    it is not. If it were ever exposed in the application, it would need a longer timeout.
+- Files changed: `analyzer/tests/test_engine.py`, `docs/05_PYTHON_ANALYZER_SPEC.md` (engine table
+  note), `PROGRESS.md`.
+- Left open / next: M1.8, the explainer baselines.
+
 ### 2026-10-03 - M1.7 and M1.7b - preprocess, rank and the engine registry
 - What was done: the method is now runnable end to end. `pare/preprocess.py` (step 0),
   `pare/rank.py` (steps 4 and 5) and `pare/engine.py` (the registry and `analyze()`), all exported
@@ -938,6 +976,17 @@ written into the spec files. One line of reason each.
     almost all of it the sklearn import, while later calls took 114 ms. For a long-running service a
     slow start-up is much better than a slow first request. LightGBM stays lazy because only one
     ablation uses it and importing it always would cost every other run a second for nothing.
+
+### M1.7b result
+
+43. **`PARE_LGBM` is kept as a registered engine even though it is measurably worse**, because a
+    negative ablation that is reported is worth more than one that is quietly dropped.
+    Measured: equal to `PARE` when there is no symptom trap, 5 points worse at amplification 0.25,
+    15 points worse at 0.50, and about six times slower. The cause is that tree ensembles cannot
+    extrapolate beyond the range they were trained on, so a caller whose callee has gone far outside
+    normal is predicted at its normal level and keeps the whole inherited rise as its own residual.
+    The paper can state plainly that residual-based root-cause analysis needs an extrapolating model,
+    with a measurement behind it.
 
 ### Order of work
 
