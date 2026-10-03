@@ -20,7 +20,7 @@ If a working application is needed early: do M0, M1, M7, M8, M9, M10 (using synt
 
 ## M1 - Python PARE core (library)
 - [x] M1.1 `analyzer/pyproject.toml`, package `pare`, `config.py`, `columns.py`.
-- [ ] M1.2 `synthetic.py` (with `propagation` and `noise` parameters) + example plot in `paper/figures/synthetic_example.png`.
+- [x] M1.2 `synthetic.py` (with `propagation` and `noise` parameters) + example plot in `paper/figures/synthetic_example.png`.
 - [ ] M1.3 `scores.py` + tests.
 - [ ] M1.4 `graph.py` + tests.
 - [ ] M1.5 `changepoint.py` + tests.

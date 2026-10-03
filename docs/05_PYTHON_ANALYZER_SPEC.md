@@ -228,10 +228,55 @@ Naming and types at the boundary:
   - `latency_s = base_s + sum_{k in children(s)} w_k * latency_k + noise`, with `w_k = propagation x U(0.8, 1.2)`.
   - `error_s = base_s + sum_{k in children(s)} v_k * error_k + noise`.
   - `cpu_s = a_s * rps + noise`, `mem_s` = random walk around a level.
-- Fault at the root-cause service r from the first abnormal row:
-  - latency: `latency_r += 6 * std`; cpu: `cpu_r += 6 * std` and `latency_r += 2 * std`; mem: `mem_r` ramps up linearly to +8 std; error: `error_r += 6 * std`.
-- Propagation to callers happens automatically through the equations.
-- Returns normal df, abnormal df, columns, graph, ground truth (service, column).
+- Fault at the root-cause service r from the first abnormal row. `std` always means the standard
+  deviation of that column over the **normal** rows of an unfaulted run, so the fault size is
+  relative to how noisy the column normally is:
+  - latency: `latency_r += 6 * std`
+  - cpu: `cpu_r += 6 * std` **and** `latency_r += 2 * std`
+  - mem: `mem_r` ramps up linearly to `+8 * std` **and** `latency_r` ramps up linearly to
+    `+2 * std`
+  - error: `error_r += 6 * std`
+- The faulted service's own latency term is added **before** propagation, so callers inherit it
+  through the latency equation.
+
+#### Why a memory fault must also raise the service's own latency
+
+Only `latency` and `error` propagate in the equations above: `mem_s` is a local random walk with no
+dependency on the services s calls. So without the `+2 * std` latency term, a memory fault would
+produce **no symptoms anywhere**, and that would break three things:
+
+- E6's whole point is that strong propagation makes marginal methods blame symptoms while PARE does
+  not. With a non-propagating fault the symptom rate would be 0 by construction and
+  `PARE_NO_RESIDUAL` would score exactly like `PARE`, so MEM could say nothing about the claim.
+- It would contradict this project's own motivating example. `00_RESEARCH_PLAN.md` section 1 and
+  `01_PROJECT_OVERVIEW.md` both use "cartservice has a memory leak, so frontend and checkoutservice
+  get slow", and figure 1 is meant to be exactly that case. The generator has to be able to make it.
+- Real RCAEval MEM faults do propagate, so synthetic MEM would behave unlike the data it is meant
+  to explain.
+
+`cpu` already works this way (`+2 * std` on latency), so this is the same mechanism, not a new one.
+A service whose memory is exhausted getting slower is also simply what happens.
+
+#### Two-pass construction
+
+`std` has to come from an unfaulted run, but the fault then has to flow up the graph. So the
+generator draws every noise array once, builds the series with no fault to measure each column's
+normal standard deviation, and then rebuilds with the fault injected **reusing the same noise
+arrays**. Reusing the draws is what makes a given seed reproduce bit for bit.
+
+#### What it returns
+
+A `SyntheticCase` with: `normal` and `abnormal` DataFrames (time-indexed, epoch seconds),
+`columns` (the explicit `ColumnInfo` list), `edges` (caller -> callee pairs), `gt_service`,
+`gt_column` and `inject_time_sec`, plus `to_frame()` for the one continuous series that the case
+format and `/v1/synthetic` need.
+
+`edges` is a plain list of `(caller, callee)` tuples rather than a `CallGraph`, because
+`graph.py` is built later (M1.4); `CallGraph.from_edges(edges)` consumes it from then on. The E6
+graph-quality variants (drop 20% of edges, add 20% wrong ones, no graph) also work directly on an
+edge list.
+
+The ground truth is only ever on the returned object, never a column in the data.
 
 ## 6. Tests (must pass before any experiment)
 

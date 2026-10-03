@@ -5,8 +5,10 @@ Human: read this before every session to know where things stand.
 
 ## Current status
 - Current milestone: M1 (Python PARE core)
-- Next task: M1.2 (`synthetic.py` with `propagation` and `noise`, plus the example plot)
-- Blockers: none.
+- Next task: M1.3 (`scores.py` + tests)
+- Blockers: none for M1.3, but **open question 3 below needs an answer before M1.7/M1.10**. The
+  synthetic generator as specified cannot produce the cause-versus-symptom confusion the paper is
+  about. M1.3 to M1.6 are unaffected and can proceed either way.
 
 ## Environment (measured 2026-10-03)
 
@@ -62,7 +64,75 @@ pinning work is needed.
      allowed in the isolated baseline venv and nowhere else. Needs the human's yes before M2.
    - Not blocking anything before M2.
 
-2. **Disk space** (less urgent than first reported). Now 24.4 GB free, not the 11.7 GB measured
+3. **The synthetic model as specified cannot produce the symptom trap. This is the
+   cause-versus-symptom story the whole paper rests on, so it needs a decision.**
+
+   Found while building M1.2. The generator faithfully implements `05` section 5, and the data looks
+   right - a fault appears, callers follow it, unrelated services stay flat (see
+   `paper/figures/synthetic_example.png`). But a caller can **never** look worse than the culprit
+   under these equations, so plain marginal scoring is already almost perfect and there is nothing
+   for PARE to improve on.
+
+   Measured, not guessed. Over 200 random cases at `propagation=1.0` with a latency fault, the ratio
+   of the worst caller's robust-z to the culprit's robust-z was **at most 0.973 and 0.591 on
+   average** - never once above 1.0. Marginal top-1 picked the true cause in 30/30 latency cases and
+   28/30 memory cases, at both weak and strong propagation.
+
+   The algebra says it has to be that way, so no amount of seed-hunting will find a counterexample:
+
+       parent_latency = own_noise + w * child_latency
+       child z  = D / sd_child
+       parent z = w*D / sqrt(sd_own^2 + w^2 * sd_child^2) = D / sqrt((sd_own/w)^2 + sd_child^2)
+
+   The parent's denominator is always larger, so `parent z < child z` for **every** propagation
+   weight `w`. Turning propagation up raises the inherited signal and the inherited noise by exactly
+   the same factor, so they cancel. In other words, the `propagation` knob that E6 is built to turn
+   cannot create the effect E6 wants to measure.
+
+   What this threatens if left alone:
+   - E6 would report that marginal methods are near-perfect and PARE adds nothing, for every setting
+     of every factor. The expected story in `08` section 4 ("when propagation is strong, marginal
+     methods and SHAP pick symptoms more often") would be contradicted by our own generator.
+   - The `05` section 6 gate "PARE top-1 >= PARE_NO_RESIDUAL top-1" would be met only as a tie at
+     about 1.0 for both, which tells us nothing.
+   - Figure 1, the motivating example, could not be drawn from synthetic data.
+
+   Why real systems do show the trap, and what is missing from the model: in reality a caller's
+   slowdown is not a scaled copy of its callee's. Queueing, retries, timeouts and thread-pool
+   saturation amplify a downstream problem **non-linearly** - the caller is calm while the callee is
+   healthy, then degrades far out of proportion once the callee passes a threshold. That is what
+   makes the caller's deviation large relative to its own normal spread. A purely linear sum can
+   never do this.
+
+   **Proposed fix** (not applied; it changes the research model, so it is the human's call): add a
+   congestion term to the latency equation, off during normal operation and growing sharply once a
+   callee is slow, for example
+
+       latency_s += g * max(0, latency_k - threshold_k)^2     (threshold_k from the normal period)
+
+   with `g` controlled by a new `amplification` parameter. `amplification=0` would reproduce exactly
+   today's linear behaviour, so the ablation "does non-linear propagation matter" comes free, and E6
+   gains a second factor that is arguably more interesting than propagation strength itself.
+
+   Options:
+   a. Add the congestion term as above, and make `amplification` an E6 factor.
+   b. Keep the linear model and drop the synthetic symptom-rate claims, relying only on RCAEval
+      (real data does contain the trap) - the synthetic study then only covers graph quality,
+      graph size, noise and delay.
+   c. Something else.
+
+   Recommendation: (a). It is a small, well-motivated change, it keeps the linear model available as
+   a special case, and without it E6 cannot speak to the paper's central claim. Either way this does
+   not block M1.3 to M1.6.
+
+4. **A memory fault is weaker than the spec's `8 * std` suggests, and may fall under
+   `min_cause_score`.** The ramp reaches `+8 * std` only at the last abnormal row, so the median over
+   the analysis window is about half of that; measured, the culprit's memory column deviates about
+   **1.9 stds**, not 8. `PareConfig.min_cause_score` is 3.0, so on current numbers a memory case could
+   come back `NO_CLEAR_CAUSE`. Worth revisiting together with question 3, since both are about how
+   strong an injected fault should be. Not blocking M1.3.
+
+5. **Disk space** (less urgent than first reported). Now 24.4 GB free, not the 11.7 GB measured
    earlier that day. Still worth planning: `analyzer/.venv` already takes 644 MB, and the RCAEval
    RE2/RE3 downloads with their logs and traces plus torch are the big items still to come. Keeping
    only one RCAEval system on disk at a time (which `08_EXPERIMENTS_SPEC.md` section 2 already
@@ -263,6 +333,40 @@ written into the spec files. One line of reason each.
     the docs stay standard and the local venv was brought up to match. pip 26.2.1 and
     setuptools 84.0.0 are now in the venv.
 
+### M1.2 choices
+
+26. **A memory fault also ramps the culprit's own latency by `+2 * std`**, mirroring what the spec
+    already does for cpu, so that memory faults reach callers at all. `05` section 5 now says this
+    and explains why.
+    Reason: `mem` is a local random walk with no dependency on callees, so without a latency term a
+    memory fault would produce no symptoms anywhere. That would make MEM useless for E6, contradict
+    this project's own motivating example ("cartservice memory leak, so frontend gets slow"), and
+    behave unlike real RCAEval memory faults. The human asked for whichever option was best.
+
+27. **`make_case` returns a frozen `SyntheticCase` dataclass, not the 5-tuple the spec lists.**
+    Same contents plus `inject_time_sec`, `fault` and the `params` the case was built from.
+    Reason: every consumer needs the injection time (the case format, `alarm_time = inject + delay`,
+    the E6 delay sweep), and a named object documents itself where a 5-tuple does not. `to_frame()`
+    gives the single continuous series the case format and `/v1/synthetic` need.
+
+28. **`edges` is a list of `(caller, callee)` tuples, not a `CallGraph`.**
+    Reason: `graph.py` is M1.4, after this task. Rather than reorder milestones or write a throwaway
+    graph class, M1.2 returns plain pairs and `CallGraph.from_edges(edges)` consumes them from M1.4
+    onward. The E6 graph-quality variants (drop 20 percent of edges, add 20 percent wrong ones, no
+    graph) work directly on an edge list anyway.
+
+29. **Two-pass construction with the random draws made once.** Pass one builds the series with no
+    fault, only to measure each column's normal standard deviation; pass two rebuilds with the fault
+    using the identical noise arrays.
+    Reason: fault sizes are multiples of a column's normal spread, but the fault also has to flow up
+    the graph, so the spread has to be measured before it is applied. Reusing the draws is what makes
+    a seed reproduce bit for bit.
+
+30. **The example figure defaults to a latency fault, not the memory fault.**
+    Reason: honesty. With `--fault mem` the callers barely move on the chart, for the reason in open
+    question 4. The latency figure shows what the generator genuinely does - cause jumps, caller
+    follows, unrelated service flat. The memory version is still one flag away.
+
 ### Order of work
 
 17. **Normal order: research first.** M0 -> M1 -> M2 ... The "application early" shortcut in
@@ -285,6 +389,43 @@ written into the spec files. One line of reason each.
 - Files changed:
 - Left open / next:
 -->
+
+### 2026-10-03 - M1.2 - synthetic generator, and a problem with the model it implements
+- What was done: `pare/synthetic.py` with `make_case()` and `SyntheticCase`,
+  `analyzer/scripts/make_synthetic_example.py`, and the generated
+  `paper/figures/synthetic_example.png`. Choices are decisions 26 to 30 above. The generator follows
+  `05` section 5, including the agreed change that a memory fault also raises the culprit's own
+  latency so it can reach callers.
+- **What needs the human: the model cannot produce the cause-versus-symptom confusion the paper is
+  about.** Written up as open question 3, with the measurements and the algebra. In short, a caller's
+  robust-z can never exceed the culprit's under a linear propagation sum, so marginal scoring is
+  already near-perfect (30/30 latency cases, 28/30 memory cases) and E6 as designed would show PARE
+  adding nothing. Measured over 200 cases: the caller-to-culprit z ratio peaked at 0.973 and averaged
+  0.591. The proposed fix is a non-linear congestion term with an `amplification` factor that
+  defaults to today's behaviour; it is not applied, because it changes the research model.
+  Open question 4 records a second, smaller issue: a memory fault's median deviation is about 1.9
+  stds, below the 3.0 `min_cause_score`, because the ramp only reaches full size at the last row.
+- How it was tested (commands + result):
+  - `pytest -q` -> **102 passed** (56 new) in 0.63 s. `ruff check .` -> clean.
+  - The new tests cover shape and naming, that a seed reproduces bit for bit and different seeds do
+    not, that the graph really is a tree rooted at `frontend` with no cycles, that each of the four
+    faults is visible in its ground-truth column, that the normal rows stay clean so splitting them
+    for training is safe, and that ground truth never appears as a data column.
+  - Propagation has its own tests because E6 depends on it: the fault reaches the callers and not
+    unrelated services; every fault type including `mem` and `cpu` reaches a caller; stronger
+    propagation moves the caller more; `propagation=0` keeps the fault put while the culprit stays
+    clearly broken; `frontend` as culprit has nothing to propagate to.
+  - All sixteen corners of the E6 grid (4 faults x n_services 5 and 40 x propagation 0.2 and 1.0)
+    build finite, usable cases.
+  - Beyond the tests, two diagnostics were run to check the generator behaves as intended rather
+    than merely passing its own assertions. They are what turned up open questions 3 and 4.
+- Files changed: new `analyzer/pare/synthetic.py`, `analyzer/scripts/make_synthetic_example.py`,
+  `analyzer/tests/test_synthetic.py`, `paper/figures/synthetic_example.png`;
+  `docs/05_PYTHON_ANALYZER_SPEC.md` (section 5: the memory latency term and why, the two-pass
+  construction, what `make_case` returns), `docs/07_TASKS.md` (M1.2 ticked), `PROGRESS.md`.
+- Left open / next: M1.3 (`scores.py`), which is unaffected by open question 3. That question should
+  be settled before M1.7 builds the engines and M1.10 runs the synthetic check, because it decides
+  what that check can possibly show.
 
 ### 2026-10-03 - M1.1 - pare package skeleton, PareConfig and ColumnInfo
 - What was done: the first real code. `analyzer/pyproject.toml` (package `pare`, `[dev]` extra with
