@@ -3,6 +3,9 @@
 Update this file at the end of every task. Newest entry at the top of "Log".
 Human: read this before every session to know where things stand.
 
+Order of this file: what is happening now, then the log of what was done (newest first), then
+anything waiting on you, then the machine setup and the full list of decisions as reference.
+
 ## Current status
 - Current milestone: M1 (Python PARE core)
 - Next task: M1.3 (`scores.py` + tests)
@@ -10,45 +13,195 @@ Human: read this before every session to know where things stand.
   synthetic generator as specified cannot produce the cause-versus-symptom confusion the paper is
   about. M1.3 to M1.6 are unaffected and can proceed either way.
 
-## Environment (measured 2026-10-03)
+## Log
+<!-- Template for each entry:
+### YYYY-MM-DD - Task Mx.y - short title
+- What was done:
+- How it was tested (commands + result):
+- Files changed:
+- Left open / next:
+-->
 
-Everything below was read off this machine, not assumed.
+### 2026-10-03 - M1.2 - synthetic generator, and a problem with the model it implements
+- What was done: `pare/synthetic.py` with `make_case()` and `SyntheticCase`,
+  `analyzer/scripts/make_synthetic_example.py`, and the generated
+  `paper/figures/synthetic_example.png`. Choices are decisions 26 to 30 below. The generator follows
+  `05` section 5, including the agreed change that a memory fault also raises the culprit's own
+  latency so it can reach callers.
+- **What needs the human: the model cannot produce the cause-versus-symptom confusion the paper is
+  about.** Written up as open question 3, with the measurements and the algebra. In short, a caller's
+  robust-z can never exceed the culprit's under a linear propagation sum, so marginal scoring is
+  already near-perfect (30/30 latency cases, 28/30 memory cases) and E6 as designed would show PARE
+  adding nothing. Measured over 200 cases: the caller-to-culprit z ratio peaked at 0.973 and averaged
+  0.591. The proposed fix is a non-linear congestion term with an `amplification` factor that
+  defaults to today's behaviour; it is not applied, because it changes the research model.
+  Open question 4 records a second, smaller issue: a memory fault's median deviation is about 1.9
+  stds, below the 3.0 `min_cause_score`, because the ramp only reaches full size at the last row.
+- How it was tested (commands + result):
+  - `pytest -q` -> **102 passed** (56 new) in 0.63 s. `ruff check .` -> clean.
+  - The new tests cover shape and naming, that a seed reproduces bit for bit and different seeds do
+    not, that the graph really is a tree rooted at `frontend` with no cycles, that each of the four
+    faults is visible in its ground-truth column, that the normal rows stay clean so splitting them
+    for training is safe, and that ground truth never appears as a data column.
+  - Propagation has its own tests because E6 depends on it: the fault reaches the callers and not
+    unrelated services; every fault type including `mem` and `cpu` reaches a caller; stronger
+    propagation moves the caller more; `propagation=0` keeps the fault put while the culprit stays
+    clearly broken; `frontend` as culprit has nothing to propagate to.
+  - All sixteen corners of the E6 grid (4 faults x n_services 5 and 40 x propagation 0.2 and 1.0)
+    build finite, usable cases.
+  - Beyond the tests, two diagnostics were run to check the generator behaves as intended rather
+    than merely passing its own assertions. They are what turned up open questions 3 and 4.
+- Files changed: new `analyzer/pare/synthetic.py`, `analyzer/scripts/make_synthetic_example.py`,
+  `analyzer/tests/test_synthetic.py`, `paper/figures/synthetic_example.png`;
+  `docs/05_PYTHON_ANALYZER_SPEC.md` (section 5: the memory latency term and why, the two-pass
+  construction, what `make_case` returns), `docs/07_TASKS.md` (M1.2 ticked), `PROGRESS.md`.
+- Left open / next: M1.3 (`scores.py`), which is unaffected by open question 3. That question should
+  be settled before M1.7 builds the engines and M1.10 runs the synthetic check, because it decides
+  what that check can possibly show.
 
-| Thing | Status |
-|---|---|
-| OS | Windows 11 Home Single Language, 10.0.26200 |
-| CPU | 12th Gen Intel Core i5-1235U, 10 cores / 12 threads (no GPU used) |
-| RAM | 15.7 GB total |
-| Disk C: | 24.4 GB free of 237.7 GB (re-measured 2026-10-03 after the venv install; an earlier reading of 11.7 GB was taken before about 13 GB was freed on the machine) |
-| Java | 21.0.12.1 LTS (Oracle), `C:\Program Files\Java\jdk-21.0.12.1`; `javac` 21.0.12.1 |
-| JAVA_HOME | set to the path above on 2026-10-03 (it was empty) |
-| Maven | **not installed, and deliberately not going to be** - we use the Maven Wrapper, see decision 18 |
-| Python | **3.10.20** installed 2026-10-03 with `uv python install 3.10`, at `C:\Users\hp\AppData\Roaming\uv\python\cpython-3.10.20-windows-x86_64-none`. The pre-existing system 3.14.4 is untouched and is not used by this project |
-| Project venv | `analyzer/.venv` on 3.10.20, 644 MB, git-ignored. Created with `uv venv analyzer/.venv --python 3.10` |
-| uv | 0.11.20 |
-| Node / npm | 24.15.0 / 11.12.1 |
-| Git | 2.54.0.windows.1 |
+### 2026-10-03 - M1.1 - pare package skeleton, PareConfig and ColumnInfo
+- What was done: the first real code. `analyzer/pyproject.toml` (package `pare`, `[dev]` extra with
+  pytest and ruff, ruff and pytest settings), `pare/__init__.py` holding `__version__` as the single
+  source of truth, `pare/config.py` with `PareConfig`, and `pare/columns.py` with `ColumnInfo` and
+  the lookup helpers the later steps need (`services`, `group_by_service`, `columns_of_service`,
+  `name_to_index`, `validate_columns`, `columns_from_dicts`). Choices and reasons are decisions 21
+  to 25 below. `pare/py.typed` marks the package as typed.
+  - `config.py` carries all 16 parameters from `05` section 1.1 with a one-line docstring each, the
+    validation rules, `with_changes()` for the ablations, and the camelCase conversion for the API.
+  - `columns.py` deliberately has no name-guessing helper, and says in its module docstring why.
+- How it was tested (commands + result):
+  - `pip install -e ".[dev]"` in `analyzer/` -> installs clean; `import pare` reports version 0.1.0
+    from the working tree, so the editable install works.
+  - `pytest -q` -> **46 passed** in 0.07 s.
+    - `test_config.py` copies the spec table from `05` section 1.1 and asserts every default against
+      it, and separately asserts that the set of fields in the code equals the set in the table. So a
+      default changed on one side without the other now fails the build instead of quietly changing
+      every number in the paper.
+    - Validation is checked with 14 parametrised bad values, plus the case that `cp_lookahead_s=0`
+      must be *allowed*, because 0 is exactly the replay situation.
+    - The API boundary is covered both ways, including that an unknown key raises and that
+      `from_api_params(to_api_params())` round-trips.
+    - `test_columns.py` covers duplicate rejection, that two services may share a metric name,
+      ordering guarantees, the name->index map used by every engine, and the JSON round trip.
+  - `ruff check .` -> clean. Two findings were fixed first: `Iterable`/`Mapping` now come from
+    `collections.abc`, and one error message was wrapped to stay inside 100 columns.
+- Files changed: new `analyzer/pyproject.toml`, `analyzer/pare/{__init__,config,columns}.py`,
+  `analyzer/pare/py.typed`, `analyzer/tests/{test_config,test_columns}.py`;
+  `docs/06_DATA_CONTRACTS.md` (section 3 now records how `params` keys are named, needed so the Java
+  client builds the same keys), `docs/07_TASKS.md` (M1.1 ticked), `PROGRESS.md`.
+- Left open / next: M1.2, the synthetic generator. Nothing from M1.2 onward was written. The
+  PyTorch question is still open and still only matters at M2.
 
-Python packages in the global 3.14 environment: `numpy 2.4.4`, `scipy 1.17.1`, `pyyaml`, `joblib`,
-`pytest`, `fastapi`, `uvicorn`, `pydantic` are present; **`pandas`, `scikit-learn`, `shap`,
-`lightgbm`, `ruptures`, `networkx`, `statsmodels`, `matplotlib`, `pyarrow` are missing**. That
-environment also holds ~190 unrelated packages (pipecat, google-genai, openai, playwright, boto3),
-so the project will use its own virtual environment regardless.
+### 2026-10-03 - M0.1 / M0.2 / M0.3 - project skeleton and working Python environment
+- What was done:
+  - Installed Python 3.10.20 with `uv python install 3.10` and created `analyzer/.venv` on it, then
+    installed the full analyzer stack into it (decisions 19 and 20).
+  - M0.1: created `analyzer/`, `experiments/`, `backend/`, `frontend/`, `scripts/` and `paper/`
+    (with `tables/`, `figures/`, `notes/`), each with a short README saying what it is and how to
+    run it. `paper/*` and `experiments/results/` carry a `.gitkeep` so git tracks the empty folders.
+    The git-ignored `data/cases`, `data/uploads`, `data/db` and `data/cache` were created with **no
+    README**, per decision 16; the layout is in the root `README.md` instead.
+  - M0.2: checked `.gitignore`. It already covered Java `target/`, Python `.venv/`/`__pycache__/`,
+    Node `node_modules/`/`dist/`, `data/` and `experiments/results/*`. No change needed.
+  - M0.3: filled in "Environment" below, and corrected the free-disk figure (24.4 GB, not the
+    11.7 GB measured earlier the same day).
+  - While the environment was fresh, checked the two library APIs that `docs/05` explicitly says not
+    to guess, and wrote the findings into that spec so nobody has to re-derive them.
+- How it was tested (commands + result):
+  - `uv python install 3.10` -> installed 3.10.20; `uv venv analyzer/.venv --python 3.10` ->
+    `analyzer/.venv/Scripts/python.exe --version` reports 3.10.20.
+  - `uv pip install ...` into that venv -> every package resolved to the version the earlier dry run
+    predicted, so the 3.10 decision is confirmed by a real install, not just by metadata.
+  - Smoke test run with the venv interpreter, all assertions passed:
+    - every one of the 17 required modules imports, versions printed above;
+    - **ruptures**: `Binseg(model="l2").fit(x).predict(n_bkps=1)` on a series with a step at index
+      100 returns `[100, 200]`. So the returned list ends with `len(x)` as a sentinel and the change
+      point is `bkps[0]`. Written into `docs/05` step 2.
+    - **shap**: `shap.TreeExplainer(IsolationForest).shap_values(X)` works in shap 0.49.1, returns
+      shape `(n_rows, n_columns)`, needs **no** `check_additivity=False`, and ranks a planted
+      single-column anomaly first. Written into `docs/05` section 4, replacing the "check whether it
+      is supported" caveat.
+    - `LGBMRegressor(n_estimators=100, max_depth=3)` fits and predicts (needed for M1.7b).
+    - `Ridge(alpha=1.0)` recovers coefficients 2, -1, 0 from data built with those coefficients.
+  - `git status` confirms `data/` and `analyzer/.venv` are ignored, and that
+    `experiments/results/.gitkeep` is trackable despite `results/*` being ignored.
+- Files changed: the new folders and their READMEs, `docs/07_TASKS.md` (M0.1 to M0.3 ticked),
+  `docs/05_PYTHON_ANALYZER_SPEC.md` (the two verified APIs), `PROGRESS.md`.
+- Left open / next: M1.1. Still waiting on the human for the PyTorch question, which first matters
+  at M2.
 
-Why Python 3.14 cannot be used for `analyzer/` (checked against PyPI, not guessed):
-- `ruptures` 1.1.10 declares `requires_python = <3.14,>=3.9` and ships Windows wheels for cp39-cp313
-  only. There is no cp314 wheel. Change-point detection is core to PARE.
-- `shap` 0.52.0 needs >= 3.12, but its only 3.14 artifact is a `cp314t` (free-threaded) manylinux
-  wheel. There is no Windows cp314 wheel.
-- `dowhy` also caps at `<3.14`.
+### 2026-10-03 - Environment check and build tooling - no code yet
+- What was done: checked every requirement in `PROJECT_RULES.md` section 4 against the actual machine and
+  recorded the result in "Environment" below. Java 21, Node 24.15.0, npm 11.12.1, git and uv are all
+  present and fine. Three gaps found: Maven missing, Python 3.10 missing (only 3.14, which this stack
+  cannot use), and the Python libraries not installed. Decided on the Maven Wrapper instead of a
+  system Maven (decision 18) and set `JAVA_HOME`, which was empty. Two findings need the human and
+  are written up under "Open questions": RCAEval's `default` extra requires PyTorch, and the disk has
+  only 11.7 GB free.
+- How it was tested (commands + result):
+  - `java -version` / `javac -version` -> 21.0.12.1 LTS; `node -v` -> v24.15.0; `npm -v` -> 11.12.1;
+    `git --version` -> 2.54.0; `uv --version` -> 0.11.20.
+  - `mvn -v` -> not found. Confirmed it is genuinely absent, not a stale PATH: no `mvn.cmd` anywhere
+    under `C:\`, Program Files, the user profile, LocalAppData or ProgramData; no `MAVEN_HOME` or
+    `M2_HOME`; the live registry PATH (machine and user) contains only the Oracle javapath entry.
+    `winget search Apache.Maven` -> no package.
+  - `py -0p` -> only 3.14 present; `py -3.10 --version` -> no suitable runtime.
+  - Package presence checked with `importlib.util.find_spec` in the 3.14 environment: pandas,
+    sklearn, shap, lightgbm, ruptures, networkx, statsmodels, matplotlib, pyarrow all missing.
+  - 3.14 incompatibility verified from PyPI metadata and wheel filenames, not from memory: ruptures
+    1.1.10 is capped `<3.14` with Windows wheels only up to cp313; shap 0.52.0 has no Windows cp314
+    wheel; dowhy is capped `<3.14`.
+  - `uv pip compile --python-version 3.10 --python-platform windows` on the full stack -> resolves
+    cleanly; the chosen versions are listed in "Environment".
+  - RCAEval metadata read from PyPI: 414 `requires_dist` entries, all behind the extras
+    `default` / `rcd` / `eventadl`; `default` requires `torch>=1.12.1`, `numpy<2`, `networkx==2.5`.
+  - `setx JAVA_HOME "C:\Program Files\Java\jdk-21.0.12.1"` -> verified by reading it back from
+    `HKCU:\Environment` and confirming `bin\java.exe` exists at that path.
+  - Nothing was installed. All of the above was read-only apart from setting `JAVA_HOME`.
+- Files changed: `PROJECT_RULES.md` (section 6 and definition of done now use `./mvnw`),
+  `docs/02_ARCHITECTURE.md` (run command), `docs/03_JAVA_BACKEND_SPEC.md` (section 1 explains the
+  wrapper and the M8.1 ordering constraint), `PROGRESS.md`.
+- Left open / next: the human's answer on the PyTorch question (not needed until M2) and on disk
+  space. Then `uv python install 3.10`, the `analyzer/` virtual environment, and M0.1 + M0.3.
 
-The whole stack does resolve cleanly for Python 3.10 on Windows (checked with
-`uv pip compile --python-version 3.10 --python-platform windows`): numpy 2.2.6, pandas 2.3.3,
-scikit-learn 1.7.2, scipy 1.15.3, shap 0.49.1, lightgbm 4.7.0, ruptures 1.1.10, networkx 3.4.2,
-statsmodels 0.15.0, matplotlib 3.10.9, pyarrow 25.0.1, fastapi 0.142.2, uvicorn 0.54.0,
-pydantic 2.13.5, pytest 9.1.1. So pip picks the last 3.10-compatible versions by itself and no
-pinning work is needed.
-
+### 2026-10-03 - Spec fixes after first review - no code yet
+- What was done: read `PROJECT_RULES.md`, `PROGRESS.md` and all nine files in `docs/`, reported 6
+  contradictions, 7 ambiguities and 4 smaller problems, and applied the human's rulings to the
+  specs. All 17 decisions are written up under "Decisions made" below. Changes by file:
+  - `PROJECT_RULES.md`, `README.md`: dropped the `HOW_TO_USE_THIS_KIT.md` references; the root README now
+    describes the `data/` layout and the `XAIRCA_DATA_DIR` variable.
+  - `docs/00_RESEARCH_PLAN.md`: symptom rate reworded to "ancestor (caller)"; PELT replaced by
+    Binseg as the implementation, PELT kept as an optional ablation.
+  - `docs/02_ARCHITECTURE.md`: replay baseline no longer described as "before the fault"; data
+    folder list extended.
+  - `docs/03_JAVA_BACKEND_SPEC.md`: env-var data dir and derived H2 URL; `baseline-rows: 300`
+    replacing `baseline-min-rows: 60`; detector no longer sees `injectTime`; `replayable` flag;
+    stated assumption about the normal window; fallback window and verdict; `NO_CLEAR_CAUSE`
+    headline; symptom template wording; `verdict` entity column; `NSIGMA_JAVA_FALLBACK` in
+    `/api/engines`; in-memory H2 for tests.
+  - `docs/04_REACT_FRONTEND_SPEC.md`: `NO_CLEAR_CAUSE` presentation (grey, no red, no cause
+    sentences); UPPERCASE fault types and noise levels in the lab.
+  - `docs/05_PYTHON_ANALYZER_SPEC.md`: new PareConfig parameter table (section 1.1); the one window
+    table; raw-unit `inheritedFraction`; verdict and strict role precedence; NSIGMA window rule;
+    noise and fault-name conversion at the service layer; two new tests.
+  - `docs/06_DATA_CONTRACTS.md`: UPPERCASE enum rule; `verdict` in the response; `topK` 10 and its
+    difference from `cpTopK`; uppercase synthetic request example; `faithfulness_auc` replaced by
+    `verdict` in `cases.csv` plus the new `faithfulness.csv` / `stability.csv` schemas.
+  - `docs/07_TASKS.md`: new M1.7b for `PARE_LGBM`; M1.7 now covers verdict and role precedence;
+    M0.1 says no README in `data/`.
+  - `docs/08_EXPERIMENTS_SPEC.md`: stated assumption about `inject_time` with the E3 no-`inject_time`
+    variant; E5 writes its own files; noise levels uppercased.
+- How it was tested: documentation only, so no build. Each edit was applied by a script that
+  requires an exact unique match for every replacement and fails otherwise, so no edit landed in the
+  wrong place. Afterwards `grep` confirmed zero remaining occurrences of `HOW_TO_USE`,
+  `faithfulness_auc`, `baseline-min-rows`, bare `NSIGMA_JAVA`, `"noise": "medium"`,
+  `"faultType": "latency"` and the old "downstream service" wording, and that `verdict` /
+  `NO_CLEAR_CAUSE` now appear in all five docs that need them. Config key names (`cp_lookback_s`)
+  were made consistent across `03`, `05` and `08`.
+- Files changed: `PROJECT_RULES.md`, `README.md`, `PROGRESS.md`, `docs/00` through `docs/08` (all except
+  `docs/01_PROJECT_OVERVIEW.md`, which needed nothing).
+- Left open / next: M0.1 (create the folder skeleton with short READMEs, no README in `data/`) and
+  M0.3 (fill in the Environment block) in one commit, then M1.1. No code written yet.
 ## Open questions (for the human)
 
 1. **RCAEval pulls PyTorch. Does hard rule 1 allow it inside the isolated venv?**
@@ -140,6 +293,51 @@ pinning work is needed.
 
 The 16 points raised in the first spec review were all answered on 2026-10-03 and are recorded
 under "Decisions made" below.
+
+## Things the human must check by hand
+- Static call graphs in experiments/graphs/*.yaml (M2.5)
+- Ground-truth indicator mapping for RCAEval (M2.2)
+- Whether the M1.10 synthetic check supports the cause-versus-symptom story (gate before M2)
+- Whether the first RE1 results in M3.2 support it on real data (gate before the application track)
+
+## Environment (measured 2026-10-03)
+
+Everything below was read off this machine, not assumed.
+
+| Thing | Status |
+|---|---|
+| OS | Windows 11 Home Single Language, 10.0.26200 |
+| CPU | 12th Gen Intel Core i5-1235U, 10 cores / 12 threads (no GPU used) |
+| RAM | 15.7 GB total |
+| Disk C: | 24.4 GB free of 237.7 GB (re-measured 2026-10-03 after the venv install; an earlier reading of 11.7 GB was taken before about 13 GB was freed on the machine) |
+| Java | 21.0.12.1 LTS (Oracle), `C:\Program Files\Java\jdk-21.0.12.1`; `javac` 21.0.12.1 |
+| JAVA_HOME | set to the path above on 2026-10-03 (it was empty) |
+| Maven | **not installed, and deliberately not going to be** - we use the Maven Wrapper, see decision 18 |
+| Python | **3.10.20** installed 2026-10-03 with `uv python install 3.10`, at `C:\Users\hp\AppData\Roaming\uv\python\cpython-3.10.20-windows-x86_64-none`. The pre-existing system 3.14.4 is untouched and is not used by this project |
+| Project venv | `analyzer/.venv` on 3.10.20, 644 MB, git-ignored. Created with `uv venv analyzer/.venv --python 3.10` |
+| uv | 0.11.20 |
+| Node / npm | 24.15.0 / 11.12.1 |
+| Git | 2.54.0.windows.1 |
+
+Python packages in the global 3.14 environment: `numpy 2.4.4`, `scipy 1.17.1`, `pyyaml`, `joblib`,
+`pytest`, `fastapi`, `uvicorn`, `pydantic` are present; **`pandas`, `scikit-learn`, `shap`,
+`lightgbm`, `ruptures`, `networkx`, `statsmodels`, `matplotlib`, `pyarrow` are missing**. That
+environment also holds ~190 unrelated packages (pipecat, google-genai, openai, playwright, boto3),
+so the project will use its own virtual environment regardless.
+
+Why Python 3.14 cannot be used for `analyzer/` (checked against PyPI, not guessed):
+- `ruptures` 1.1.10 declares `requires_python = <3.14,>=3.9` and ships Windows wheels for cp39-cp313
+  only. There is no cp314 wheel. Change-point detection is core to PARE.
+- `shap` 0.52.0 needs >= 3.12, but its only 3.14 artifact is a `cp314t` (free-threaded) manylinux
+  wheel. There is no Windows cp314 wheel.
+- `dowhy` also caps at `<3.14`.
+
+The whole stack does resolve cleanly for Python 3.10 on Windows (checked with
+`uv pip compile --python-version 3.10 --python-platform windows`): numpy 2.2.6, pandas 2.3.3,
+scikit-learn 1.7.2, scipy 1.15.3, shap 0.49.1, lightgbm 4.7.0, ruptures 1.1.10, networkx 3.4.2,
+statsmodels 0.15.0, matplotlib 3.10.9, pyarrow 25.0.1, fastapi 0.142.2, uvicorn 0.54.0,
+pydantic 2.13.5, pytest 9.1.1. So pip picks the last 3.10-compatible versions by itself and no
+pinning work is needed.
 
 ## Decisions made
 
@@ -317,7 +515,7 @@ written into the spec files. One line of reason each.
     Reason: the cap is the valuable part, because it encodes the ruptures/shap/dowhy problem and
     makes a wrong-interpreter install fail immediately with a clear message. Exact pins would fight
     pip on any other machine for no benefit; the exact verified versions are recorded in
-    "Environment" above, which is what reproducibility actually needs.
+    "Environment" below, which is what reproducibility actually needs.
 
 24. **No `guess_from_name` helper in `pare.columns`.**
     Reason: `05` section 2 forbids the algorithm parsing column names. Guessing is still needed, but
@@ -375,198 +573,3 @@ written into the spec files. One line of reason each.
     support the cause-versus-symptom story, we need to know that **before** building an application
     around it. So M1.10 and M3.2 are explicit stop-and-report gates.
 
-## Things the human must check by hand
-- Static call graphs in experiments/graphs/*.yaml (M2.5)
-- Ground-truth indicator mapping for RCAEval (M2.2)
-- Whether the M1.10 synthetic check supports the cause-versus-symptom story (gate before M2)
-- Whether the first RE1 results in M3.2 support it on real data (gate before the application track)
-
-## Log
-<!-- Template for each entry:
-### YYYY-MM-DD - Task Mx.y - short title
-- What was done:
-- How it was tested (commands + result):
-- Files changed:
-- Left open / next:
--->
-
-### 2026-10-03 - M1.2 - synthetic generator, and a problem with the model it implements
-- What was done: `pare/synthetic.py` with `make_case()` and `SyntheticCase`,
-  `analyzer/scripts/make_synthetic_example.py`, and the generated
-  `paper/figures/synthetic_example.png`. Choices are decisions 26 to 30 above. The generator follows
-  `05` section 5, including the agreed change that a memory fault also raises the culprit's own
-  latency so it can reach callers.
-- **What needs the human: the model cannot produce the cause-versus-symptom confusion the paper is
-  about.** Written up as open question 3, with the measurements and the algebra. In short, a caller's
-  robust-z can never exceed the culprit's under a linear propagation sum, so marginal scoring is
-  already near-perfect (30/30 latency cases, 28/30 memory cases) and E6 as designed would show PARE
-  adding nothing. Measured over 200 cases: the caller-to-culprit z ratio peaked at 0.973 and averaged
-  0.591. The proposed fix is a non-linear congestion term with an `amplification` factor that
-  defaults to today's behaviour; it is not applied, because it changes the research model.
-  Open question 4 records a second, smaller issue: a memory fault's median deviation is about 1.9
-  stds, below the 3.0 `min_cause_score`, because the ramp only reaches full size at the last row.
-- How it was tested (commands + result):
-  - `pytest -q` -> **102 passed** (56 new) in 0.63 s. `ruff check .` -> clean.
-  - The new tests cover shape and naming, that a seed reproduces bit for bit and different seeds do
-    not, that the graph really is a tree rooted at `frontend` with no cycles, that each of the four
-    faults is visible in its ground-truth column, that the normal rows stay clean so splitting them
-    for training is safe, and that ground truth never appears as a data column.
-  - Propagation has its own tests because E6 depends on it: the fault reaches the callers and not
-    unrelated services; every fault type including `mem` and `cpu` reaches a caller; stronger
-    propagation moves the caller more; `propagation=0` keeps the fault put while the culprit stays
-    clearly broken; `frontend` as culprit has nothing to propagate to.
-  - All sixteen corners of the E6 grid (4 faults x n_services 5 and 40 x propagation 0.2 and 1.0)
-    build finite, usable cases.
-  - Beyond the tests, two diagnostics were run to check the generator behaves as intended rather
-    than merely passing its own assertions. They are what turned up open questions 3 and 4.
-- Files changed: new `analyzer/pare/synthetic.py`, `analyzer/scripts/make_synthetic_example.py`,
-  `analyzer/tests/test_synthetic.py`, `paper/figures/synthetic_example.png`;
-  `docs/05_PYTHON_ANALYZER_SPEC.md` (section 5: the memory latency term and why, the two-pass
-  construction, what `make_case` returns), `docs/07_TASKS.md` (M1.2 ticked), `PROGRESS.md`.
-- Left open / next: M1.3 (`scores.py`), which is unaffected by open question 3. That question should
-  be settled before M1.7 builds the engines and M1.10 runs the synthetic check, because it decides
-  what that check can possibly show.
-
-### 2026-10-03 - M1.1 - pare package skeleton, PareConfig and ColumnInfo
-- What was done: the first real code. `analyzer/pyproject.toml` (package `pare`, `[dev]` extra with
-  pytest and ruff, ruff and pytest settings), `pare/__init__.py` holding `__version__` as the single
-  source of truth, `pare/config.py` with `PareConfig`, and `pare/columns.py` with `ColumnInfo` and
-  the lookup helpers the later steps need (`services`, `group_by_service`, `columns_of_service`,
-  `name_to_index`, `validate_columns`, `columns_from_dicts`). Choices and reasons are decisions 21
-  to 25 above. `pare/py.typed` marks the package as typed.
-  - `config.py` carries all 16 parameters from `05` section 1.1 with a one-line docstring each, the
-    validation rules, `with_changes()` for the ablations, and the camelCase conversion for the API.
-  - `columns.py` deliberately has no name-guessing helper, and says in its module docstring why.
-- How it was tested (commands + result):
-  - `pip install -e ".[dev]"` in `analyzer/` -> installs clean; `import pare` reports version 0.1.0
-    from the working tree, so the editable install works.
-  - `pytest -q` -> **46 passed** in 0.07 s.
-    - `test_config.py` copies the spec table from `05` section 1.1 and asserts every default against
-      it, and separately asserts that the set of fields in the code equals the set in the table. So a
-      default changed on one side without the other now fails the build instead of quietly changing
-      every number in the paper.
-    - Validation is checked with 14 parametrised bad values, plus the case that `cp_lookahead_s=0`
-      must be *allowed*, because 0 is exactly the replay situation.
-    - The API boundary is covered both ways, including that an unknown key raises and that
-      `from_api_params(to_api_params())` round-trips.
-    - `test_columns.py` covers duplicate rejection, that two services may share a metric name,
-      ordering guarantees, the name->index map used by every engine, and the JSON round trip.
-  - `ruff check .` -> clean. Two findings were fixed first: `Iterable`/`Mapping` now come from
-    `collections.abc`, and one error message was wrapped to stay inside 100 columns.
-- Files changed: new `analyzer/pyproject.toml`, `analyzer/pare/{__init__,config,columns}.py`,
-  `analyzer/pare/py.typed`, `analyzer/tests/{test_config,test_columns}.py`;
-  `docs/06_DATA_CONTRACTS.md` (section 3 now records how `params` keys are named, needed so the Java
-  client builds the same keys), `docs/07_TASKS.md` (M1.1 ticked), `PROGRESS.md`.
-- Left open / next: M1.2, the synthetic generator. Nothing from M1.2 onward was written. The
-  PyTorch question is still open and still only matters at M2.
-
-### 2026-10-03 - M0.1 / M0.2 / M0.3 - project skeleton and working Python environment
-- What was done:
-  - Installed Python 3.10.20 with `uv python install 3.10` and created `analyzer/.venv` on it, then
-    installed the full analyzer stack into it (decisions 19 and 20).
-  - M0.1: created `analyzer/`, `experiments/`, `backend/`, `frontend/`, `scripts/` and `paper/`
-    (with `tables/`, `figures/`, `notes/`), each with a short README saying what it is and how to
-    run it. `paper/*` and `experiments/results/` carry a `.gitkeep` so git tracks the empty folders.
-    The git-ignored `data/cases`, `data/uploads`, `data/db` and `data/cache` were created with **no
-    README**, per decision 16; the layout is in the root `README.md` instead.
-  - M0.2: checked `.gitignore`. It already covered Java `target/`, Python `.venv/`/`__pycache__/`,
-    Node `node_modules/`/`dist/`, `data/` and `experiments/results/*`. No change needed.
-  - M0.3: filled in "Environment" above, and corrected the free-disk figure (24.4 GB, not the
-    11.7 GB measured earlier the same day).
-  - While the environment was fresh, checked the two library APIs that `docs/05` explicitly says not
-    to guess, and wrote the findings into that spec so nobody has to re-derive them.
-- How it was tested (commands + result):
-  - `uv python install 3.10` -> installed 3.10.20; `uv venv analyzer/.venv --python 3.10` ->
-    `analyzer/.venv/Scripts/python.exe --version` reports 3.10.20.
-  - `uv pip install ...` into that venv -> every package resolved to the version the earlier dry run
-    predicted, so the 3.10 decision is confirmed by a real install, not just by metadata.
-  - Smoke test run with the venv interpreter, all assertions passed:
-    - every one of the 17 required modules imports, versions printed above;
-    - **ruptures**: `Binseg(model="l2").fit(x).predict(n_bkps=1)` on a series with a step at index
-      100 returns `[100, 200]`. So the returned list ends with `len(x)` as a sentinel and the change
-      point is `bkps[0]`. Written into `docs/05` step 2.
-    - **shap**: `shap.TreeExplainer(IsolationForest).shap_values(X)` works in shap 0.49.1, returns
-      shape `(n_rows, n_columns)`, needs **no** `check_additivity=False`, and ranks a planted
-      single-column anomaly first. Written into `docs/05` section 4, replacing the "check whether it
-      is supported" caveat.
-    - `LGBMRegressor(n_estimators=100, max_depth=3)` fits and predicts (needed for M1.7b).
-    - `Ridge(alpha=1.0)` recovers coefficients 2, -1, 0 from data built with those coefficients.
-  - `git status` confirms `data/` and `analyzer/.venv` are ignored, and that
-    `experiments/results/.gitkeep` is trackable despite `results/*` being ignored.
-- Files changed: the new folders and their READMEs, `docs/07_TASKS.md` (M0.1 to M0.3 ticked),
-  `docs/05_PYTHON_ANALYZER_SPEC.md` (the two verified APIs), `PROGRESS.md`.
-- Left open / next: M1.1. Still waiting on the human for the PyTorch question, which first matters
-  at M2.
-
-### 2026-10-03 - Environment check and build tooling - no code yet
-- What was done: checked every requirement in `PROJECT_RULES.md` section 4 against the actual machine and
-  recorded the result in "Environment" above. Java 21, Node 24.15.0, npm 11.12.1, git and uv are all
-  present and fine. Three gaps found: Maven missing, Python 3.10 missing (only 3.14, which this stack
-  cannot use), and the Python libraries not installed. Decided on the Maven Wrapper instead of a
-  system Maven (decision 18) and set `JAVA_HOME`, which was empty. Two findings need the human and
-  are written up under "Open questions": RCAEval's `default` extra requires PyTorch, and the disk has
-  only 11.7 GB free.
-- How it was tested (commands + result):
-  - `java -version` / `javac -version` -> 21.0.12.1 LTS; `node -v` -> v24.15.0; `npm -v` -> 11.12.1;
-    `git --version` -> 2.54.0; `uv --version` -> 0.11.20.
-  - `mvn -v` -> not found. Confirmed it is genuinely absent, not a stale PATH: no `mvn.cmd` anywhere
-    under `C:\`, Program Files, the user profile, LocalAppData or ProgramData; no `MAVEN_HOME` or
-    `M2_HOME`; the live registry PATH (machine and user) contains only the Oracle javapath entry.
-    `winget search Apache.Maven` -> no package.
-  - `py -0p` -> only 3.14 present; `py -3.10 --version` -> no suitable runtime.
-  - Package presence checked with `importlib.util.find_spec` in the 3.14 environment: pandas,
-    sklearn, shap, lightgbm, ruptures, networkx, statsmodels, matplotlib, pyarrow all missing.
-  - 3.14 incompatibility verified from PyPI metadata and wheel filenames, not from memory: ruptures
-    1.1.10 is capped `<3.14` with Windows wheels only up to cp313; shap 0.52.0 has no Windows cp314
-    wheel; dowhy is capped `<3.14`.
-  - `uv pip compile --python-version 3.10 --python-platform windows` on the full stack -> resolves
-    cleanly; the chosen versions are listed in "Environment".
-  - RCAEval metadata read from PyPI: 414 `requires_dist` entries, all behind the extras
-    `default` / `rcd` / `eventadl`; `default` requires `torch>=1.12.1`, `numpy<2`, `networkx==2.5`.
-  - `setx JAVA_HOME "C:\Program Files\Java\jdk-21.0.12.1"` -> verified by reading it back from
-    `HKCU:\Environment` and confirming `bin\java.exe` exists at that path.
-  - Nothing was installed. All of the above was read-only apart from setting `JAVA_HOME`.
-- Files changed: `PROJECT_RULES.md` (section 6 and definition of done now use `./mvnw`),
-  `docs/02_ARCHITECTURE.md` (run command), `docs/03_JAVA_BACKEND_SPEC.md` (section 1 explains the
-  wrapper and the M8.1 ordering constraint), `PROGRESS.md`.
-- Left open / next: the human's answer on the PyTorch question (not needed until M2) and on disk
-  space. Then `uv python install 3.10`, the `analyzer/` virtual environment, and M0.1 + M0.3.
-
-### 2026-10-03 - Spec fixes after first review - no code yet
-- What was done: read `PROJECT_RULES.md`, `PROGRESS.md` and all nine files in `docs/`, reported 6
-  contradictions, 7 ambiguities and 4 smaller problems, and applied the human's rulings to the
-  specs. All 17 decisions are written up under "Decisions made" above. Changes by file:
-  - `PROJECT_RULES.md`, `README.md`: dropped the `HOW_TO_USE_THIS_KIT.md` references; the root README now
-    describes the `data/` layout and the `XAIRCA_DATA_DIR` variable.
-  - `docs/00_RESEARCH_PLAN.md`: symptom rate reworded to "ancestor (caller)"; PELT replaced by
-    Binseg as the implementation, PELT kept as an optional ablation.
-  - `docs/02_ARCHITECTURE.md`: replay baseline no longer described as "before the fault"; data
-    folder list extended.
-  - `docs/03_JAVA_BACKEND_SPEC.md`: env-var data dir and derived H2 URL; `baseline-rows: 300`
-    replacing `baseline-min-rows: 60`; detector no longer sees `injectTime`; `replayable` flag;
-    stated assumption about the normal window; fallback window and verdict; `NO_CLEAR_CAUSE`
-    headline; symptom template wording; `verdict` entity column; `NSIGMA_JAVA_FALLBACK` in
-    `/api/engines`; in-memory H2 for tests.
-  - `docs/04_REACT_FRONTEND_SPEC.md`: `NO_CLEAR_CAUSE` presentation (grey, no red, no cause
-    sentences); UPPERCASE fault types and noise levels in the lab.
-  - `docs/05_PYTHON_ANALYZER_SPEC.md`: new PareConfig parameter table (section 1.1); the one window
-    table; raw-unit `inheritedFraction`; verdict and strict role precedence; NSIGMA window rule;
-    noise and fault-name conversion at the service layer; two new tests.
-  - `docs/06_DATA_CONTRACTS.md`: UPPERCASE enum rule; `verdict` in the response; `topK` 10 and its
-    difference from `cpTopK`; uppercase synthetic request example; `faithfulness_auc` replaced by
-    `verdict` in `cases.csv` plus the new `faithfulness.csv` / `stability.csv` schemas.
-  - `docs/07_TASKS.md`: new M1.7b for `PARE_LGBM`; M1.7 now covers verdict and role precedence;
-    M0.1 says no README in `data/`.
-  - `docs/08_EXPERIMENTS_SPEC.md`: stated assumption about `inject_time` with the E3 no-`inject_time`
-    variant; E5 writes its own files; noise levels uppercased.
-- How it was tested: documentation only, so no build. Each edit was applied by a script that
-  requires an exact unique match for every replacement and fails otherwise, so no edit landed in the
-  wrong place. Afterwards `grep` confirmed zero remaining occurrences of `HOW_TO_USE`,
-  `faithfulness_auc`, `baseline-min-rows`, bare `NSIGMA_JAVA`, `"noise": "medium"`,
-  `"faultType": "latency"` and the old "downstream service" wording, and that `verdict` /
-  `NO_CLEAR_CAUSE` now appear in all five docs that need them. Config key names (`cp_lookback_s`)
-  were made consistent across `03`, `05` and `08`.
-- Files changed: `PROJECT_RULES.md`, `README.md`, `PROGRESS.md`, `docs/00` through `docs/08` (all except
-  `docs/01_PROJECT_OVERVIEW.md`, which needed nothing).
-- Left open / next: M0.1 (create the folder skeleton with short READMEs, no README in `data/`) and
-  M0.3 (fill in the Environment block) in one commit, then M1.1. No code written yet.
