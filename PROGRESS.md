@@ -4,10 +4,9 @@ Update this file at the end of every task. Newest entry at the top of "Log".
 Human: read this before every session to know where things stand.
 
 ## Current status
-- Current milestone: M0
-- Next task: M0.1 (then M0.3 in the same commit), then M1.1 onward
-- Blockers: none for M0.1. Before M1.1 we need Python 3.10 installed (`uv python install 3.10`)
-  and a project virtual environment; see "Environment" for why 3.14 will not work.
+- Current milestone: M0 done
+- Next task: M1.1 (`analyzer/pyproject.toml`, package `pare`, `config.py`, `columns.py`)
+- Blockers: none. The Python 3.10 environment exists and its libraries are verified working.
 
 ## Environment (measured 2026-10-03)
 
@@ -18,12 +17,13 @@ Everything below was read off this machine, not assumed.
 | OS | Windows 11 Home Single Language, 10.0.26200 |
 | CPU | 12th Gen Intel Core i5-1235U, 10 cores / 12 threads (no GPU used) |
 | RAM | 15.7 GB total |
-| Disk C: | **11.7 GB free of 237.7 GB - the tightest resource we have** |
+| Disk C: | 24.4 GB free of 237.7 GB (re-measured 2026-10-03 after the venv install; an earlier reading of 11.7 GB was taken before about 13 GB was freed on the machine) |
 | Java | 21.0.12.1 LTS (Oracle), `C:\Program Files\Java\jdk-21.0.12.1`; `javac` 21.0.12.1 |
 | JAVA_HOME | set to the path above on 2026-10-03 (it was empty) |
 | Maven | **not installed, and deliberately not going to be** - we use the Maven Wrapper, see decision 18 |
-| Python | 3.14.4 only, at `C:\Users\hp\AppData\Local\Programs\Python\Python314`. **3.10 is not installed yet and is required** |
-| uv | 0.11.20 - this is how Python 3.10 will be installed (`uv python install 3.10`) |
+| Python | **3.10.20** installed 2026-10-03 with `uv python install 3.10`, at `C:\Users\hp\AppData\Roaming\uv\python\cpython-3.10.20-windows-x86_64-none`. The pre-existing system 3.14.4 is untouched and is not used by this project |
+| Project venv | `analyzer/.venv` on 3.10.20, 644 MB, git-ignored. Created with `uv venv analyzer/.venv --python 3.10` |
+| uv | 0.11.20 |
 | Node / npm | 24.15.0 / 11.12.1 |
 | Git | 2.54.0.windows.1 |
 
@@ -62,11 +62,11 @@ pinning work is needed.
      allowed in the isolated baseline venv and nowhere else. Needs the human's yes before M2.
    - Not blocking anything before M2.
 
-2. **Disk space.** 11.7 GB free. Maven's `~/.m2` (300-500 MB once Spring Boot, JPA, H2 and springdoc
-   are pulled), the two Python venvs, torch, and the RCAEval RE1/RE2/RE3 downloads all land on C:.
-   RE2 and RE3 carry logs and traces and are the big ones. Worth freeing space or planning to keep
+2. **Disk space** (less urgent than first reported). Now 24.4 GB free, not the 11.7 GB measured
+   earlier that day. Still worth planning: `analyzer/.venv` already takes 644 MB, and the RCAEval
+   RE2/RE3 downloads with their logs and traces plus torch are the big items still to come. Keeping
    only one RCAEval system on disk at a time (which `08_EXPERIMENTS_SPEC.md` section 2 already
-   suggests for memory reasons).
+   suggests for memory reasons) should be enough.
 
 The 16 points raised in the first spec review were all answered on 2026-10-03 and are recorded
 under "Decisions made" below.
@@ -207,6 +207,26 @@ written into the spec files. One line of reason each.
     `C:\Program Files\Java\jdk-21.0.12.1` (user-level), because some IDE Java tooling expects it
     even though the wrapper copes without it.
 
+### Python environment
+
+19. **Python 3.10.20 via `uv`, with the project venv at `analyzer/.venv`.** The system Python 3.14.4
+    stays untouched and unused by this project.
+    Reason: 3.14 cannot run the stack (see "Environment" for the wheel evidence), and `uv` installs
+    a private 3.10 without admin rights, without touching PATH, and without disturbing the existing
+    interpreter. `analyzer/.venv` sits next to the package it serves and is already covered by
+    `.gitignore`.
+
+20. **The analyzer libraries were installed now, one milestone before M1.1 declares them.**
+    Installed and verified: numpy 2.2.6, pandas 2.3.3, scikit-learn 1.7.2, scipy 1.15.3,
+    shap 0.49.1, lightgbm 4.7.0, ruptures 1.1.10, networkx 3.4.2, statsmodels 0.15.0,
+    matplotlib 3.10.9, pyarrow 25.0.1, fastapi 0.142.2, uvicorn 0.54.0, pydantic 2.13.5,
+    pytest 9.1.1, pyyaml 6.0.3, joblib 1.6.0, ruff 0.16.10 - exactly the versions the dry-run
+    resolution predicted.
+    Reason: it turns "the stack should work on 3.10" into a checked fact before we write code
+    against it. M1.1 will declare these same packages in `analyzer/pyproject.toml`, where
+    `pip install -e ".[dev]"` then finds them already satisfied. If a version here disagrees with
+    what M1.1 pins, M1.1's pyproject wins.
+
 ### Order of work
 
 17. **Normal order: research first.** M0 -> M1 -> M2 ... The "application early" shortcut in
@@ -229,6 +249,44 @@ written into the spec files. One line of reason each.
 - Files changed:
 - Left open / next:
 -->
+
+### 2026-10-03 - M0.1 / M0.2 / M0.3 - project skeleton and working Python environment
+- What was done:
+  - Installed Python 3.10.20 with `uv python install 3.10` and created `analyzer/.venv` on it, then
+    installed the full analyzer stack into it (decisions 19 and 20).
+  - M0.1: created `analyzer/`, `experiments/`, `backend/`, `frontend/`, `scripts/` and `paper/`
+    (with `tables/`, `figures/`, `notes/`), each with a short README saying what it is and how to
+    run it. `paper/*` and `experiments/results/` carry a `.gitkeep` so git tracks the empty folders.
+    The git-ignored `data/cases`, `data/uploads`, `data/db` and `data/cache` were created with **no
+    README**, per decision 16; the layout is in the root `README.md` instead.
+  - M0.2: checked `.gitignore`. It already covered Java `target/`, Python `.venv/`/`__pycache__/`,
+    Node `node_modules/`/`dist/`, `data/` and `experiments/results/*`. No change needed.
+  - M0.3: filled in "Environment" above, and corrected the free-disk figure (24.4 GB, not the
+    11.7 GB measured earlier the same day).
+  - While the environment was fresh, checked the two library APIs that `docs/05` explicitly says not
+    to guess, and wrote the findings into that spec so nobody has to re-derive them.
+- How it was tested (commands + result):
+  - `uv python install 3.10` -> installed 3.10.20; `uv venv analyzer/.venv --python 3.10` ->
+    `analyzer/.venv/Scripts/python.exe --version` reports 3.10.20.
+  - `uv pip install ...` into that venv -> every package resolved to the version the earlier dry run
+    predicted, so the 3.10 decision is confirmed by a real install, not just by metadata.
+  - Smoke test run with the venv interpreter, all assertions passed:
+    - every one of the 17 required modules imports, versions printed above;
+    - **ruptures**: `Binseg(model="l2").fit(x).predict(n_bkps=1)` on a series with a step at index
+      100 returns `[100, 200]`. So the returned list ends with `len(x)` as a sentinel and the change
+      point is `bkps[0]`. Written into `docs/05` step 2.
+    - **shap**: `shap.TreeExplainer(IsolationForest).shap_values(X)` works in shap 0.49.1, returns
+      shape `(n_rows, n_columns)`, needs **no** `check_additivity=False`, and ranks a planted
+      single-column anomaly first. Written into `docs/05` section 4, replacing the "check whether it
+      is supported" caveat.
+    - `LGBMRegressor(n_estimators=100, max_depth=3)` fits and predicts (needed for M1.7b).
+    - `Ridge(alpha=1.0)` recovers coefficients 2, -1, 0 from data built with those coefficients.
+  - `git status` confirms `data/` and `analyzer/.venv` are ignored, and that
+    `experiments/results/.gitkeep` is trackable despite `results/*` being ignored.
+- Files changed: the new folders and their READMEs, `docs/07_TASKS.md` (M0.1 to M0.3 ticked),
+  `docs/05_PYTHON_ANALYZER_SPEC.md` (the two verified APIs), `PROGRESS.md`.
+- Left open / next: M1.1. Still waiting on the human for the PyTorch question, which first matters
+  at M2.
 
 ### 2026-10-03 - Environment check and build tooling - no code yet
 - What was done: checked every requirement in `PROJECT_RULES.md` section 4 against the actual machine and

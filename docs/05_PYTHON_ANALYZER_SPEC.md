@@ -82,7 +82,11 @@ change-point step, `top_k` is only the length of the returned indicator list.
 ### Step 2. Change-point re-anchoring
 - Purpose: real detectors are late. Find where the change really started.
 - Take the top `cp_top_k` (default 5) columns by `max |z_c(t)|` over `recent` up to the alarm.
-- For each, take the change-point search window from the table below, standardize it, and find the single best change point with `ruptures.Binseg(model="l2").fit(x).predict(n_bkps=1)`. (Check the ruptures API in the installed version.)
+- For each, take the change-point search window from the table below, standardize it, and find the single best change point with `ruptures.Binseg(model="l2").fit(x).predict(n_bkps=1)`.
+  - API checked against the installed `ruptures v1.1.10` on 2026-10-03, so this is not a guess:
+    `predict(n_bkps=1)` returns a **list of breakpoint indices whose last element is always
+    `len(x)`**. For a series with a step at index 100 it returns `[100, 200]`. So the change point
+    is `bkps[0]`; the trailing sentinel must be dropped, never treated as a change point.
 - Change point = median of these candidate times.
 - If `use_change_point=False`, the analysis window starts at `alarm_time` instead.
 - Return the change point in the result (the Java side shows it).
@@ -180,7 +184,12 @@ estimated change point, the window bounds, at most `top_k` indicators, timing (`
 | `PCA_RECON` | PCA (keep 95% variance) on standardized normal rows; per-column squared reconstruction error on abnormal rows | C1 explainer |
 | `KERNEL_SHAP_PCA` (optional) | KernelSHAP on the PCA detector with 50 background rows | C1 explainer if time allows |
 
-Before using `shap.TreeExplainer` on IsolationForest, check that the installed shap version supports it. If not, fall back to `shap.Explainer` with a small background set and note it.
+`shap.TreeExplainer` on IsolationForest was checked against the installed `shap 0.49.1` on
+2026-10-03 and works: `shap.TreeExplainer(iso).shap_values(X)` returns an array of shape
+`(n_rows, n_columns)`, the additivity check passes (no `check_additivity=False` needed), and on a
+planted single-column anomaly the mean absolute SHAP correctly puts that column first. If a future
+shap version drops this, fall back to `shap.Explainer` with a small background set and record it in
+`warnings`.
 
 `NSIGMA` and the explainer baselines (`SHAP_IFOREST`, `ECDF`, `PCA_RECON`, `KERNEL_SHAP_PCA`)
 never use change-point re-anchoring: their abnormal window is always

@@ -13,9 +13,9 @@ If a working application is needed early: do M0, M1, M7, M8, M9, M10 (using synt
 ---
 
 ## M0 - Project skeleton
-- [ ] M0.1 Create folders: `analyzer/`, `experiments/`, `backend/`, `frontend/`, `scripts/`, `data/` (git-ignored), `paper/` (with `tables/`, `figures/`, `notes/`). Each gets a 2 to 5 line README, **except `data/`**: it is git-ignored, so a README inside it would never be committed. The `data/` layout is described in the root `README.md` instead.
-- [ ] M0.2 Check `.gitignore` covers Java, Python, Node (`node_modules/`, `dist/`), `data/`, results.
-- [ ] M0.3 Fill "Environment" in `PROGRESS.md` (Java, Maven, Python, Node, npm versions).
+- [x] M0.1 Create folders: `analyzer/`, `experiments/`, `backend/`, `frontend/`, `scripts/`, `data/` (git-ignored), `paper/` (with `tables/`, `figures/`, `notes/`). Each gets a 2 to 5 line README, **except `data/`**: it is git-ignored, so a README inside it would never be committed. The `data/` layout is described in the root `README.md` instead.
+- [x] M0.2 Check `.gitignore` covers Java, Python, Node (`node_modules/`, `dist/`), `data/`, results.
+- [x] M0.3 Fill "Environment" in `PROGRESS.md` (Java, Maven, Python, Node, npm versions).
 - Done when: first commit is clean.
 
 ## M1 - Python PARE core (library)
