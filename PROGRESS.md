@@ -8,7 +8,7 @@ anything waiting on you, then the machine setup and the full list of decisions a
 
 ## Current status
 - Current milestone: M1 (Python PARE core)
-- Next task: M1.7 (`rank.py` + `engine.py`, the engine registry)
+- Next task: M1.8 (`explainers.py`: SHAP_IFOREST, ECDF, PCA_RECON)
 - Blockers: none. Open question 3, which would have made the M1.10 synthetic check meaningless, was
   settled on 2026-10-03 (decision 38).
 
@@ -50,6 +50,61 @@ anything waiting on you, then the machine setup and the full list of decisions a
   linear dependency model stops working above about 0.7, because the non-linearity is invisible in
   the normal data it is fitted on. That is a limitation to measure and report in E6, not a bug to
   tune away.
+
+### 2026-10-03 - M1.7 and M1.7b - preprocess, rank and the engine registry
+- What was done: the method is now runnable end to end. `pare/preprocess.py` (step 0),
+  `pare/rank.py` (steps 4 and 5) and `pare/engine.py` (the registry and `analyze()`), all exported
+  from `pare`. Five engines are registered: `PARE`, `PARE_NO_RESIDUAL`, `PARE_NO_CP`, `PARE_LGBM`
+  and `NSIGMA`. `AnalyzeResult` maps field for field onto `AnalyzeResponse` in `06` section 3.
+  - `preprocess.py` was **not** in the task list although it is in the `05` section 1 layout, and
+    the engine cannot run without it. Built here rather than inventing a task for it; `07` now says
+    so. Decision 39.
+  - `rank.py` holds the service score, the traversal, the verdict rule and the strict role
+    precedence agreed in decision 9.
+  - `engine.py` expresses the engines as a small table of three differences - change point, residuals,
+    window - so the ablations cannot drift away from the method they are ablating.
+- How it was tested (commands + result):
+  - `pytest -q` -> **262 passed** (59 new) in 18.6 s. `ruff check .` -> clean.
+  - Both guarantees `05` section 6 asks for by name are covered for **every** engine: a case with an
+    entirely missing column, a long gap and a flat column still returns a valid result with no graph;
+    and a window containing no fault comes back `NO_CLEAR_CAUSE` with nobody given the CAUSE role.
+  - Roles are tested directly rather than through an engine, because a wrong role is a wrong answer
+    shown confidently to a user: SYMPTOM needs both conditions, a barely-moved service with a high
+    inherited fraction stays NORMAL, and when the verdict is NO_CLEAR_CAUSE the leader falls through
+    to another role instead of being accused.
+  - Preprocessing has a test for the property that matters most: **which columns are kept is decided
+    by the normal window alone**. The abnormal window is the one containing the fault, and letting it
+    choose which columns are worth looking at would be letting the answer pick the question.
+  - Speed: a typical case is answered in about 120 ms warm, against the 2 s budget in `05` section 7.
+- **Early look at the M1 gate**, which M1.10 will do properly. 25 seeds, 8 services, delay 30 s,
+  top-1 accuracy:
+
+  | amplification | fault | PARE | PARE_NO_RESIDUAL | PARE_NO_CP | NSIGMA |
+  |---|---|---|---|---|---|
+  | 0.00 | latency | 1.00 | 1.00 | 1.00 | 1.00 |
+  | 0.00 | cpu | 1.00 | 1.00 | 1.00 | 1.00 |
+  | 0.00 | mem | 0.92 | 0.92 | 0.92 | **1.00** |
+  | 0.00 | error | 1.00 | 1.00 | 1.00 | 1.00 |
+  | 0.25 | latency | **0.96** | 0.84 | 0.96 | 0.88 |
+  | 0.25 | cpu | 1.00 | 1.00 | 1.00 | 1.00 |
+  | 0.25 | mem | 0.92 | 0.92 | 0.92 | **1.00** |
+  | 0.25 | error | 1.00 | 1.00 | 1.00 | 1.00 |
+
+  Both halves of the gate hold: PARE on latency is 1.00 and 0.96, comfortably above the 0.85 the
+  spec asks for, and PARE is never below `PARE_NO_RESIDUAL`. The 12-point gap at amplification 0.25
+  on latency faults is the core claim appearing for the first time in a full run.
+
+  Two honest readings to carry forward. Without amplification every engine ties, which is expected
+  and is exactly why open question 3 had to be settled. And **NSIGMA beats PARE on memory faults**,
+  0.92 against 1.00, in every setting. That is consistent with the M1.5 finding: a memory fault ramps
+  rather than steps, so the change point lands mid-ramp, while NSIGMA scores from the alarm to the
+  end of the data and so sees the whole ramp. It is a real result and belongs in the paper as one;
+  it also suggests the analysis window length deserves an ablation for ramp-like faults.
+- Files changed: new `analyzer/pare/{preprocess,rank,engine}.py` and
+  `analyzer/tests/test_{preprocess,rank,engine}.py`; `analyzer/pare/scores.py` (`nsigma_score`),
+  `analyzer/pare/residual.py` (carries `metric`, sklearn imported at module level),
+  `analyzer/pare/__init__.py`, `docs/07_TASKS.md`, `PROGRESS.md`.
+- Left open / next: M1.8, the explainer baselines.
 
 ### 2026-10-03 - M1.6 - residual.py, the core idea, and two limits it revealed
 - What was done: `pare/residual.py` with `DependencyModel` and `ColumnResidual`, exported from
@@ -855,6 +910,34 @@ written into the spec files. One line of reason each.
     propagation and watch ordinary methods fail, which would simply not have happened; it now points
     at amplification and warns the presenter that above 0.7 neither method works, so that is not
     shown as a PARE failure.
+
+### M1.7 choices
+
+39. **`preprocess.py` was built as part of M1.7, although no task owned it.** It is in the `05`
+    section 1 layout and is step 0 of the algorithm, but `07` never listed it, and `engine.py` cannot
+    run without it. `07` now records that M1.7 covers it.
+    Reason: the alternative was an engine that skips cleaning, which does not merely add noise - a
+    column that is constant through the normal period has no spread, so any movement divides by
+    almost nothing and scores enormously. A dead metric would win rankings.
+
+40. **`nsigma_score` lives in `scores.py` and deliberately uses mean and standard deviation**, not
+    the robust median and MAD that everything else uses.
+    Reason: NSigma is the baseline this work is measured against, so it has to be the method as
+    everyone else implements it. An improved version would flatter our results. Its weakness to
+    outliers is part of what the comparison is meant to show. The Java fallback ranker mirrors this
+    function exactly, so the shared-sample test in `03` section 4.4 can pass.
+
+41. **`ColumnResidual` carries `metric` through from the column map**, rather than recovering it from
+    the column name when building the indicator table.
+    Reason: `pare.columns` forbids parsing meaning out of a column name, and a display table is not
+    an exception - `payment-service` with a metric called `memory_working_set_bytes` would be split
+    wrongly and shown wrongly. A test pins it.
+
+42. **scikit-learn is imported at the top of `residual.py`; LightGBM stays lazily imported.**
+    Reason: with both lazy, the first `analyze()` call in a process took 2.0 s against a 2 s budget,
+    almost all of it the sklearn import, while later calls took 114 ms. For a long-running service a
+    slow start-up is much better than a slow first request. LightGBM stays lazy because only one
+    ablation uses it and importing it always would cost every other run a second for nothing.
 
 ### Order of work
 

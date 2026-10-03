@@ -42,6 +42,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import numpy.typing as npt
+from sklearn.linear_model import Ridge
 
 from pare.columns import ColumnInfo, group_by_service
 from pare.config import PareConfig
@@ -64,6 +65,10 @@ class ColumnResidual:
 
     column: str
     service: str
+    metric: str
+    """Carried through from the column map. Never recovered from the column name:
+    see pare.columns for why that is forbidden."""
+
     self_score: float
     """How unusual the unexplained part is, in robust deviations. The ranking."""
 
@@ -199,6 +204,7 @@ def _score_one_column(
             ColumnResidual(
                 column=column.name,
                 service=column.service,
+                metric=column.metric,
                 self_score=marginal,
                 marginal_score=marginal,
                 inherited_fraction=0.0,
@@ -227,6 +233,7 @@ def _score_one_column(
         ColumnResidual(
             column=column.name,
             service=column.service,
+            metric=column.metric,
             self_score=float(self_score),
             marginal_score=marginal,
             inherited_fraction=inherited,
@@ -288,6 +295,11 @@ def _fit_dependency(
 def _make_model(settings: PareConfig):
     """Ridge by default; LightGBM when asked for, as the PARE_LGBM ablation."""
     if settings.dependency_model == "lgbm":
+        # Imported here rather than at the top of the module on purpose: LightGBM
+        # is only used by one ablation, and importing it costs a second of
+        # start-up that every other run would pay for nothing. Ridge is imported
+        # normally, because the main engine needs it and a slow first request is
+        # worse than a slow start-up for a long-running service.
         from lightgbm import LGBMRegressor
 
         return LGBMRegressor(
@@ -296,8 +308,6 @@ def _make_model(settings: PareConfig):
             random_state=settings.seed,
             verbose=-1,
         )
-
-    from sklearn.linear_model import Ridge
 
     return Ridge(alpha=settings.ridge_alpha)
 

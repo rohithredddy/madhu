@@ -207,6 +207,38 @@ def ecdf_tail_score(
     return np.asarray(np.nan_to_num(score, nan=0.0), dtype=np.float64)
 
 
+def nsigma_score(normal: ArrayLike, abnormal: ArrayLike) -> FloatArray:
+    """The classic NSigma baseline: mean and standard deviation, not median and MAD.
+
+    ``|mean(abnormal) - mean(normal)| / (std(normal) + eps)``.
+
+    Deliberately **not** robust, and deliberately not reusing
+    :func:`window_score`. NSigma is the standard baseline this work is measured
+    against, so it has to be the method as everyone else implements it, not an
+    improved version of it - otherwise the comparison flatters us. Its weakness to
+    outliers is part of what the results are supposed to show.
+
+    The Java fallback ranker computes exactly this, so that the two agree on the
+    shared sample file (``docs/03_JAVA_BACKEND_SPEC.md`` section 4.4). If this
+    changes, that changes with it.
+    """
+    before = _as_float_array(normal)
+    after = _as_float_array(abnormal)
+    if before.shape[0] == 0:
+        raise ValueError("cannot measure a baseline from zero rows")
+    if after.shape[0] == 0:
+        raise ValueError("cannot score an empty window")
+
+    with _quiet_all_nan():
+        centre = np.nanmean(before, axis=0)
+        spread = np.nanstd(before, axis=0)
+        moved = np.nanmean(after, axis=0)
+
+    eps = EPS_FACTOR * (np.abs(np.nan_to_num(centre, nan=0.0)) + 1.0)
+    score = np.abs(moved - centre) / (spread + eps)
+    return np.asarray(np.nan_to_num(score, nan=0.0), dtype=np.float64)
+
+
 def _as_float_array(values: ArrayLike) -> FloatArray:
     """Turn the input into a float array of rows, so NaN works and ints do not
     silently truncate. Accepts one column or a whole window."""

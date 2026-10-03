@@ -29,7 +29,17 @@ from pare.columns import (
     validate_columns,
 )
 from pare.config import PareConfig
+from pare.engine import (
+    ENGINES,
+    AnalyzeRequest,
+    AnalyzeResult,
+    Window,
+    analyze,
+    available_engines,
+)
 from pare.graph import CallGraph, Edge
+from pare.preprocess import preprocess
+from pare.rank import IndicatorRanking, Ranking, ServiceRanking, rank_all
 from pare.residual import ColumnResidual, DependencyModel
 from pare.scores import (
     RobustBaseline,
@@ -42,6 +52,17 @@ from pare.scores import (
 
 __all__ = [
     "__version__",
+    "ENGINES",
+    "AnalyzeRequest",
+    "AnalyzeResult",
+    "IndicatorRanking",
+    "Ranking",
+    "ServiceRanking",
+    "Window",
+    "analyze",
+    "available_engines",
+    "preprocess",
+    "rank_all",
     "CallGraph",
     "ChangePoint",
     "ColumnInfo",
