@@ -18,6 +18,7 @@ See ``docs/05_PYTHON_ANALYZER_SPEC.md`` for the algorithm and
 # "engineVersion", so a stored result can always be traced to the code that made it.
 __version__ = "0.1.0"
 
+from pare.changepoint import ChangePoint, estimate_change_point
 from pare.columns import (
     ColumnInfo,
     columns_from_dicts,
@@ -41,6 +42,7 @@ from pare.scores import (
 __all__ = [
     "__version__",
     "CallGraph",
+    "ChangePoint",
     "ColumnInfo",
     "Edge",
     "PareConfig",
@@ -48,6 +50,7 @@ __all__ = [
     "columns_from_dicts",
     "columns_of_service",
     "ecdf_tail_score",
+    "estimate_change_point",
     "group_by_service",
     "mad",
     "name_to_index",

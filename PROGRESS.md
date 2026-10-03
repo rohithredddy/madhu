@@ -8,8 +8,8 @@ anything waiting on you, then the machine setup and the full list of decisions a
 
 ## Current status
 - Current milestone: M1 (Python PARE core)
-- Next task: M1.5 (`changepoint.py` + tests)
-- Blockers: none for M1.5, but **open question 3 below needs an answer before M1.7/M1.10**. The
+- Next task: M1.6 (`residual.py` + tests) - the core of the method
+- Blockers: none for M1.6, but **open question 3 below needs an answer before M1.7/M1.10**. The
   synthetic generator as specified cannot produce the cause-versus-symptom confusion the paper is
   about. M1.3 to M1.6 are unaffected and can proceed either way.
 
@@ -21,6 +21,65 @@ anything waiting on you, then the machine setup and the full list of decisions a
 - Files changed:
 - Left open / next:
 -->
+
+### 2026-10-03 - M1.5 - changepoint.py, re-anchoring the window when detection is late
+- What was done: `pare/changepoint.py` with `estimate_change_point()` and the `ChangePoint` result,
+  exported from `pare`. This is the step that answers RQ4: an alarm says "something is wrong now",
+  but the fault may have started a minute earlier, and scoring from the alarm measures the aftermath
+  - by which time the symptoms have caught up with the cause and the two look alike. So the window is
+  re-anchored on where the data says the change began.
+  - Follows `05` step 2: rank columns by `max |z|` in the run-up to the alarm, take the top
+    `cp_top_k`, search each with `ruptures.Binseg(model="l2")` for one split, and take the **median**
+    of the candidates so one column misled by a blip cannot drag the answer.
+  - `ChangePoint` carries `estimated`, a plain-language `reason`, the candidate times and the columns
+    they came from. When nothing usable is found it returns the alarm time with `estimated=False`,
+    so a caller never receives a guess dressed up as a measurement.
+- Three things about the ruptures API were checked against the installed v1.1.10 rather than assumed
+  (hard rule 9), and two of them changed the code:
+  - **`jump` defaults to 5**, which only proposes breakpoints at multiples of 5 and so rounds the
+    answer to the nearest 5 rows. On a series whose change is at index 102 the default answers 100;
+    with `jump=1` it answers 102. We care which second the change began, so this module sets
+    `jump=1`. Decision 35.
+  - **A flat column does not raise, it returns a confident split in the middle of nothing.** That
+    would be pure invention, so flat columns are filtered out before searching. Decision 36.
+  - A window shorter than `2 * min_size` raises `BadSegmentationParameters`, which is a normal
+    outcome here rather than a failure, so it is caught and that column is skipped.
+- How it was tested (commands + result):
+  - `pytest -q` -> **177 passed** (19 new) in 2.2 s. `ruff check .` -> clean.
+  - The spec's own bar first: "a step series with a known change at index 100 is found within +/- 3
+    rows" (`05` section 6). Then the same at 40, 77, 100, 102 and 150, because positions that are not
+    multiples of 5 are exactly what the `jump` default would have rounded.
+  - The point of the module has its own test: with the alarm 60 rows late, the estimate still lands
+    within 3 rows of the real start, and `seconds_before_alarm` reports about 60.
+  - Failure behaviour: a flat column produces no estimate rather than an invented one; an all-missing
+    column is skipped while its neighbour still works; scattered NaN is tolerated; too few rows falls
+    back to the alarm time with a readable reason; a change outside the lookback is not pretended to
+    be found.
+  - Measured end to end against generated data where the true injection time is known exactly,
+    20 seeds per setting, 8 services. Error of the re-anchored start against the real injection:
+
+    | fault | delay 0 s | 30 s | 60 s | 120 s |
+    |---|---|---|---|---|
+    | latency | 0.0 | 0.0 | 0.0 | 0.0 |
+    | cpu | 2.0 | 0.0 | 0.0 | 0.0 |
+    | error | 0.5 | 0.0 | 0.0 | 0.0 |
+    | mem | 78.5 | 37.5 | 40.0 | 61.0 |
+
+    (median absolute error in seconds; without re-anchoring the error simply *is* the delay, so the
+    comparison row is 0 / 30 / 60 / 120.) An estimate was produced in 20 of 20 cases everywhere.
+
+    So for the three step-like faults, re-anchoring recovers the true start essentially exactly even
+    when the detector is two minutes late. That is the RQ4 claim behaving as hoped, on synthetic data.
+  - **`mem` is the exception and it is worth knowing why**: a memory fault ramps up gradually rather
+    than stepping, and a ramp has no sharp split, so Binseg lands somewhere in the middle of it
+    instead of at its onset. This is the same root cause as open question 4. It is not obviously
+    harmful - a window starting mid-ramp contains a stronger signal than one starting at the barely
+    perceptible beginning - but it does mean the delay-robustness claim will look weaker for MEM than
+    for the others, and the paper should say so rather than report an average that hides it.
+- Files changed: new `analyzer/pare/changepoint.py`, `analyzer/tests/test_changepoint.py`;
+  `analyzer/pare/__init__.py` (exports), `docs/07_TASKS.md` (M1.5 ticked), `PROGRESS.md`.
+- Left open / next: M1.6, `residual.py`, which is the core idea of the whole method. Open question 3
+  still needs an answer before M1.7 and M1.10.
 
 ### 2026-10-03 - M1.4 - graph.py, the call graph and the questions asked of it
 - What was done: `pare/graph.py` with `CallGraph` and `Edge`, exported from `pare`. An edge runs
@@ -686,6 +745,28 @@ written into the spec files. One line of reason each.
     callee's plus its own work, so it varies at least as much. Measured, this gets direction right
     55 to 88 percent of the time against a known tree - better than chance, and deliberately still
     imperfect, since E4's whole job is to measure what an imperfect graph costs.
+
+### M1.5 choices
+
+35. **`ruptures.Binseg` is used with `jump=1`, not its default of 5.**
+    Reason: the default only ever proposes breakpoints at multiples of 5, so the estimated start is
+    rounded to the nearest 5 rows. Checked on the installed v1.1.10: for a change at index 102 the
+    default answers 100 and `jump=1` answers 102. The analysis window is anchored on this number, so
+    the resolution matters. The extra cost is trivial on a window of a few hundred rows.
+
+36. **Flat and all-missing columns are filtered out before searching, and a column that cannot be
+    searched is skipped rather than failing the analysis.**
+    Reason: ruptures does not object to a flat line, it returns a confident split in the middle of
+    the noise. Trusting that would be inventing a result, which hard rule 2 forbids. For the same
+    reason `BadSegmentationParameters` on a too-short window is caught and treated as "this column
+    has nothing to say", which is what it means.
+
+37. **When no change point can be found, the alarm time is returned with `estimated=False` and a
+    reason in plain words**, rather than silently returning the alarm time as though it had been
+    measured.
+    Reason: the difference matters to whoever reads the result. "The change started 60 s before the
+    alarm" and "we could not tell, so we used the alarm" are different claims, and the explanation
+    text and the warnings list need to be able to say which one happened.
 
 ### Order of work
 
