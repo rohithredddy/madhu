@@ -8,7 +8,7 @@ anything waiting on you, then the machine setup and the full list of decisions a
 
 ## Current status
 - Current milestone: M1 (Python PARE core)
-- Next task: M1.6 (`residual.py` + tests) - the core of the method
+- Next task: M1.7 (`rank.py` + `engine.py`, the engine registry)
 - Blockers: none. Open question 3, which would have made the M1.10 synthetic check meaningless, was
   settled on 2026-10-03 (decision 38).
 
@@ -50,6 +50,56 @@ anything waiting on you, then the machine setup and the full list of decisions a
   linear dependency model stops working above about 0.7, because the non-linearity is invisible in
   the normal data it is fitted on. That is a limitation to measure and report in E6, not a bug to
   tune away.
+
+### 2026-10-03 - M1.6 - residual.py, the core idea, and two limits it revealed
+- What was done: `pare/residual.py` with `DependencyModel` and `ColumnResidual`, exported from
+  `pare`. For every column of every service it fits that column from the columns of the services it
+  **calls**, at t and t-1, on normal rows only, and scores what is left over. A small leftover means
+  the callees account for the movement and the service is a symptom; a large one means the trouble
+  starts there. Implements `05` step 3 including the raw-units inherited fraction and `explained_by`.
+  - `explained_by` is computed as a counterfactual - what the model would have predicted had this
+    callee stayed normal - which for a linear model is exactly the coefficient formula the spec gives
+    and also works for the LightGBM variant that has no coefficients to read.
+  - Without a graph, or for a service with no callees, the self-score is simply the marginal score
+    and nothing is inherited. That is the honest answer: we had nothing to explain it with.
+- How it was tested (commands + result):
+  - `pytest -q` -> **203 passed** (18 new) in 7.9 s. `ruff check .` -> clean.
+  - The spec's own test first (`05` section 6): a parent whose latency is a linear function of its
+    child's, with only the child faulty, gets a self-score of **0.77** against a marginal score of
+    6.12, while the child scores 5.95. Movement alone would have blamed the parent; the residual does
+    not. Its inherited fraction is 0.989.
+  - The no-own-history rule has a test of its own: a strongly autocorrelated service that breaks must
+    still get a large self-score. If its own past ever became a feature, the model would learn the
+    anomaly a row after it starts and predict it away.
+  - Properties: the inherited fraction stays inside [0, 1] for all four fault types; every column
+    gets exactly one result; flat, missing and partially missing columns all produce finite scores.
+  - End to end: on cases where movement alone points at a caller, the residual recovers the real
+    culprit in every one of them at amplification 0.25.
+- **Two limits were found, and both are properties of the approach rather than of the code.** Three
+  tests failed on the first run; in all three the code was right and my expectations were wrong
+  (hard rule 12), and the investigation is where the findings came from. Both are now written into
+  `05` step 3 and pinned by tests.
+  1. **A symptom's self-score is not zero and grows with the size of the fault.** The model is fitted
+     on the normal range and the incident pushes its inputs outside it, so any slope error - and
+     ridge shrinkage guarantees one - is multiplied by how far the fault reaches. Measured on the
+     same parent-and-child setup: self-score 0.7, 2.3, 4.8, 9.6 for faults of 2, 6, 12 and 24 std,
+     while the inherited fraction stayed at 0.996 throughout. So `inherited_fraction` is the stable,
+     honest number to show a user, and the margin between cause and symptom narrows as faults grow.
+     A smaller `ridge_alpha` cut the symptom's score from 2.3 to 0.5, so alpha is worth an ablation.
+  2. **LightGBM is the wrong kind of model for this, and `PARE_LGBM` is a negative result.** Trees
+     cannot extrapolate: beyond their training range the prediction is flat, so the caller is
+     predicted at its normal level and its whole inherited rise lands in the residual. Ridge gave the
+     parent 0.77 against the child's 5.95; LightGBM gave the parent **48.5**, ranking the symptom far
+     above the cause. This is a clean finding for the ablation table - residual-based RCA needs a
+     model that extrapolates - and the behaviour is pinned by a test so it is not later mistaken for
+     a bug.
+  - Decision 38's measured table has been **corrected** using the real implementation rather than the
+    earlier least-squares proxy. The useful band is narrower and lower than the proxy suggested
+    (around amplification 0.25, not 0.5), and limit 1 above is why.
+- Files changed: new `analyzer/pare/residual.py`, `analyzer/tests/test_residual.py`;
+  `analyzer/pare/__init__.py` (exports), `docs/05_PYTHON_ANALYZER_SPEC.md` (the counterfactual note
+  and the two limits), `docs/07_TASKS.md` (M1.6 ticked), `PROGRESS.md`.
+- Left open / next: M1.7, `rank.py` and `engine.py`. Everything the ranking needs now exists.
 
 ### 2026-10-03 - M1.5 - changepoint.py, re-anchoring the window when detection is late
 - What was done: `pare/changepoint.py` with `estimate_change_point()` and the `ChangePoint` result,
@@ -770,26 +820,30 @@ written into the spec files. One line of reason each.
     `amplification=0` reproduces the old model **bit for bit** - no new random draws were added - so
     every earlier result stays reproducible and the linear case remains available as a comparison.
 
-    Measured, 40 seeds, 10 services, latency fault, propagation 0.9, top-1 accuracy:
+    Measured, 30 seeds, 8 services, latency fault, propagation 0.9, top-1 accuracy. **Updated on
+    2026-10-03 with the real `residual.py` from M1.6**; the first version of this table used a
+    least-squares proxy and was too optimistic:
 
-    | amplification | marginal scoring | residual scoring | wrong answers that were callers |
+    | amplification | marginal scoring | residual scoring | rescued of trapped |
     |---|---|---|---|
-    | 0.0 | 1.00 | 1.00 | none wrong |
-    | 0.5 | 0.50 | **0.70** | 20 of 20 |
-    | 1.0 | 0.17 | 0.12 | 33 of 33 |
-    | 2.0 | 0.00 | 0.00 | 40 of 40 |
-    | 4.0 | 0.00 | 0.03 | 40 of 40 |
+    | 0.00 | 1.00 | 1.00 | none trapped |
+    | 0.25 | 0.80 | **1.00** | 6 of 6 |
+    | 0.50 | 0.43 | 0.53 | 3 of 17 |
+    | 0.75 | 0.20 | 0.23 | 3 of 24 |
+    | 1.00 | 0.03 | 0.07 | 2 of 29 |
+    | 2.00 | 0.00 | 0.00 | 0 of 30 |
 
-    (The residual column is a proxy - least squares on the callees - because `residual.py` is M1.6.
-    It is a design check, not a paper result.)
+    **Three regimes, and the paper must report all three.** Below about 0.15 there is no trap and
+    nothing can beat marginal scoring. **Around 0.25 is the useful band**: movement alone starts
+    blaming callers while subtracting what the callees explain still recovers the culprit every
+    time. From about 0.5 upward the advantage shrinks to a few points, and by 1.0 both methods have
+    collapsed, because the non-linearity is dormant in the normal data and no model fitted on normal
+    data can extrapolate it. That last regime is a real limit of metric-only root-cause analysis and
+    belongs in threats to validity, not in an average that hides it.
 
-    **Three regimes, and the paper must report all three.** Below about 0.3 there is no trap and
-    nothing can beat marginal scoring. Between about 0.3 and 0.7 is the useful band: callers are loud
-    enough to fool a method that only measures how far each service moved, while subtracting what the
-    callees explain still finds the culprit. Above about 0.7 neither works, because the
-    non-linearity is dormant in the normal data and no model fitted on normal data can extrapolate
-    it. That last regime is a real limit of metric-only root-cause analysis and belongs in threats to
-    validity, not in an average that hides it.
+    The band is narrower and lower than the proxy suggested, for a reason M1.6 then identified: ridge
+    shrinkage leaves a symptom with a residual proportional to the size of the fault, so symptoms
+    accumulate self-score as amplification rises. See the M1.6 log entry.
 
     The band is predicted by algebra, not just observed: a trap needs the congestion contribution to
     exceed `(S/w - sd_child) * D` and a residual method keeps working while it stays below `D`.

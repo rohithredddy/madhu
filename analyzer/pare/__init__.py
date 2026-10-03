@@ -30,6 +30,7 @@ from pare.columns import (
 )
 from pare.config import PareConfig
 from pare.graph import CallGraph, Edge
+from pare.residual import ColumnResidual, DependencyModel
 from pare.scores import (
     RobustBaseline,
     ecdf_tail_score,
@@ -44,6 +45,8 @@ __all__ = [
     "CallGraph",
     "ChangePoint",
     "ColumnInfo",
+    "ColumnResidual",
+    "DependencyModel",
     "Edge",
     "PareConfig",
     "RobustBaseline",

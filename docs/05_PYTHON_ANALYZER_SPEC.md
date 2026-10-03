@@ -130,6 +130,45 @@ For each service s and each of its columns c:
   `self_c` above (normalised by the residual MAD) does not change: it stays the ranking score.
   `inherited_c` is only for reporting and for the SYMPTOM role test.
 - Explained by: for the ridge model, contribution of child k = sum over k's features of `coef_j * (median(abnormal feature_j) - median(normal feature_j))` (in standardized units). `explained_by_c` = child with the largest positive contribution, or null.
+  - Implemented as a counterfactual - what would the fitted model have predicted if this child had
+    stayed at its normal level, everything else as it actually was - which for a linear model is
+    exactly the formula above, and also works for the LightGBM variant that has no coefficients.
+
+#### Two measured limits of this step
+
+Both were found while building it, both are properties of the approach rather than of the code, and
+both belong in the paper's limitations rather than being discovered by a reviewer.
+
+**1. A symptom's self-score is not zero, and grows with the size of the fault.** The model is fitted
+on the normal range, and an incident pushes its inputs well outside that range. Any small error in
+the fitted slope - and ridge regularisation guarantees one, since it shrinks coefficients on purpose
+- is multiplied by how far the fault reaches. Measured on a parent that is exactly twice its child
+plus a little noise, with only the child faulty:
+
+| fault size | parent self-score | parent inherited fraction |
+|---|---|---|
+| 2 std | 0.7 | 0.997 |
+| 6 std | 2.3 | 0.996 |
+| 12 std | 4.8 | 0.996 |
+| 24 std | 9.6 | 0.996 |
+
+The share explained stays essentially constant, which is why `inherited_fraction` is the honest
+number to report to a user, while the normalised self-score drifts upward. The consequence is that
+the margin between cause and symptom narrows as faults get larger, rather than staying constant.
+`ridge_alpha` is worth an ablation for this reason: a smaller alpha cut the parent's self-score from
+2.3 to 0.5 in the same setup.
+
+**2. LightGBM is the wrong kind of model for this job, and `PARE_LGBM` should be reported as a
+negative result.** A tree ensemble cannot extrapolate: outside the range it was trained on its
+prediction is flat. So when a callee goes far beyond anything in the normal period, the model
+predicts the caller at its normal level and the caller's entire inherited rise lands in its residual.
+On the same parent-and-child setup, ridge gives the parent a self-score of 0.77 against the child's
+5.95 - correct - while LightGBM gives the parent **48.5**, ranking the symptom far above the cause.
+
+This is a clean, explainable finding: root-cause analysis by residuals needs a model that
+extrapolates, which rules out tree ensembles however well they interpolate. It is kept as a
+registered engine so the ablation table can show it, with a test pinning the behaviour so nobody
+later mistakes it for a bug.
 
 ### Step 4. Rank services
 - Service score `S_s = max_c self_c` (option `service_agg="top2mean"`).
