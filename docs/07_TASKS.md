@@ -22,7 +22,7 @@ If a working application is needed early: do M0, M1, M7, M8, M9, M10 (using synt
 - [x] M1.1 `analyzer/pyproject.toml`, package `pare`, `config.py`, `columns.py`.
 - [x] M1.2 `synthetic.py` (with `propagation` and `noise` parameters) + example plot in `paper/figures/synthetic_example.png`.
 - [x] M1.3 `scores.py` + tests.
-- [ ] M1.4 `graph.py` + tests.
+- [x] M1.4 `graph.py` + tests.
 - [ ] M1.5 `changepoint.py` + tests.
 - [ ] M1.6 `residual.py` + tests.
 - [ ] M1.7 `rank.py` + `engine.py` with `PARE`, `PARE_NO_RESIDUAL`, `PARE_NO_CP`, `NSIGMA`. Includes the `verdict` rule (`min_cause_score`) and the strict role precedence from `05_PYTHON_ANALYZER_SPEC.md` section 3, step 4, with tests for both.

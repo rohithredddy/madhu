@@ -28,6 +28,7 @@ from pare.columns import (
     validate_columns,
 )
 from pare.config import PareConfig
+from pare.graph import CallGraph, Edge
 from pare.scores import (
     RobustBaseline,
     ecdf_tail_score,
@@ -39,7 +40,9 @@ from pare.scores import (
 
 __all__ = [
     "__version__",
+    "CallGraph",
     "ColumnInfo",
+    "Edge",
     "PareConfig",
     "RobustBaseline",
     "columns_from_dicts",

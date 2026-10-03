@@ -8,8 +8,8 @@ anything waiting on you, then the machine setup and the full list of decisions a
 
 ## Current status
 - Current milestone: M1 (Python PARE core)
-- Next task: M1.4 (`graph.py` + tests)
-- Blockers: none for M1.4, but **open question 3 below needs an answer before M1.7/M1.10**. The
+- Next task: M1.5 (`changepoint.py` + tests)
+- Blockers: none for M1.5, but **open question 3 below needs an answer before M1.7/M1.10**. The
   synthetic generator as specified cannot produce the cause-versus-symptom confusion the paper is
   about. M1.3 to M1.6 are unaffected and can proceed either way.
 
@@ -21,6 +21,52 @@ anything waiting on you, then the machine setup and the full list of decisions a
 - Files changed:
 - Left open / next:
 -->
+
+### 2026-10-03 - M1.4 - graph.py, the call graph and the questions asked of it
+- What was done: `pare/graph.py` with `CallGraph` and `Edge`, exported from `pare`. An edge runs
+  from caller to callee, and everything else follows from that: `children(s)` are the services s
+  calls (the dependency model's features), `parents(s)` are its callers, and `ancestors(s)` is every
+  caller directly or indirectly - which is exactly the set the symptom-rate metric is defined on.
+  `descendants(s)` is the mirror image. Also `from_edges`, `from_dicts`/`to_dicts` for the JSON form
+  in `06` section 2, `empty()`, `has_edge`, `services`, `is_empty`, and `infer_from_correlation`.
+  - `from_edges` accepts all three shapes we actually receive: `(caller, callee)` tuples from
+    `pare.synthetic`, `{"from", "to"}` mappings from the API, and `Edge` objects.
+  - The graph carries `source` (one of the six values in `06` section 2), so a reader of a result
+    knows whether the edges came from traces or from guesswork.
+  - Messy graphs are normal input, not errors: duplicate edges are collapsed, unknown services give
+    empty answers rather than raising, and cycles terminate. Self-loops are dropped - see decision 33.
+- How it was tested (commands + result):
+  - `pytest -q` -> **158 passed** (26 new) in 0.84 s. `ruff check .` -> clean.
+  - The direction convention gets its own tests, because if `children` and `parents` were ever
+    swapped the dependency model would use the wrong features and the symptom rate would measure the
+    opposite of what it claims, with nothing else failing. On a five-service tree:
+    `children("frontend") == ("checkout", "catalogue")`, `parents("cart") == ("checkout",)`,
+    `ancestors("cart") == {"checkout", "frontend"}`, and `catalogue` is **not** among the services
+    that can be affected by a fault in `cart`.
+  - Messy input: a cycle `a->b->c->a` terminates and never reports a service as its own ancestor; a
+    diamond reports each service once; duplicates collapse; an unknown service gives `()`; the empty
+    graph answers every question without raising.
+  - `infer_from_correlation` was measured against graphs we actually know, 20 seeds per setting,
+    rather than only asserted loosely (see decision 34 for what it does):
+
+    | services | propagation | undirected precision | undirected recall | directed precision |
+    |---|---|---|---|---|
+    | 6 | 0.5 | 1.00 | 0.30 | 0.88 |
+    | 6 | 0.9 | 0.86 | 0.80 | 0.60 |
+    | 10 | 0.5 | 1.00 | 0.17 | 0.78 |
+    | 10 | 0.9 | 0.83 | 0.67 | 0.55 |
+
+    Read: it rarely invents a call that does not exist, it misses many real ones when propagation is
+    weak (a weak call leaves little correlation to find), and it gets the direction right more often
+    than a coin toss but not much more. That is the right shape for its purpose - experiment E4 needs
+    a plausible *wrong* graph to measure what a bad graph costs, not a good one.
+  - Also tested: unrelated noise produces no edges at all, only the chosen metric is used,
+    `max_children` caps the fan-out, a flat service is skipped, and the input shape is checked.
+- Files changed: new `analyzer/pare/graph.py`, `analyzer/tests/test_graph.py`;
+  `analyzer/pare/__init__.py` (exports), `docs/07_TASKS.md` (M1.4 ticked), `PROGRESS.md`.
+- Left open / next: M1.5 (`changepoint.py`). The ruptures API was already checked against the
+  installed version during M0 and written into `05` step 2, so that one starts from a known API.
+  Open question 3 still needs an answer before M1.7 and M1.10.
 
 ### 2026-10-03 - M1.3 - scores.py, the shared scoring building blocks
 - What was done: `pare/scores.py` with the three functions the spec names - `robust_z`,
@@ -620,6 +666,26 @@ written into the spec files. One line of reason each.
     Reason: the engines work on a whole window at once for speed, while the tests and the spec talk
     about a single column. numpy's `axis=0` gives both from the same code, so there is no second
     implementation to keep in step.
+
+### M1.4 choices
+
+33. **A self-loop is dropped when a graph is built**, quietly, rather than kept or rejected.
+    Reason: an edge `a -> a` would make a service its own child, and the dependency model would then
+    predict a service from its own values. That is precisely the autoregressive leak `05` step 3
+    forbids ("Do NOT use s's own past values"), and it would hide the very anomaly we are looking
+    for. Rejecting outright would be worse, because inferred and trace-derived graphs throw up
+    self-loops routinely and a case should not fail to analyse over one.
+
+34. **`infer_from_correlation` decides direction by lag first, then by variance.** Link a pair if
+    the best correlation over lags 0 to `max_lag` reaches a threshold; orient it by whichever
+    ordering correlates more strongly, and when the two are within 0.02 of each other, treat the
+    wider-varying service as the caller.
+    Reason: the lag rule alone cannot work when propagation is effectively instantaneous, which is
+    the case in our own synthetic data and often in real sampled metrics. The variance tie-breaker
+    has a reason behind it rather than being arbitrary: a caller's response time contains its
+    callee's plus its own work, so it varies at least as much. Measured, this gets direction right
+    55 to 88 percent of the time against a known tree - better than chance, and deliberately still
+    imperfect, since E4's whole job is to measure what an imperfect graph costs.
 
 ### Order of work
 
