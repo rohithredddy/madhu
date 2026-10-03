@@ -318,3 +318,99 @@ def test_the_e6_factor_grid_builds(n_services, propagation, fault):
     assert len(case.columns) == n_services * len(METRICS)
     assert np.isfinite(case.to_frame().to_numpy()).all()
     assert case.gt_column in case.normal.columns
+
+
+# --- amplification: the mechanism that makes the symptom trap possible ------
+
+
+def test_amplification_defaults_to_off_so_the_model_stays_linear():
+    """Every earlier test and every stored result assumes the linear model, so
+    the default must not change what make_case produces."""
+    import inspect
+
+    assert inspect.signature(make_case).parameters["amplification"].default == 0.0
+
+
+def test_zero_amplification_is_exactly_the_linear_model():
+    plain = make_case(n_services=8, fault="latency", seed=71)
+    explicit = make_case(n_services=8, fault="latency", amplification=0.0, seed=71)
+    pd.testing.assert_frame_equal(plain.abnormal, explicit.abnormal)
+
+
+def test_a_negative_amplification_is_rejected():
+    with pytest.raises(ValueError, match="amplification"):
+        make_case(amplification=-1.0)
+
+
+def test_congestion_is_dormant_while_everything_is_healthy():
+    """The whole trick depends on this. If congestion fired during normal
+    operation it would widen the caller's normal spread, and the effect would
+    cancel itself out instead of creating a trap."""
+    calm = make_case(n_services=8, n_normal=500, fault="latency", amplification=0.0, seed=72)
+    loud = make_case(n_services=8, n_normal=500, fault="latency", amplification=2.0, seed=72)
+
+    for column in ("frontend_latency", "svc-01_latency"):
+        assert loud.normal[column].std() == pytest.approx(
+            calm.normal[column].std(), rel=0.10
+        ), f"{column}'s normal spread changed, so congestion is not dormant"
+
+
+def test_with_amplification_a_caller_can_look_worse_than_the_culprit():
+    """The point of the parameter, and the thing the linear model cannot do.
+
+    Under linear propagation a caller's deviation can never exceed the culprit's,
+    because raising the propagation weight scales the inherited signal and the
+    inherited noise together. Congestion breaks that tie.
+    """
+    trapped = 0
+    for seed in range(20):
+        case = make_case(
+            n_services=10, n_normal=500, n_abnormal=200, fault="latency",
+            propagation=0.9, amplification=1.0, seed=seed,
+        )
+        callers = ancestors_of(case, case.gt_service)
+        if not callers:
+            continue
+        culprit = deviation_in_stds(case, case.gt_column)
+        worst_caller = max(deviation_in_stds(case, f"{s}_latency") for s in callers)
+        if worst_caller > culprit:
+            trapped += 1
+
+    assert trapped >= 10, (
+        f"only {trapped}/20 cases put a caller above the culprit; "
+        "amplification is not producing the symptom trap"
+    )
+
+
+def test_without_amplification_a_caller_never_looks_worse_than_the_culprit():
+    """The counterpart, and the reason amplification had to be added at all."""
+    for seed in range(20):
+        case = make_case(
+            n_services=10, n_normal=500, n_abnormal=200, fault="latency",
+            propagation=1.0, amplification=0.0, seed=seed,
+        )
+        callers = ancestors_of(case, case.gt_service)
+        if not callers:
+            continue
+        culprit = deviation_in_stds(case, case.gt_column)
+        worst_caller = max(deviation_in_stds(case, f"{s}_latency") for s in callers)
+        assert worst_caller < culprit, f"seed {seed} trapped under a purely linear model"
+
+
+def test_more_amplification_means_a_louder_caller():
+    mild = make_case(
+        n_services=8, n_normal=500, n_abnormal=200, fault="latency",
+        propagation=0.9, amplification=0.5, seed=73,
+    )
+    severe = make_case(
+        n_services=8, n_normal=500, n_abnormal=200, fault="latency",
+        propagation=0.9, amplification=4.0, seed=73,
+    )
+    caller = ancestors_of(mild, mild.gt_service)[0]
+    column = f"{caller}_latency"
+    assert deviation_in_stds(severe, column) > deviation_in_stds(mild, column)
+
+
+def test_the_case_records_the_amplification_it_was_built_with():
+    case = make_case(n_services=5, amplification=0.75, seed=74)
+    assert case.params["amplification"] == 0.75

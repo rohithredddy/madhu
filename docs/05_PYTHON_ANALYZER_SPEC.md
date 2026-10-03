@@ -205,7 +205,7 @@ Engines without residuals return `score == marginalScore`, `inheritedFraction = 
 
 ## 5. Synthetic data (`synthetic.py`) - used for tests
 
-`make_case(n_services=8, n_normal=600, n_abnormal=120, fault="latency"|"cpu"|"mem"|"error", root=None, propagation=0.8, noise=1.0, seed=0)`:
+`make_case(n_services=8, n_normal=600, n_abnormal=120, fault="latency"|"cpu"|"mem"|"error", root=None, propagation=0.8, noise=1.0, amplification=0.0, seed=0)`:
 
 Naming and types at the boundary:
 - Inside the library, `fault` is lowercase (`"latency"`, `"cpu"`, `"mem"`, `"error"`) and `noise`
@@ -239,15 +239,82 @@ Naming and types at the boundary:
 - The faulted service's own latency term is added **before** propagation, so callers inherit it
   through the latency equation.
 
+#### Congestion: why `amplification` exists
+
+With purely linear propagation a caller can **never** look worse than the service that broke, so
+the symptom trap this project is about cannot occur in the data at all. The algebra, with `D` the
+fault size and `w` the propagation weight:
+
+```
+parent = own_noise + w * child
+child  z = D / sd_child
+parent z = w*D / sqrt(sd_own^2 + w^2 * sd_child^2) = D / sqrt((sd_own/w)^2 + sd_child^2)
+```
+
+The parent's denominator is always the larger, so `parent z < child z` for **every** `w`. Raising
+propagation scales the inherited signal and the inherited noise by the same factor and they cancel.
+This was measured as well as derived: over 200 random cases at `propagation=1.0` the ratio of the
+worst caller's score to the culprit's peaked at 0.973 and never reached 1.
+
+Real systems behave differently because a caller does not simply add a scaled copy of its callee's
+delay. Queueing, retries, timeouts and thread-pool saturation make a caller degrade out of all
+proportion once a callee passes a threshold, while leaving it calm below that threshold. It is that
+asymmetry - loud during the fault, silent during normal operation - that lifts the caller's
+deviation without widening its normal spread.
+
+So the caller's latency gains one more term:
+
+```
+latency_s += amplification * own_scale_s * sum over callees k of max(0, z_k - 3)^2
+```
+
+where `z_k` is how slow callee k is in units of its own normal spread, `own_scale_s` is the standard
+deviation of the caller's own latency noise, and the onset of 3 is a constant
+(`CONGESTION_ONSET_Z`). Squared rather than linear, so the effect is negligible just past the
+threshold and severe well beyond it. Exactly zero below the threshold, which is the essential part:
+if congestion fired during normal operation it would widen the caller's normal spread and cancel
+itself out.
+
+`amplification=0` reproduces the purely linear model exactly, bit for bit, so every result produced
+before this was added remains reproducible and the linear case stays available as a comparison.
+
+**Measured behaviour** (40 seeds, 10 services, latency fault, propagation 0.9; top-1 accuracy of
+scoring by marginal deviation versus by residual after a least-squares fit on the callees):
+
+| amplification | marginal | residual | of the wrong answers, how many were callers |
+|---|---|---|---|
+| 0.0 | 1.00 | 1.00 | none wrong |
+| 0.5 | 0.50 | 0.70 | 20 of 20 |
+| 1.0 | 0.17 | 0.12 | 33 of 33 |
+| 2.0 | 0.00 | 0.00 | 40 of 40 |
+| 4.0 | 0.00 | 0.03 | 40 of 40 |
+
+Read honestly, there are three regimes, and the paper must report all three:
+
+- **Below about 0.3**: no trap. Marginal scoring is already right, and nothing can improve on it.
+- **About 0.3 to 0.7**: the useful band. Callers are loud enough to fool a method that only looks at
+  how far each service moved, while subtracting what the callees explain still recovers the culprit.
+- **Above about 0.7**: the fault is so amplified downstream that a model fitted on normal data
+  cannot explain the caller's response either, because the non-linearity is dormant in the training
+  data and no amount of fitting can extrapolate it. Neither method works. This is a real limit of
+  metric-only root-cause analysis, and belongs in the threats-to-validity section rather than being
+  averaged away.
+
+The band is predicted by the algebra, not just observed: a trap needs the congestion contribution
+`A` to exceed `(sqrt(sd_own^2 + w^2 sd_child^2)/w - sd_child) * D`, and a residual method keeps
+working while `A < D`.
+
 #### Why a memory fault must also raise the service's own latency
 
 Only `latency` and `error` propagate in the equations above: `mem_s` is a local random walk with no
 dependency on the services s calls. So without the `+2 * std` latency term, a memory fault would
 produce **no symptoms anywhere**, and that would break three things:
 
-- E6's whole point is that strong propagation makes marginal methods blame symptoms while PARE does
-  not. With a non-propagating fault the symptom rate would be 0 by construction and
-  `PARE_NO_RESIDUAL` would score exactly like `PARE`, so MEM could say nothing about the claim.
+- E6's whole point is that a fault which spreads can make marginal methods blame the services it
+  spread to, while PARE does not. With a non-propagating fault the symptom rate would be 0 by
+  construction and `PARE_NO_RESIDUAL` would score exactly like `PARE`, so MEM could say nothing
+  about the claim. (Spreading is necessary but not sufficient: see "Congestion" above for why
+  propagation strength alone never produces the trap.)
 - It would contradict this project's own motivating example. `00_RESEARCH_PLAN.md` section 1 and
   `01_PROJECT_OVERVIEW.md` both use "cartservice has a memory leak, so frontend and checkoutservice
   get slow", and figure 1 is meant to be exactly that case. The generator has to be able to make it.
@@ -295,7 +362,7 @@ The ground truth is only ever on the returned object, never a column in the data
 
 - `GET /health` -> `{"status":"ok","version":"x.y.z"}`
 - `GET /v1/engines` -> list of engine names with a one-line description each
-- `POST /v1/synthetic` -> generates one synthetic case and returns it in the case format (`06_DATA_CONTRACTS.md` section 2, JSON form). Parameters: nServices, faultType (`LATENCY` | `CPU` | `MEM` | `ERROR`), rootService (optional), propagation, noise (`LOW` | `MEDIUM` | `HIGH`), nNormal, nAbnormal, seed. The returned `meta.json` carries the UPPERCASE `faultType`.
+- `POST /v1/synthetic` -> generates one synthetic case and returns it in the case format (`06_DATA_CONTRACTS.md` section 2, JSON form). Parameters: nServices, faultType (`LATENCY` | `CPU` | `MEM` | `ERROR`), rootService (optional), propagation, amplification, noise (`LOW` | `MEDIUM` | `HIGH`), nNormal, nAbnormal, seed. The returned `meta.json` carries the UPPERCASE `faultType`.
 - `POST /v1/analyze` -> request/response exactly as `AnalyzeRequest` / `AnalyzeResponse` in `06_DATA_CONTRACTS.md`
 - Convert `null` values to NaN. Validate that each row length equals the number of columns; return HTTP 422 with a clear message otherwise.
 - Log one line per request: engine, rows, columns, took_ms.

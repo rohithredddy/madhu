@@ -9,9 +9,8 @@ anything waiting on you, then the machine setup and the full list of decisions a
 ## Current status
 - Current milestone: M1 (Python PARE core)
 - Next task: M1.6 (`residual.py` + tests) - the core of the method
-- Blockers: none for M1.6, but **open question 3 below needs an answer before M1.7/M1.10**. The
-  synthetic generator as specified cannot produce the cause-versus-symptom confusion the paper is
-  about. M1.3 to M1.6 are unaffected and can proceed either way.
+- Blockers: none. Open question 3, which would have made the M1.10 synthetic check meaningless, was
+  settled on 2026-10-03 (decision 38).
 
 ## Log
 <!-- Template for each entry:
@@ -21,6 +20,36 @@ anything waiting on you, then the machine setup and the full list of decisions a
 - Files changed:
 - Left open / next:
 -->
+
+### 2026-10-03 - M1.2a - settling open question 3: the synthetic model could not produce the trap
+- What was done: added a non-linear congestion term and an `amplification` parameter to
+  `pare.synthetic`, resolving the finding raised during M1.2. Full reasoning, the measurements and
+  the three regimes are in decision 38. The headline: with linear propagation a caller can never
+  outscore the culprit, so our own generator could not produce the mistake the project exists to
+  study; congestion fixes that with a mechanism that has a physical justification rather than being
+  tuned to flatter the method.
+- How it was tested (commands + result):
+  - `pytest -q` -> **185 passed** (8 new) in 2.0 s. `ruff check .` -> clean.
+  - The most important check is that nothing moved: all 56 pre-existing synthetic tests pass
+    untouched, and a case built with `amplification=0.0` is byte-identical to one built without the
+    argument. No new random draws were introduced, which is what makes that possible.
+  - The two opposing properties are both asserted, because together they are the whole point:
+    without amplification a caller **never** outscores the culprit across 20 seeds, and with
+    amplification at 1.0 a caller outscores it in at least half of them.
+  - Congestion is tested to be dormant in normal operation: the caller's normal spread changes by
+    less than 10 percent between `amplification=0` and `amplification=2`. If that ever failed, the
+    mechanism would be cancelling itself out and the trap would vanish again.
+  - Behaviour across the amplification sweep was measured with a least-squares residual proxy, since
+    `residual.py` is M1.6. Numbers in decision 38.
+- Files changed: `analyzer/pare/synthetic.py`, `analyzer/tests/test_synthetic.py`;
+  `docs/05_PYTHON_ANALYZER_SPEC.md` (the congestion section, the derivation, the measured regimes),
+  `docs/08_EXPERIMENTS_SPEC.md` (E6 gains amplification as a factor and its expected story is
+  corrected), `docs/06_DATA_CONTRACTS.md` (`amplification` on the synthetic request),
+  `docs/04_REACT_FRONTEND_SPEC.md` (the lab's slider and its now-corrected hint), `PROGRESS.md`.
+- Left open / next: M1.6, `residual.py`. Worth carrying into it: the amplification sweep says a
+  linear dependency model stops working above about 0.7, because the non-linearity is invisible in
+  the normal data it is fitted on. That is a limitation to measure and report in E6, not a bug to
+  tune away.
 
 ### 2026-10-03 - M1.5 - changepoint.py, re-anchoring the window when detection is late
 - What was done: `pare/changepoint.py` with `estimate_change_point()` and the `ChangePoint` result,
@@ -362,66 +391,13 @@ anything waiting on you, then the machine setup and the full list of decisions a
      allowed in the isolated baseline venv and nowhere else. Needs the human's yes before M2.
    - Not blocking anything before M2.
 
-3. **The synthetic model as specified cannot produce the symptom trap. This is the
-   cause-versus-symptom story the whole paper rests on, so it needs a decision.**
-
-   Found while building M1.2. The generator faithfully implements `05` section 5, and the data looks
-   right - a fault appears, callers follow it, unrelated services stay flat (see
-   `paper/figures/synthetic_example.png`). But a caller can **never** look worse than the culprit
-   under these equations, so plain marginal scoring is already almost perfect and there is nothing
-   for PARE to improve on.
-
-   Measured, not guessed. Over 200 random cases at `propagation=1.0` with a latency fault, the ratio
-   of the worst caller's robust-z to the culprit's robust-z was **at most 0.973 and 0.591 on
-   average** - never once above 1.0. Marginal top-1 picked the true cause in 30/30 latency cases and
-   28/30 memory cases, at both weak and strong propagation.
-
-   The algebra says it has to be that way, so no amount of seed-hunting will find a counterexample:
-
-       parent_latency = own_noise + w * child_latency
-       child z  = D / sd_child
-       parent z = w*D / sqrt(sd_own^2 + w^2 * sd_child^2) = D / sqrt((sd_own/w)^2 + sd_child^2)
-
-   The parent's denominator is always larger, so `parent z < child z` for **every** propagation
-   weight `w`. Turning propagation up raises the inherited signal and the inherited noise by exactly
-   the same factor, so they cancel. In other words, the `propagation` knob that E6 is built to turn
-   cannot create the effect E6 wants to measure.
-
-   What this threatens if left alone:
-   - E6 would report that marginal methods are near-perfect and PARE adds nothing, for every setting
-     of every factor. The expected story in `08` section 4 ("when propagation is strong, marginal
-     methods and SHAP pick symptoms more often") would be contradicted by our own generator.
-   - The `05` section 6 gate "PARE top-1 >= PARE_NO_RESIDUAL top-1" would be met only as a tie at
-     about 1.0 for both, which tells us nothing.
-   - Figure 1, the motivating example, could not be drawn from synthetic data.
-
-   Why real systems do show the trap, and what is missing from the model: in reality a caller's
-   slowdown is not a scaled copy of its callee's. Queueing, retries, timeouts and thread-pool
-   saturation amplify a downstream problem **non-linearly** - the caller is calm while the callee is
-   healthy, then degrades far out of proportion once the callee passes a threshold. That is what
-   makes the caller's deviation large relative to its own normal spread. A purely linear sum can
-   never do this.
-
-   **Proposed fix** (not applied; it changes the research model, so it is the human's call): add a
-   congestion term to the latency equation, off during normal operation and growing sharply once a
-   callee is slow, for example
-
-       latency_s += g * max(0, latency_k - threshold_k)^2     (threshold_k from the normal period)
-
-   with `g` controlled by a new `amplification` parameter. `amplification=0` would reproduce exactly
-   today's linear behaviour, so the ablation "does non-linear propagation matter" comes free, and E6
-   gains a second factor that is arguably more interesting than propagation strength itself.
-
-   Options:
-   a. Add the congestion term as above, and make `amplification` an E6 factor.
-   b. Keep the linear model and drop the synthetic symptom-rate claims, relying only on RCAEval
-      (real data does contain the trap) - the synthetic study then only covers graph quality,
-      graph size, noise and delay.
-   c. Something else.
-
-   Recommendation: (a). It is a small, well-motivated change, it keeps the linear model available as
-   a special case, and without it E6 cannot speak to the paper's central claim. Either way this does
-   not block M1.3 to M1.6.
+3. ~~**The synthetic model cannot produce the symptom trap.**~~ **SETTLED on 2026-10-03** - see
+   decision 38 and the M1.2a log entry. In short: the cause was that linear propagation scales the
+   inherited signal and the inherited noise by the same factor, so they cancel and a caller can never
+   outscore the culprit for any propagation weight. Fixed by adding a non-linear congestion term with
+   an `amplification` parameter, default 0, which reproduces the old linear model exactly. The trap
+   now appears, PARE wins over a band of amplification, and beyond that band nothing metric-only
+   works - which is reported rather than hidden.
 
 4. **A memory fault is weaker than the spec's `8 * std` suggests, and may fall under
    `min_cause_score`.** The ramp reaches `+8 * std` only at the last abnormal row, so the median over
@@ -767,6 +743,64 @@ written into the spec files. One line of reason each.
     Reason: the difference matters to whoever reads the result. "The change started 60 s before the
     alarm" and "we could not tell, so we used the alarm" are different claims, and the explanation
     text and the warnings list need to be able to say which one happened.
+
+### Settling open question 3
+
+38. **The synthetic generator gains a non-linear congestion term, controlled by a new
+    `amplification` parameter that defaults to 0.**
+
+    The problem: with linear propagation a caller can never look worse than the service that broke,
+    so the symptom trap the whole project is about could not occur in our own data. Raising the
+    propagation weight scales the inherited signal and the inherited noise by the same factor and
+    they cancel. Derived, then measured over 200 cases: the caller-to-culprit score ratio peaked at
+    0.973 and never once reached 1.
+
+    The fix, with a physical reason rather than a fudge: a caller does not add a scaled copy of its
+    callee's delay. Queueing, retries, timeouts and pool saturation make it degrade out of all
+    proportion once a callee passes a threshold, while leaving it calm below it. That asymmetry -
+    loud during the fault, silent in normal operation - lifts the caller's deviation without widening
+    its normal spread, which is exactly what is needed. So
+
+        latency_s += amplification * own_scale_s * sum over callees k of max(0, z_k - 3)^2
+
+    Squared, so it is negligible just past the threshold and severe well beyond. Exactly zero below
+    the threshold, which is the essential part and is tested: if congestion fired during normal
+    operation it would widen the caller's normal spread and cancel itself out.
+
+    `amplification=0` reproduces the old model **bit for bit** - no new random draws were added - so
+    every earlier result stays reproducible and the linear case remains available as a comparison.
+
+    Measured, 40 seeds, 10 services, latency fault, propagation 0.9, top-1 accuracy:
+
+    | amplification | marginal scoring | residual scoring | wrong answers that were callers |
+    |---|---|---|---|
+    | 0.0 | 1.00 | 1.00 | none wrong |
+    | 0.5 | 0.50 | **0.70** | 20 of 20 |
+    | 1.0 | 0.17 | 0.12 | 33 of 33 |
+    | 2.0 | 0.00 | 0.00 | 40 of 40 |
+    | 4.0 | 0.00 | 0.03 | 40 of 40 |
+
+    (The residual column is a proxy - least squares on the callees - because `residual.py` is M1.6.
+    It is a design check, not a paper result.)
+
+    **Three regimes, and the paper must report all three.** Below about 0.3 there is no trap and
+    nothing can beat marginal scoring. Between about 0.3 and 0.7 is the useful band: callers are loud
+    enough to fool a method that only measures how far each service moved, while subtracting what the
+    callees explain still finds the culprit. Above about 0.7 neither works, because the
+    non-linearity is dormant in the normal data and no model fitted on normal data can extrapolate
+    it. That last regime is a real limit of metric-only root-cause analysis and belongs in threats to
+    validity, not in an average that hides it.
+
+    The band is predicted by algebra, not just observed: a trap needs the congestion contribution to
+    exceed `(S/w - sd_child) * D` and a residual method keeps working while it stays below `D`.
+
+    **This also corrected a claim in two specs.** `08` said E6's story was that *strong propagation*
+    makes marginal methods blame symptoms. That is false, and E6 built on it would have measured
+    nothing. The factor is amplification, so E6 now sweeps it and the headline figure is AC@1 and
+    symptom rate against amplification. `04`'s synthetic-lab hint told the user to turn up
+    propagation and watch ordinary methods fail, which would simply not have happened; it now points
+    at amplification and warns the presenter that above 0.7 neither method works, so that is not
+    shown as a PARE failure.
 
 ### Order of work
 

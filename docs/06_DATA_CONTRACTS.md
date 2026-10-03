@@ -133,9 +133,13 @@ For engines without residuals: `score == marginalScore`, `inheritedFraction = 0`
 ### POST /v1/synthetic - request
 ```json
 { "nServices": 10, "faultType": "LATENCY", "rootService": null, "propagation": 0.8,
-  "noise": "MEDIUM", "nNormal": 600, "nAbnormal": 180, "seed": 7 }
+  "amplification": 0.5, "noise": "MEDIUM", "nNormal": 600, "nAbnormal": 180, "seed": 7 }
 ```
 - `faultType`: `LATENCY` | `CPU` | `MEM` | `ERROR` (UPPERCASE).
+- `amplification`: 0 or more, default 0. How non-linearly a caller degrades once a callee is slow.
+  0 is purely linear propagation, where a caller can never look worse than the service that broke.
+  Around 0.5 a caller can out-shout the culprit, which is the mistake this project is about; above
+  about 0.7 nothing metric-only can tell them apart. See `05_PYTHON_ANALYZER_SPEC.md` section 5.
 - `noise`: `LOW` | `MEDIUM` | `HIGH`. The service layer maps these to the float the library wants:
   LOW -> 0.5, MEDIUM -> 1.0, HIGH -> 2.0.
 - Anything else in these two fields is HTTP 422 with a clear message.

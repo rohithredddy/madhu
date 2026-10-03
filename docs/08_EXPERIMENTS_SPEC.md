@@ -98,12 +98,22 @@ because a real system would not know when the fault was injected:
 - Vary one factor at a time, 50 seeds per setting, 4 fault types:
   - graph size: 5, 10, 20, 40 services
   - propagation strength (weight from callee to caller): 0.2, 0.5, 0.8, 1.0
+  - amplification (how non-linearly a caller degrades once a callee is slow): 0, 0.25, 0.5, 1.0, 2.0
   - noise level: LOW, MEDIUM, HIGH (the float multipliers 0.5 / 1.0 / 2.0)
   - graph quality: true graph, 20% edges removed, 20% wrong edges added, no graph
   - detection delay: 0, 10, 30, 60 rows
 - Methods: PARE, PARE_NO_RESIDUAL, PARE_NO_CP, NSIGMA, SHAP_IFOREST, ECDF.
-- Expected story: when propagation is strong, marginal methods and SHAP pick symptoms more often; PARE stays accurate; PARE degrades gracefully when the graph is wrong.
-- Figures: AC@1 vs propagation strength; symptom rate vs propagation strength; AC@1 vs graph quality.
+- Expected story, corrected after building the generator: **propagation strength alone does not
+  create the symptom trap** - under linear propagation a caller can never outscore the culprit, for
+  the reason derived in `05_PYTHON_ANALYZER_SPEC.md` section 5. The factor that creates it is
+  `amplification`. So the story to test is: as amplification rises, marginal methods and SHAP start
+  blaming callers; PARE keeps finding the culprit over a band of amplification; and beyond that band
+  nothing metric-only works, which is a limit worth reporting rather than hiding. PARE should also
+  degrade gracefully when the graph is wrong.
+- Because of that, the headline figure for this experiment is **AC@1 and symptom rate against
+  amplification**, with propagation strength as a secondary factor rather than the main one.
+- Figures: AC@1 vs amplification; symptom rate vs amplification; AC@1 vs propagation strength;
+  AC@1 vs graph quality.
 - This study is cheap (minutes on a laptop) and gives clear, explainable figures for the paper.
 
 ### E7 (optional) - RS-Anomic comparison with GAL-MAD's SHAP localization

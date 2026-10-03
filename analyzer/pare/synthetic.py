@@ -22,6 +22,17 @@ The model, from ``docs/05_PYTHON_ANALYZER_SPEC.md`` section 5:
 The faulted service's own latency term is added before propagation, so a cpu or
 memory fault also makes its callers slow. See the spec for why a memory fault has
 to work that way.
+
+One more mechanism, controlled by ``amplification``, is what makes the symptom
+trap possible at all. With purely linear propagation a caller can never look
+*worse* than the service that broke: raising the propagation weight scales the
+inherited signal and the inherited noise by the same factor, so they cancel, and
+the caller's score stays below the culprit's for any weight. Real systems do not
+behave that way - queueing, retries and timeouts make a caller degrade out of all
+proportion once a callee passes a threshold, while leaving it calm below that
+threshold. That asymmetry is exactly what inflates the caller's deviation without
+inflating its normal spread. ``amplification=0`` keeps the old purely linear
+model, so it is still available as a comparison.
 """
 
 from __future__ import annotations
@@ -47,6 +58,12 @@ DEFAULT_START_TIME_SEC = 1_704_067_200
 # One row per second. The E6 delay sweep is specified in rows, so rows and
 # seconds being the same thing keeps that simple.
 STEP_SEC = 1
+
+# How slow a callee has to get, in units of its own normal spread, before its
+# caller starts to suffer disproportionately. Below this the congestion term is
+# exactly zero, which is the point: normal operation must stay untouched, or the
+# caller's normal spread would widen and the effect would cancel itself out.
+CONGESTION_ONSET_Z = 3.0
 
 # Guards against dividing by a zero standard deviation on a column that happened
 # to come out flat.
@@ -114,6 +131,7 @@ def make_case(
     root: str | None = None,
     propagation: float = 0.8,
     noise: float = 1.0,
+    amplification: float = 0.0,
     seed: int = 0,
     start_time_sec: int = DEFAULT_START_TIME_SEC,
 ) -> SyntheticCase:
@@ -131,13 +149,21 @@ def make_case(
             caller. 0 means a fault stays put; 1 means a caller feels it fully.
         noise: Multiplier on every noise standard deviation. The API's
             LOW/MEDIUM/HIGH map to 0.5/1.0/2.0.
+        amplification: How much a caller degrades out of proportion once a callee
+            passes :data:`CONGESTION_ONSET_Z`. 0 means purely linear propagation,
+            where a caller can never outscore the service that broke. Raising it
+            lets the caller look worse than the culprit, which is the mistake the
+            whole project is about. Around 1.0 the caller is loud enough to fool a
+            method that only looks at how far each service moved, while a method
+            that subtracts what the callees explain still gets it right; much
+            higher and nothing can tell them apart from metrics alone.
         seed: Random seed. The same seed reproduces the case bit for bit.
         start_time_sec: Epoch second of the first row.
 
     Returns:
         A :class:`SyntheticCase`.
     """
-    _validate(n_services, n_normal, n_abnormal, fault, propagation, noise)
+    _validate(n_services, n_normal, n_abnormal, fault, propagation, noise, amplification)
 
     rng = np.random.default_rng(seed)
     n_rows = n_normal + n_abnormal
@@ -161,12 +187,17 @@ def make_case(
     culprit = _pick_culprit(names, root, rng)
     culprit_index = names.index(culprit)
 
-    # Pass 1: no fault, only to measure how noisy each column normally is.
+    # Pass 1: no fault and no congestion, only to measure how each column behaves
+    # normally. Both the fault sizes and the congestion threshold are expressed
+    # relative to these numbers.
     unfaulted = _build_series(
         n_services, n_rows, children, draws, latency_weights, error_weights, fault_terms=None
     )
     normal_std = {
         name: max(float(np.std(values[:n_normal])), _TINY) for name, values in unfaulted.items()
+    }
+    normal_median = {
+        name: float(np.median(values[:n_normal])) for name, values in unfaulted.items()
     }
 
     # Pass 2: the same draws, now with the fault injected.
@@ -178,8 +209,25 @@ def make_case(
         n_abnormal=n_abnormal,
         normal_std=normal_std,
     )
+    congestion = None
+    if amplification > 0:
+        congestion = _Congestion(
+            amplification=amplification,
+            latency_median=np.array(
+                [normal_median[f"{name}_latency"] for name in names], dtype=np.float64
+            ),
+            latency_std=np.array(
+                [normal_std[f"{name}_latency"] for name in names], dtype=np.float64
+            ),
+            own_scale=np.array(
+                [float(np.std(draws["latency_noise"][i])) for i in range(n_services)],
+                dtype=np.float64,
+            ),
+        )
+
     faulted = _build_series(
-        n_services, n_rows, children, draws, latency_weights, error_weights, fault_terms
+        n_services, n_rows, children, draws, latency_weights, error_weights, fault_terms,
+        congestion=congestion,
     )
 
     columns = [
@@ -212,6 +260,7 @@ def make_case(
             "root": culprit,
             "propagation": propagation,
             "noise": noise,
+            "amplification": amplification,
             "seed": seed,
             "start_time_sec": start_time_sec,
         },
@@ -228,6 +277,7 @@ def _validate(
     fault: str,
     propagation: float,
     noise: float,
+    amplification: float,
 ) -> None:
     """Reject arguments that cannot produce a usable case."""
     if fault not in FAULTS:
@@ -240,6 +290,8 @@ def _validate(
         raise ValueError(f"n_abnormal must be at least 1, got {n_abnormal}")
     if propagation < 0:
         raise ValueError(f"propagation must be 0 or more, got {propagation}")
+    if amplification < 0:
+        raise ValueError(f"amplification must be 0 or more, got {amplification}")
     if noise <= 0:
         # A zero noise level would give every column a zero standard deviation,
         # and the fault sizes are all multiples of that standard deviation.
@@ -378,6 +430,29 @@ def _fault_terms(
     return terms
 
 
+@dataclass(frozen=True)
+class _Congestion:
+    """The non-linear part of propagation: queueing, retries and timeouts.
+
+    A caller waits on its callees. While they respond normally it is unaffected,
+    but once one of them is badly slow the caller's own threads and connections
+    stay held, work queues up, and its response time rises far faster than the
+    delay it is waiting on. That is why a caller can end up looking worse than the
+    service that actually broke.
+
+    Modelled as ``amplification * own_scale * max(0, z_k - onset) ** 2`` summed
+    over the callees, where ``z_k`` is how slow callee k is in units of its own
+    normal spread. Squared rather than linear so the effect is negligible just
+    past the threshold and severe well beyond it; zero below the threshold so that
+    normal operation, and therefore the caller's normal spread, is untouched.
+    """
+
+    amplification: float
+    latency_median: np.ndarray
+    latency_std: np.ndarray
+    own_scale: np.ndarray
+
+
 def _build_series(
     n_services: int,
     n_rows: int,
@@ -386,6 +461,7 @@ def _build_series(
     latency_weights: dict[int, np.ndarray],
     error_weights: dict[int, np.ndarray],
     fault_terms: dict[str, np.ndarray] | None,
+    congestion: _Congestion | None = None,
 ) -> dict[str, np.ndarray]:
     """Compute every column, callees before callers.
 
@@ -442,6 +518,16 @@ def _build_series(
             weight * latency[kid] for weight, kid in zip(latency_weights[i], kids, strict=True)
         )
         latency[i] = own_latency + (inherited_latency if kids else 0.0)
+
+        # Congestion, on top of the linear share. Added here, before this service
+        # is used by its own caller, so the effect cascades up the graph the same
+        # way the linear part does.
+        if congestion is not None and kids:
+            extra = np.zeros(n_rows)
+            for kid in kids:
+                z = (latency[kid] - congestion.latency_median[kid]) / congestion.latency_std[kid]
+                extra += np.maximum(0.0, z - CONGESTION_ONSET_Z) ** 2
+            latency[i] = latency[i] + congestion.amplification * congestion.own_scale[i] * extra
 
         own_error = error_base[i] + error_noise[i] + terms.get(f"{name}_error", zero)
         inherited_error = sum(
