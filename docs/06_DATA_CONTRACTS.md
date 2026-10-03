@@ -79,6 +79,14 @@ Synthetic cases returned by Python `/v1/synthetic` use the same content as JSON:
 - `topK` (default 10) is only the number of indicators returned in `indicators`. It is a different
   thing from the internal `cpTopK` (default 5), which is how many columns the change-point step
   looks at. Both can be set here.
+- **Which keys are allowed**: exactly the `PareConfig` fields from
+  `05_PYTHON_ANALYZER_SPEC.md` section 1.1, with the snake_case field name converted to camelCase.
+  The rule is mechanical, so there is no second list of names to keep in step:
+  `use_change_point` -> `useChangePoint`, `top_k` -> `topK`, `cp_top_k` -> `cpTopK`,
+  `cp_lookback_s` -> `cpLookbackS`, `seed` -> `seed`. `pare.config.api_param_names()` returns the
+  full list, and `PareConfig.from_api_params()` is the only place that does the conversion.
+- An **unknown key is rejected** with HTTP 422 rather than ignored. A request that says `topk`
+  instead of `topK` is a mistake worth reporting, not something to silently analyse with defaults.
 - Ground truth is NEVER part of this request.
 
 ### POST /v1/analyze - response (AnalyzeResponse)

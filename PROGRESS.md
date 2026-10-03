@@ -4,9 +4,9 @@ Update this file at the end of every task. Newest entry at the top of "Log".
 Human: read this before every session to know where things stand.
 
 ## Current status
-- Current milestone: M0 done
-- Next task: M1.1 (`analyzer/pyproject.toml`, package `pare`, `config.py`, `columns.py`)
-- Blockers: none. The Python 3.10 environment exists and its libraries are verified working.
+- Current milestone: M1 (Python PARE core)
+- Next task: M1.2 (`synthetic.py` with `propagation` and `noise`, plus the example plot)
+- Blockers: none.
 
 ## Environment (measured 2026-10-03)
 
@@ -227,6 +227,42 @@ written into the spec files. One line of reason each.
     `pip install -e ".[dev]"` then finds them already satisfied. If a version here disagrees with
     what M1.1 pins, M1.1's pyproject wins.
 
+### M1.1 choices
+
+21. **`PareConfig` is a frozen dataclass with validation in `__post_init__`.**
+    Reason: the ablation engines are variants of one config (`PARE_NO_CP` is
+    `use_change_point=False`), and `with_changes()` on a frozen object gives that without any risk
+    of an analysis changing its own settings halfway through. Validation turns a typo into an
+    immediate clear error instead of a quietly strange result later.
+
+22. **The camelCase conversion for `params` lives in `config.py`** as
+    `PareConfig.from_api_params()`, and it is **mechanical**, not a hand-written table:
+    `use_change_point` -> `useChangePoint`, `top_k` -> `topK`. Unknown keys raise.
+    Reason: one tested function beats duplicating all 16 defaults again in `service/schemas.py` at
+    M7.1, and a mechanical rule cannot drift the way a second list of names would. `06` section 3
+    now records the rule so the Java side builds the same keys. A silently ignored `topk` typo is
+    the kind of thing that costs an afternoon.
+
+23. **`pyproject.toml` uses version floors, not exact pins, but caps Python at `<3.14`.**
+    Reason: the cap is the valuable part, because it encodes the ruptures/shap/dowhy problem and
+    makes a wrong-interpreter install fail immediately with a clear message. Exact pins would fight
+    pip on any other machine for no benefit; the exact verified versions are recorded in
+    "Environment" above, which is what reproducibility actually needs.
+
+24. **No `guess_from_name` helper in `pare.columns`.**
+    Reason: `05` section 2 forbids the algorithm parsing column names. Guessing is still needed, but
+    it belongs to the experiment adapter (M2.3) and the Java upload helper, where a human checks the
+    result before it is used. A test in `test_columns.py` locks the rule in by giving a column a name
+    that looks nothing like its service and metric.
+
+25. **`pip` was added to `analyzer/.venv` with `ensurepip`, rather than changing the documented
+    command.** `uv venv` creates an environment without pip, so `pip install -e ".[dev]"` from
+    `PROJECT_RULES.md` section 6 would not have run.
+    Reason: the documented command should be the one that works for someone on a fresh clone with a
+    plain `python -m venv`, who will have pip and may not have uv. M12.2 is a fresh-clone test, so
+    the docs stay standard and the local venv was brought up to match. pip 26.2.1 and
+    setuptools 84.0.0 are now in the venv.
+
 ### Order of work
 
 17. **Normal order: research first.** M0 -> M1 -> M2 ... The "application early" shortcut in
@@ -249,6 +285,39 @@ written into the spec files. One line of reason each.
 - Files changed:
 - Left open / next:
 -->
+
+### 2026-10-03 - M1.1 - pare package skeleton, PareConfig and ColumnInfo
+- What was done: the first real code. `analyzer/pyproject.toml` (package `pare`, `[dev]` extra with
+  pytest and ruff, ruff and pytest settings), `pare/__init__.py` holding `__version__` as the single
+  source of truth, `pare/config.py` with `PareConfig`, and `pare/columns.py` with `ColumnInfo` and
+  the lookup helpers the later steps need (`services`, `group_by_service`, `columns_of_service`,
+  `name_to_index`, `validate_columns`, `columns_from_dicts`). Choices and reasons are decisions 21
+  to 25 above. `pare/py.typed` marks the package as typed.
+  - `config.py` carries all 16 parameters from `05` section 1.1 with a one-line docstring each, the
+    validation rules, `with_changes()` for the ablations, and the camelCase conversion for the API.
+  - `columns.py` deliberately has no name-guessing helper, and says in its module docstring why.
+- How it was tested (commands + result):
+  - `pip install -e ".[dev]"` in `analyzer/` -> installs clean; `import pare` reports version 0.1.0
+    from the working tree, so the editable install works.
+  - `pytest -q` -> **46 passed** in 0.07 s.
+    - `test_config.py` copies the spec table from `05` section 1.1 and asserts every default against
+      it, and separately asserts that the set of fields in the code equals the set in the table. So a
+      default changed on one side without the other now fails the build instead of quietly changing
+      every number in the paper.
+    - Validation is checked with 14 parametrised bad values, plus the case that `cp_lookahead_s=0`
+      must be *allowed*, because 0 is exactly the replay situation.
+    - The API boundary is covered both ways, including that an unknown key raises and that
+      `from_api_params(to_api_params())` round-trips.
+    - `test_columns.py` covers duplicate rejection, that two services may share a metric name,
+      ordering guarantees, the name->index map used by every engine, and the JSON round trip.
+  - `ruff check .` -> clean. Two findings were fixed first: `Iterable`/`Mapping` now come from
+    `collections.abc`, and one error message was wrapped to stay inside 100 columns.
+- Files changed: new `analyzer/pyproject.toml`, `analyzer/pare/{__init__,config,columns}.py`,
+  `analyzer/pare/py.typed`, `analyzer/tests/{test_config,test_columns}.py`;
+  `docs/06_DATA_CONTRACTS.md` (section 3 now records how `params` keys are named, needed so the Java
+  client builds the same keys), `docs/07_TASKS.md` (M1.1 ticked), `PROGRESS.md`.
+- Left open / next: M1.2, the synthetic generator. Nothing from M1.2 onward was written. The
+  PyTorch question is still open and still only matters at M2.
 
 ### 2026-10-03 - M0.1 / M0.2 / M0.3 - project skeleton and working Python environment
 - What was done:

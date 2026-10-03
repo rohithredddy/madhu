@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pare"
+description = "Propagation-Aware Residual Explanations: CPU-only anomaly explanation and root-cause ranking for microservice systems"
+readme = "README.md"
+license = { text = "MIT" }
+dynamic = ["version"]
+
+# Why the upper bound matters as much as the lower one:
+#   ruptures (<3.14) and dowhy (<3.14) cap Python, and shap ships no Windows
+#   cp314 wheel. Writing the cap here makes a wrong-interpreter install fail
+#   immediately with a clear message, instead of failing strangely later.
+requires-python = ">=3.10,<3.14"
+
+# Floors, not exact pins. These are the versions the environment was verified
+# with on 2026-10-03 (see PROGRESS.md "Environment"); the floors let pip pick
+# compatible builds on another machine without fighting us.
+dependencies = [
+    "numpy>=2.2.6",
+    "pandas>=2.3.3",
+    "scikit-learn>=1.7.2",
+    "scipy>=1.15.3",
+    "shap>=0.49.1",
+    "lightgbm>=4.7.0",
+    "ruptures>=1.1.10",
+    "networkx>=3.4.2",
+    "statsmodels>=0.15.0",
+    "matplotlib>=3.10.9",
+    "pyarrow>=25.0.1",
+    "pyyaml>=6.0.3",
+    "joblib>=1.6.0",
+    "fastapi>=0.142.2",
+    "uvicorn>=0.54.0",
+    "pydantic>=2.13.5",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.16.10",
+]
+
+# Only "pare" is declared. The FastAPI "service" package does not exist until
+# M7.1 and declaring it now would break the install; `uvicorn service.app:app`
+# runs from the analyzer/ directory anyway.
+[tool.setuptools]
+packages = ["pare"]
+
+[tool.setuptools.dynamic]
+version = { attr = "pare.__version__" }
+
+[tool.setuptools.package-data]
+pare = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+# E/F: pycodestyle + pyflakes, I: import order, UP: modern syntax, B: likely bugs
+select = ["E", "F", "I", "UP", "B"]
