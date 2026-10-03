@@ -45,11 +45,16 @@ def request_for(case, engine, normal_rows=400, config=None):
 
 def test_the_registry_holds_the_engines_the_spec_names():
     assert set(ALL_ENGINES) == {
+        # the method and its ablations
         "PARE",
         "PARE_NO_RESIDUAL",
         "PARE_NO_CP",
         "PARE_LGBM",
+        # the baselines contribution C1 measures
         "NSIGMA",
+        "SHAP_IFOREST",
+        "ECDF",
+        "PCA_RECON",
     }
 
 
@@ -110,7 +115,9 @@ def test_every_engine_survives_missing_columns_and_no_graph(engine):
     assert any("dropped" in w for w in result.warnings)
 
 
-@pytest.mark.parametrize("engine", ["PARE_NO_RESIDUAL", "NSIGMA"])
+@pytest.mark.parametrize(
+    "engine", ["PARE_NO_RESIDUAL", "NSIGMA", "SHAP_IFOREST", "ECDF", "PCA_RECON"]
+)
 def test_engines_without_residuals_report_so_honestly(engine):
     """docs/06 section 3: score equals marginal, nothing inherited, nothing
     explained. That is the admission that they cannot tell cause from symptom."""
@@ -311,9 +318,9 @@ def test_pare_lgbm_differs_from_pare_only_in_its_dependency_model():
 
     assert lgbm.dependency_model == "lgbm"
     assert pare.dependency_model is None
-    assert (lgbm.use_change_point, lgbm.use_residuals, lgbm.robust, lgbm.window_to_end) == (
+    assert (lgbm.use_change_point, lgbm.use_residuals, lgbm.scorer, lgbm.window_to_end) == (
         pare.use_change_point,
         pare.use_residuals,
-        pare.robust,
+        pare.scorer,
         pare.window_to_end,
     )

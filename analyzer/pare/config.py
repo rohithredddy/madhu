@@ -17,7 +17,10 @@ from typing import Any
 
 # The two string parameters have a small closed set of valid values.
 DEPENDENCY_MODELS = ("ridge", "lgbm")
-SERVICE_AGGREGATIONS = ("max", "top2mean")
+# "sum" exists for SHAP_IFOREST, which the spec defines as summing a service's
+# per-column SHAP values (the GAL-MAD style). It is not useful for the robust
+# scores, where summing would simply reward whichever service has most metrics.
+SERVICE_AGGREGATIONS = ("max", "top2mean", "sum")
 
 
 @dataclass(frozen=True)
@@ -68,7 +71,8 @@ class PareConfig:
 
     # --- step 4, ranking and roles ---
     service_agg: str = "max"
-    """How a service score is built from its columns: ``"max"`` or ``"top2mean"``."""
+    """How a service score is built from its columns: ``"max"``, ``"top2mean"`` or
+    ``"sum"``. Engines may override it: ``SHAP_IFOREST`` requires ``"sum"``."""
 
     traversal: bool = True
     """Use the call-graph traversal step when picking rank 1."""

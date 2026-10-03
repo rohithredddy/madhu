@@ -14,13 +14,19 @@ engine               change point  residuals  window
 ``PARE_NO_CP``       no            yes        starts at the alarm
 ``PARE_LGBM``        yes           yes        re-anchored; LightGBM dependency
 ``NSIGMA``           no            no         alarm to the end of the data
+``SHAP_IFOREST``     no            no         alarm to the end of the data
+``ECDF``             no            no         alarm to the end of the data
+``PCA_RECON``        no            no         alarm to the end of the data
 ===================  ============  =========  ================================
 
 The two ablations exist to answer "which half does the work": ``PARE_NO_RESIDUAL``
 keeps the re-anchoring but scores by raw movement, and ``PARE_NO_CP`` keeps the
-residuals but takes the alarm at face value. ``NSIGMA`` is the standard baseline,
-implemented the ordinary way rather than an improved way, so the comparison is
-fair.
+residuals but takes the alarm at face value.
+
+The last four are the baselines contribution C1 measures: ``NSIGMA`` and the
+three explainer methods people normally reach for. None of them uses the call
+graph or the change point, because the published versions do not, and scoring
+them any other way would make the comparison flattering rather than fair.
 
 Spec: ``docs/05_PYTHON_ANALYZER_SPEC.md`` sections 3 and 4; the result maps field
 for field onto ``AnalyzeResponse`` in ``docs/06_DATA_CONTRACTS.md`` section 3.
@@ -39,6 +45,7 @@ from pare import __version__
 from pare.changepoint import estimate_change_point
 from pare.columns import ColumnInfo
 from pare.config import PareConfig
+from pare.explainers import ecdf_explainer, pca_reconstruction, shap_iforest
 from pare.graph import CallGraph
 from pare.preprocess import preprocess
 from pare.rank import NO_CLEAR_CAUSE, IndicatorRanking, Ranking, ServiceRanking, rank_all
@@ -115,14 +122,20 @@ class EngineSpec:
     description: str
     use_change_point: bool
     use_residuals: bool
-    robust: bool = True
-    """False means mean-and-standard-deviation scoring, as NSigma does it."""
+    scorer: str = "robust"
+    """Which per-column score to use when no dependency model is fitted:
+    ``robust`` (median and MAD), ``nsigma`` (mean and standard deviation),
+    ``ecdf``, ``shap_iforest`` or ``pca_recon``."""
 
     window_to_end: bool = False
     """True means score from the alarm to the end of the data, rather than a
     fixed-length window."""
 
     dependency_model: str | None = None
+
+    service_agg: str | None = None
+    """Overrides the configured aggregation. Only SHAP_IFOREST sets it, because
+    the method it reproduces sums a service's columns."""
 
 
 ENGINES: dict[str, EngineSpec] = {
@@ -156,7 +169,32 @@ ENGINES: dict[str, EngineSpec] = {
         description="Baseline: mean shift over normal standard deviation, no graph",
         use_change_point=False,
         use_residuals=False,
-        robust=False,
+        scorer="nsigma",
+        window_to_end=True,
+    ),
+    "SHAP_IFOREST": EngineSpec(
+        name="SHAP_IFOREST",
+        description="Baseline: Isolation Forest with TreeSHAP attribution (GAL-MAD style)",
+        use_change_point=False,
+        use_residuals=False,
+        scorer="shap_iforest",
+        window_to_end=True,
+        service_agg="sum",
+    ),
+    "ECDF": EngineSpec(
+        name="ECDF",
+        description="Baseline: ECOD-style empirical tail probability per metric",
+        use_change_point=False,
+        use_residuals=False,
+        scorer="ecdf",
+        window_to_end=True,
+    ),
+    "PCA_RECON": EngineSpec(
+        name="PCA_RECON",
+        description="Baseline: PCA reconstruction error per metric",
+        use_change_point=False,
+        use_residuals=False,
+        scorer="pca_recon",
         window_to_end=True,
     ),
 }
@@ -182,6 +220,8 @@ def analyze(request: AnalyzeRequest) -> AnalyzeResult:
     settings = request.config
     if spec.dependency_model is not None:
         settings = settings.with_changes(dependency_model=spec.dependency_model)
+    if spec.service_agg is not None:
+        settings = settings.with_changes(service_agg=spec.service_agg)
     if not spec.use_change_point:
         settings = settings.with_changes(use_change_point=False)
 
@@ -227,7 +267,7 @@ def analyze(request: AnalyzeRequest) -> AnalyzeResult:
         residuals = list(model.residuals)
         warnings.extend(model.warnings)
     else:
-        residuals = _scores_only(clean, abnormal, spec)
+        residuals = _scores_only(clean, abnormal, spec, settings)
 
     ranking = rank_all(residuals, request.graph, settings)
     took_ms = int(round((time.perf_counter() - started) * 1000))
@@ -289,18 +329,27 @@ def _analysis_window(
     return chosen, float(picked[0]), float(picked[-1]), None
 
 
-def _scores_only(clean, abnormal: FloatArray, spec: EngineSpec) -> list[ColumnResidual]:
+def _scores_only(
+    clean, abnormal: FloatArray, spec: EngineSpec, settings: PareConfig
+) -> list[ColumnResidual]:
     """Score every column on its own, with no dependency model.
 
-    Used by ``PARE_NO_RESIDUAL`` and ``NSIGMA``. Per ``docs/06`` section 3, these
-    engines report ``score == marginalScore``, nothing inherited and nothing
-    explained - which is exactly the admission that they cannot tell a cause from
-    a symptom.
+    Used by every engine that is not PARE or one of its residual ablations. Per
+    ``docs/06`` section 3 these engines report ``score == marginalScore``, nothing
+    inherited and nothing explained - which is exactly the admission that they
+    cannot tell a cause from a symptom. Reporting it that way rather than hiding
+    it is what makes the comparison in the paper legible.
     """
-    if spec.robust:
-        scores = window_score(clean.normal, abnormal)
-    else:
-        scores = nsigma_score(clean.normal, abnormal)
+    scorers = {
+        "robust": lambda: window_score(clean.normal, abnormal),
+        "nsigma": lambda: nsigma_score(clean.normal, abnormal),
+        "ecdf": lambda: ecdf_explainer(clean.normal, abnormal, settings),
+        "shap_iforest": lambda: shap_iforest(clean.normal, abnormal, settings),
+        "pca_recon": lambda: pca_reconstruction(clean.normal, abnormal, settings),
+    }
+    if spec.scorer not in scorers:
+        raise ValueError(f"unknown scorer {spec.scorer!r} on engine {spec.name}")
+    scores = scorers[spec.scorer]()
 
     return [
         ColumnResidual(

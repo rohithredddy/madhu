@@ -37,6 +37,7 @@ from pare.engine import (
     analyze,
     available_engines,
 )
+from pare.explainers import ecdf_explainer, pca_reconstruction, shap_iforest
 from pare.graph import CallGraph, Edge
 from pare.preprocess import preprocess
 from pare.rank import IndicatorRanking, Ranking, ServiceRanking, rank_all
@@ -73,14 +74,17 @@ __all__ = [
     "RobustBaseline",
     "columns_from_dicts",
     "columns_of_service",
+    "ecdf_explainer",
     "ecdf_tail_score",
     "estimate_change_point",
     "group_by_service",
     "mad",
     "name_to_index",
+    "pca_reconstruction",
     "robust_baseline",
     "robust_z",
     "services",
+    "shap_iforest",
     "validate_columns",
     "window_score",
 ]

@@ -407,3 +407,13 @@ The ground truth is only ever on the returned object, never a column in the data
 - Log one line per request: engine, rows, columns, took_ms.
 - Run with `uvicorn service.app:app --host 127.0.0.1 --port 8000` (local only; the Java backend is the only client).
 - Typical request (5 services x 7 metrics, 240 normal rows, 60 recent rows) must answer in under 2 seconds on a laptop.
+  - Measured on a larger case (8 services x 5 metrics, 400 normal rows): `PARE` about 100 ms,
+    `NSIGMA` 4 ms, `ECDF` 13 ms, `PCA_RECON` 17 ms - all comfortably inside the budget.
+  - Two engines do not meet it and are **offline baselines rather than interactive ones**:
+    `SHAP_IFOREST` at about 2.2 s, which is the cost of fitting 200 trees and running TreeSHAP as
+    the published method specifies, and `PARE_LGBM` at about 2.2 s. Neither is the default engine.
+    If either is ever offered in the application, the Java timeout (10 s) covers it, but the page
+    should warn the user it is slow.
+  - The first call in a fresh process additionally pays for importing scikit-learn, shap or
+    lightgbm. The service should make one warm-up call at start-up rather than let the first real
+    request pay for it.

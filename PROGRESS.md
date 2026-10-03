@@ -8,7 +8,7 @@ anything waiting on you, then the machine setup and the full list of decisions a
 
 ## Current status
 - Current milestone: M1 (Python PARE core)
-- Next task: M1.8 (`explainers.py`: SHAP_IFOREST, ECDF, PCA_RECON)
+- Next task: M1.9 (`eval_metrics.py` + tests)
 - Blockers: none. Open question 3, which would have made the M1.10 synthetic check meaningless, was
   settled on 2026-10-03 (decision 38).
 
@@ -50,6 +50,77 @@ anything waiting on you, then the machine setup and the full list of decisions a
   linear dependency model stops working above about 0.7, because the non-linearity is invisible in
   the normal data it is fitted on. That is a limitation to measure and report in E6, not a bug to
   tune away.
+
+### 2026-10-03 - M1.8 - the explainer baselines, and the first look at contribution C1
+- What was done: `pare/explainers.py` with `shap_iforest()`, `ecdf_explainer()` and
+  `pca_reconstruction()`, registered as the engines `SHAP_IFOREST`, `ECDF` and `PCA_RECON`. The
+  registry now holds eight engines: the method, three ablations and four baselines.
+  `kernel_shap_pca()` is left unimplemented - it is optional in `05` section 4, would cost minutes
+  per case where the others cost milliseconds, and answers the same question as `PCA_RECON`; it
+  raises with that reason rather than silently returning something that looks like an answer.
+  - The baselines are deliberately **not** improved: none takes a call graph, none uses the change
+    point, and their quirks are left in. A test asserts they have nowhere to put a graph. Improving
+    them would make our own method look better and the comparison dishonest, since the claim is
+    about what current practice does.
+  - `EngineSpec.robust` (a flag) became `EngineSpec.scorer` (a name), because there are now five
+    per-column scorers rather than two.
+- A real bug was found by a test and fixed: **`marginal_score` for a service was always the maximum
+  over its columns, while `score` honoured `service_agg`.** For `SHAP_IFOREST`, which the spec
+  requires to sum a service's columns, that meant the two were a sum and a maximum of the same data.
+  They sit side by side in the cause-versus-symptom chart, so that would have displayed as a gap
+  that does not exist, and it also broke the contract line in `06` section 3 that says score equals
+  marginalScore for engines without residuals. Both are now aggregated the same way. This mattered
+  for `top2mean` too, so it was not only a SHAP problem.
+- How it was tested (commands + result):
+  - `pytest -q` -> **293 passed** (29 new) in 44 s. `ruff check .` -> clean.
+  - Each baseline: one finite non-negative score per column, finds a planted anomaly, stays quiet on
+    a window where nothing happened, survives missing values, and gives no opinion rather than
+    crashing when there is too little history. `SHAP_IFOREST` is checked to be reproducible under a
+    fixed seed, since it is the only explainer with randomness in it.
+- **Two findings about PCA_RECON**, both now in its docstring and pinned by tests:
+  1. It **smears blame across correlated columns**, so it often names a neighbour of the culprit
+     rather than the culprit.
+  2. It is **blind when columns are independent**. Keeping 95 percent of the variance of unrelated
+     columns means keeping essentially all the components, and a full-rank model rebuilds everything
+     perfectly - the anomaly included. Every score comes back around 1e-30. On realistic telemetry
+     this does not bite (a generated case with 40 columns keeps 17 components), but it means a
+     near-zero reconstruction error must never be read as "nothing is wrong".
+- **First look at contribution C1.** 15 seeds, 8 services, latency fault, delay 30 s. ExpAC@1 is
+  indicator-level accuracy; symptom rate counts how many wrong answers blamed a **caller** of the
+  real cause:
+
+  | amplification | engine | AC@1 | ExpAC@1 | wrong answers that blamed a caller |
+  |---|---|---|---|---|
+  | 0.00 | PARE | 1.00 | 1.00 | none wrong |
+  | 0.00 | NSIGMA | 1.00 | 1.00 | none wrong |
+  | 0.00 | SHAP_IFOREST | 0.73 | 0.73 | 3 of 4 |
+  | 0.00 | ECDF | 1.00 | **0.33** | none wrong |
+  | 0.00 | PCA_RECON | 0.07 | 0.07 | 1 of 14 |
+  | 0.25 | PARE | 0.93 | 1.00 | 1 of 1 |
+  | 0.25 | NSIGMA | 0.80 | 0.80 | 3 of 3 |
+  | 0.25 | SHAP_IFOREST | 0.73 | 0.73 | 3 of 4 |
+  | 0.25 | ECDF | 1.00 | **0.13** | none wrong |
+  | 0.25 | PCA_RECON | 0.00 | 0.00 | 4 of 15 |
+
+  Three things stand out, all of which are the kind of result C1 exists to produce.
+
+  **SHAP on an Isolation Forest blames a caller three times out of four when it is wrong.** That is
+  the paper's thesis appearing in the first measurement that could show it.
+
+  **ECDF is perfect at service level and poor at indicator level** - 1.00 against 0.13. A method can
+  look flawless in the coarse table everyone reports and be nearly useless at the question an
+  engineer actually asks, which is "which metric". Part of this is the saturation effect now written
+  up as open question 4, and M1.9 must settle how ties are scored before these numbers go in a paper.
+
+  **PCA_RECON is close to useless here**, 0.00 to 0.07, and mostly not through the symptom trap - it
+  simply blames whichever columns reconstruct worst, which in our data are the memory random walks.
+
+  These are synthetic numbers on one fault type and are not paper results; RE1 in M3 is. But the
+  pipeline that will produce the paper results now runs end to end.
+- Files changed: new `analyzer/pare/explainers.py`, `analyzer/tests/test_explainers.py`;
+  `analyzer/pare/{engine,rank,config,__init__}.py`, `analyzer/tests/test_engine.py`,
+  `docs/05_PYTHON_ANALYZER_SPEC.md` (timings), `docs/07_TASKS.md`, `PROGRESS.md`.
+- Left open / next: M1.9, `eval_metrics.py`, which has to settle open question 4 on its way.
 
 ### 2026-10-03 - M1.7b - measuring the PARE_LGBM ablation
 - What was done: the `PARE_LGBM` engine itself was registered during M1.7, and the "returns a valid
@@ -542,14 +613,26 @@ anything waiting on you, then the machine setup and the full list of decisions a
    now appears, PARE wins over a band of amplification, and beyond that band nothing metric-only
    works - which is reported rather than hidden.
 
-4. **A memory fault is weaker than the spec's `8 * std` suggests, and may fall under
+4. **Tie-breaking will affect ExpAC@k, and M1.9 has to decide how to handle it.** Found while
+   measuring M1.8. `ECDF`'s tail score saturates: with 400 normal rows the most surprising any
+   column can be is `log(401)` = 6.0, and **every** column that moves beyond the normal range scores
+   exactly that. Many columns therefore tie at the ceiling, and the current ranking breaks ties by
+   column name, which is arbitrary. That is a large part of why ECDF scores 1.00 on service accuracy
+   but only 0.13 to 0.33 on indicator accuracy in the preview below.
+   The saturation itself is the method's genuine limitation and must stay. What needs deciding in
+   M1.9 is how the **metrics** treat ties - an average rank over the tied group is the usual fair
+   choice, rather than letting alphabetical order decide. Whatever is chosen has to be stated in the
+   paper, because it changes the numbers for any saturating method.
+   Not blocking: it changes how results are scored, not how engines work.
+
+5. **A memory fault is weaker than the spec's `8 * std` suggests, and may fall under
    `min_cause_score`.** The ramp reaches `+8 * std` only at the last abnormal row, so the median over
    the analysis window is about half of that; measured, the culprit's memory column deviates about
    **1.9 stds**, not 8. `PareConfig.min_cause_score` is 3.0, so on current numbers a memory case could
    come back `NO_CLEAR_CAUSE`. Worth revisiting together with question 3, since both are about how
    strong an injected fault should be. Not blocking M1.3.
 
-5. **Disk space** (less urgent than first reported). Now 24.4 GB free, not the 11.7 GB measured
+6. **Disk space** (less urgent than first reported). Now 24.4 GB free, not the 11.7 GB measured
    earlier that day. Still worth planning: `analyzer/.venv` already takes 644 MB, and the RCAEval
    RE2/RE3 downloads with their logs and traces plus torch are the big items still to come. Keeping
    only one RCAEval system on disk at a time (which `08_EXPERIMENTS_SPEC.md` section 2 already
@@ -987,6 +1070,30 @@ written into the spec files. One line of reason each.
     normal is predicted at its normal level and keeps the whole inherited rise as its own residual.
     The paper can state plainly that residual-based root-cause analysis needs an extrapolating model,
     with a measurement behind it.
+
+### M1.8 choices
+
+44. **`service_agg` gained a `"sum"` option, and `marginal_score` is now aggregated the same way as
+    `score`.** `SHAP_IFOREST` is specified to sum a service's per-column SHAP values, which no
+    existing option did.
+    Reason for the second half, which was a real bug: the two numbers sit side by side in the
+    cause-versus-symptom chart, so a sum against a maximum would have shown a gap that does not
+    exist, and it broke the contract line saying score equals marginalScore for engines without
+    residuals. Noted in `rank.py` that summing rewards whichever service has the most metrics - that
+    bias belongs to the baseline being reproduced, not to us.
+
+45. **`KERNEL_SHAP_PCA` is not implemented and raises with the reason.** It is marked optional in
+    `05` section 4.
+    Reason: KernelSHAP over 50 background rows times every column times every abnormal row costs
+    minutes per case where the other explainers cost milliseconds, and it answers the same question
+    as `PCA_RECON`. Raising with an explanation is better than quietly omitting it from the registry,
+    where its absence would look like an oversight.
+
+46. **The baselines are kept deliberately un-improved.** None takes a call graph, none uses change
+    point re-anchoring, and known weaknesses are left in place.
+    Reason: contribution C1 is a claim about what current practice does. A baseline we had quietly
+    improved would make PARE look better and the comparison worthless. A test asserts the explainer
+    functions have nowhere to put a graph, so this cannot be eroded by a later edit.
 
 ### Order of work
 

@@ -99,8 +99,16 @@ def rank_all(
         service: _service_score(items, settings.service_agg)
         for service, items in by_service.items()
     }
+    # Aggregated the same way as the self-score, never differently. The two sit
+    # side by side in the cause-versus-symptom chart, so comparing a sum of one
+    # against a maximum of the other would misread as a gap that is not there.
+    # It is also what makes "score equals marginalScore for engines without
+    # residuals" (docs/06 section 3) true for every such engine, including
+    # SHAP_IFOREST, which sums.
     marginals = {
-        service: max(item.marginal_score for item in items)
+        service: _aggregate(
+            [item.marginal_score for item in items], settings.service_agg
+        )
         for service, items in by_service.items()
     }
 
@@ -261,14 +269,34 @@ def _role(
     return NORMAL
 
 
-def _service_score(items: Sequence[ColumnResidual], how: str) -> float:
-    """A service is as bad as its worst metric, or the mean of its worst two."""
-    scores = sorted((item.self_score for item in items), reverse=True)
+def _aggregate(values: Sequence[float], how: str) -> float:
+    """Combine column numbers into one service number. See :func:`_service_score`."""
+    scores = sorted(values, reverse=True)
     if not scores:
         return 0.0
+    if how == "sum":
+        return float(sum(scores))
     if how == "top2mean" and len(scores) >= 2:
         return float((scores[0] + scores[1]) / 2.0)
     return float(scores[0])
+
+
+def _service_score(items: Sequence[ColumnResidual], how: str) -> float:
+    """Combine a service's column scores into one number.
+
+    ``max`` - a service is as bad as its worst metric. The default, and the right
+    choice for the robust scores, where one badly wrong metric is the signal.
+
+    ``top2mean`` - the mean of its worst two, which is steadier when a single
+    metric is noisy.
+
+    ``sum`` - everything added up. Only used by ``SHAP_IFOREST``, where the spec
+    requires it to match the GAL-MAD method. Note what it does: a service with
+    more metrics collects more score, so this aggregation has a built-in bias
+    towards heavily instrumented services. That bias belongs to the baseline we
+    are reproducing, not to us.
+    """
+    return _aggregate([item.self_score for item in items], how)
 
 
 def _group(residuals: Sequence[ColumnResidual]) -> dict[str, list[ColumnResidual]]:
