@@ -203,9 +203,13 @@ Per-case results `experiments/results/<run_id>/cases.csv`, one row per (case, me
 ```
 run_id, dataset, system, case_id, fault_type, gt_service, gt_indicator,
 method, delay_s, seed, rank_gt_service, rank_gt_indicator,
-top1_service, top1_indicator, symptom_error, verdict, runtime_s
+top1_service, top1_indicator, tied_gt_service, tied_gt_indicator,
+symptom_error, verdict, runtime_s
 ```
-- `rank_gt_*`: 1-based, empty if not ranked.
+- `rank_gt_*`: 1-based, empty if not ranked. When several items share the ground truth's score, this
+  records the **best** rank the tied group occupies, and `tied_gt_service` / `tied_gt_indicator`
+  record how many items share it, so the metrics can score the tie properly rather than letting the
+  order of column names decide. See `08_EXPERIMENTS_SPEC.md` section 4 for the rule.
 - `symptom_error`: true if top-1 is wrong AND top-1 calls the true root cause directly or indirectly; empty if no graph.
 
 - `verdict`: `ROOT_CAUSE_FOUND` or `NO_CLEAR_CAUSE`, as returned by the engine.

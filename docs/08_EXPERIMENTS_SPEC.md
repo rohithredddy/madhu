@@ -85,6 +85,28 @@ because a real system would not know when the fault was injected:
 ### E4 - Call-graph ablation
 - PARE with graph from (a) traces, (b) static architecture file, (c) correlation-inferred, (d) no graph. RE2 (has traces) is the right dataset.
 
+#### How ties are scored
+
+Several methods saturate. `ECDF`'s tail score cannot exceed `log(n+1)`, so with 400 normal rows
+**every** column that moves beyond the normal range scores exactly 6.0 and a dozen columns can share
+first place. Deciding those by the alphabetical order of column names would make the reported
+accuracy an accident of naming.
+
+So a tie is scored as what it is: **the expected hit rate if the tied group were shuffled**. If the
+ground truth sits in a tie group of size `m` whose best rank is `r`, its contribution to AC@k is
+
+```
+clip(k - r + 1, 0, m) / m
+```
+
+With no ties this is exactly the textbook definition, so nothing changes for a method whose scores
+are all distinct. It is neither optimistic nor pessimistic, and it must be stated in the paper
+because it changes the numbers for any saturating method.
+
+Measured on 15 synthetic cases, it changes nothing for `PARE`, `NSIGMA`, `SHAP_IFOREST` or
+`PCA_RECON` (no ties at the top), and moves `ECDF`'s indicator accuracy from 0.13 to 0.46 - the
+earlier figure was an artefact of column naming, not a property of the method.
+
 ### E5 - Explanation quality (C3) - `run_faithfulness.py`, `run_stability.py`
 - Faithfulness (deletion test): system anomaly score = mean over the analysis window of the max robust z over columns. For k = 0..10, replace the top-k columns of a method's indicator ranking by their normal medians and recompute the score. Report the normalized area under this curve (lower = more faithful) and compare with a random ranking (average of 10 random orders).
   - Output goes to its own `faithfulness.csv` in the run folder, not into `cases.csv`: the shape is

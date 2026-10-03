@@ -28,7 +28,7 @@ If a working application is needed early: do M0, M1, M7, M8, M9, M10 (using synt
 - [x] M1.7 `rank.py` + `engine.py` with `PARE`, `PARE_NO_RESIDUAL`, `PARE_NO_CP`, `NSIGMA`. Also `preprocess.py` (step 0), which the engine cannot run without and which no other task owned. Includes the `verdict` rule (`min_cause_score`) and the strict role precedence from `05_PYTHON_ANALYZER_SPEC.md` section 3, step 4, with tests for both.
 - [x] M1.7b `PARE_LGBM` engine (LightGBM dependency model, `dependency_model="lgbm"`) + test that it returns a valid result and that its ranking is sane on one synthetic latency case.
 - [x] M1.8 `explainers.py`: `SHAP_IFOREST`, `ECDF`, `PCA_RECON`; register them. `KERNEL_SHAP_PCA` is left unimplemented (optional in `05` section 4); it raises with the reason.
-- [ ] M1.9 `eval_metrics.py` + tests.
+- [x] M1.9 `eval_metrics.py` + tests.
 - [ ] M1.10 `analyzer/scripts/synthetic_check.py`: 50 seeds x 4 fault types -> CSV of top-1 accuracy per engine.
 - [ ] M1.11 Save `analyzer/samples/analyze_request.json` and the matching responses for `PARE` and `NSIGMA` (used by Java tests).
 - Done when: `pytest -q` passes and the synthetic check shows PARE top-1 >= PARE_NO_RESIDUAL. If not, stop and report.

@@ -8,7 +8,7 @@ anything waiting on you, then the machine setup and the full list of decisions a
 
 ## Current status
 - Current milestone: M1 (Python PARE core)
-- Next task: M1.9 (`eval_metrics.py` + tests)
+- Next task: M1.10 (`analyzer/scripts/synthetic_check.py`, the M1 gate)
 - Blockers: none. Open question 3, which would have made the M1.10 synthetic check meaningless, was
   settled on 2026-10-03 (decision 38).
 
@@ -50,6 +50,46 @@ anything waiting on you, then the machine setup and the full list of decisions a
   linear dependency model stops working above about 0.7, because the non-linearity is invisible in
   the normal data it is fitted on. That is a limitation to measure and report in E6, not a bug to
   tune away.
+
+### 2026-10-03 - M1.9 - eval_metrics.py, and settling how ties are scored
+- What was done: `pare/eval_metrics.py`, the module that produces every number in the paper. It is
+  kept apart from the engines deliberately, because it is the only place ground truth is allowed to
+  appear - an engine never sees it, and a test asserts the words `gt_service`, `gt_column` and
+  `ground_truth` do not occur anywhere in `engine.py`. Grounding: `ac_at_k`, `avg_at_5`,
+  `exp_ac_at_k`, with `Rank` and `rank_of`. Cause versus symptom: `symptom_error`, `symptom_rate`.
+  Explanation quality: `system_anomaly_score`, `deletion_faithfulness`, `random_deletion_baseline`,
+  `topk_jaccard`, `kendall_tau`, `compactness`.
+  - `kendall_tau` and `compactness` are not in the `05` section 1 list but are required by E5 in
+    `08` section 4, so they are here rather than invented later in an experiment script.
+- **Open question 4 is settled (decision 47).** Ties are scored as the expected hit rate if the tied
+  group were shuffled: a ground truth in a group of size `m` starting at rank `r` contributes
+  `clip(k - r + 1, 0, m) / m` to AC@k. With no ties that is exactly the textbook definition.
+  Measured over 15 cases, it changes nothing for PARE, NSIGMA, SHAP_IFOREST or PCA_RECON, which have
+  no ties at the top, and moves **ECDF's indicator accuracy from 0.13 to 0.46** - its mean tie group
+  is 2.7 columns. The earlier 0.13 was an artefact of alphabetical ordering rather than a property
+  of the method, and publishing it would have been wrong. The rule is now in `08` section 4 for the
+  paper to quote, and `06` section 5 gains `tied_gt_service` and `tied_gt_indicator` so a result file
+  carries what the metric needs.
+- Two smaller judgement calls, both about not overstating a result:
+  - `symptom_rate` returns **None**, not 0, when a method got everything right. Zero would read as
+    "tested against the symptom problem and passed"; it was never tested at all.
+  - `symptom_error` returns **None** when there is no graph, as `06` section 5 requires, rather than
+    False. We cannot tell, and False would quietly understate the problem.
+- How it was tested (commands + result):
+  - `pytest -q` -> **331 passed** (38 new) in 45 s. `ruff check .` -> clean.
+  - Expected values are worked out by hand: `ac_at_k([1,1,2,5,None], 1)` is 2/5; a group of five
+    tied at the top gives AC@1 = 0.2, AC@3 = 0.6, AC@5 = 1.0; `avg_at_5([5])` is 0.2.
+  - The deletion test is checked in both directions, which is the only way it means anything: naming
+    the genuinely broken column first collapses the score to under 0.4 of its starting value, naming
+    two innocent columns first leaves it essentially unchanged, and the faithful ordering has the
+    smaller area. The random baseline sits between them and is reproducible under a seed.
+  - `symptom_error` distinguishes the three outcomes that matter: blaming a caller of the culprit is
+    a symptom error, blaming an unrelated service is wrong but **not** a symptom error and must not
+    inflate the rate, and being right is neither.
+- Files changed: new `analyzer/pare/eval_metrics.py`, `analyzer/tests/test_eval_metrics.py`;
+  `analyzer/pare/__init__.py`, `docs/06_DATA_CONTRACTS.md`, `docs/08_EXPERIMENTS_SPEC.md`,
+  `docs/07_TASKS.md`, `PROGRESS.md`.
+- Left open / next: M1.10, the synthetic check, which is the M1 gate proper.
 
 ### 2026-10-03 - M1.8 - the explainer baselines, and the first look at contribution C1
 - What was done: `pare/explainers.py` with `shap_iforest()`, `ecdf_explainer()` and
@@ -613,17 +653,10 @@ anything waiting on you, then the machine setup and the full list of decisions a
    now appears, PARE wins over a band of amplification, and beyond that band nothing metric-only
    works - which is reported rather than hidden.
 
-4. **Tie-breaking will affect ExpAC@k, and M1.9 has to decide how to handle it.** Found while
-   measuring M1.8. `ECDF`'s tail score saturates: with 400 normal rows the most surprising any
-   column can be is `log(401)` = 6.0, and **every** column that moves beyond the normal range scores
-   exactly that. Many columns therefore tie at the ceiling, and the current ranking breaks ties by
-   column name, which is arbitrary. That is a large part of why ECDF scores 1.00 on service accuracy
-   but only 0.13 to 0.33 on indicator accuracy in the preview below.
-   The saturation itself is the method's genuine limitation and must stay. What needs deciding in
-   M1.9 is how the **metrics** treat ties - an average rank over the tied group is the usual fair
-   choice, rather than letting alphabetical order decide. Whatever is chosen has to be stated in the
-   paper, because it changes the numbers for any saturating method.
-   Not blocking: it changes how results are scored, not how engines work.
+4. ~~**Tie-breaking will affect ExpAC@k.**~~ **SETTLED on 2026-10-03** - decision 47. Scored as the
+   expected hit rate if the tied group were shuffled. It changed `ECDF`'s indicator accuracy from
+   0.13 to 0.46 and left every other engine untouched. Written into `08` section 4, which the paper
+   must quote.
 
 5. **A memory fault is weaker than the spec's `8 * std` suggests, and may fall under
    `min_cause_score`.** The ramp reaches `+8 * std` only at the last abnormal row, so the median over
@@ -1094,6 +1127,25 @@ written into the spec files. One line of reason each.
     Reason: contribution C1 is a claim about what current practice does. A baseline we had quietly
     improved would make PARE look better and the comparison worthless. A test asserts the explainer
     functions have nowhere to put a graph, so this cannot be eroded by a later edit.
+
+### M1.9 choices
+
+47. **Ties are scored as the expected hit rate under a shuffle of the tied group**, settling open
+    question 4. A ground truth in a tie group of size `m` starting at rank `r` contributes
+    `clip(k - r + 1, 0, m) / m` to AC@k.
+    Reason: saturating methods produce real ties - `ECDF` cannot score above `log(n+1)`, so every
+    column past the normal range gets the identical ceiling - and breaking them alphabetically makes
+    the published accuracy depend on what the columns happen to be called. The expectation is the
+    only answer that is neither optimistic nor pessimistic, and it collapses to the ordinary
+    definition when scores are distinct. Measured effect: ECDF's indicator accuracy 0.13 -> 0.46,
+    everything else unchanged. Stated in `08` section 4 because the paper has to disclose it.
+
+48. **`symptom_rate` and `symptom_error` return None rather than 0 or False when the question does
+    not apply** - no wrong answers to judge, or no graph to judge with.
+    Reason: both zeros would be read as evidence. "0 percent symptom errors" sounds like a method
+    that was tested against the trap and passed, when it was never tested; and False for "no graph"
+    would quietly understate the measured symptom rate across a dataset. `06` section 5 already says
+    these fields are empty in that case.
 
 ### Order of work
 
