@@ -35,7 +35,7 @@ If a working application is needed early: do M0, M1, M7, M8, M9, M10 (using synt
 
 ## M2 - RCAEval data and baseline reproduction
 - [x] M2.1 Set up RCAEval (separate venv if needed); download RE1 Online Boutique. Repeatable with `experiments/download_rcaeval.py`.
-- [ ] M2.2 Inspect folders; write structure, column names, inject time and ground-truth labelling in PROGRESS.md before writing code.
+- [x] M2.2 Inspect folders; write structure, column names, inject time and ground-truth labelling in PROGRESS.md before writing code. Findings in the 2026-10-04 M2.2 entry; the indicator mapping for DISK, DELAY and LOSS needs a decision (open question 6).
 - [ ] M2.3 `experiments/adapters/rcaeval.py` + test loading 3 cases.
 - [ ] M2.4 Reproduce RCAEval's NSigma and BARO on RE1-OB; compare with our NSIGMA.
 - [ ] M2.5 `experiments/graphs/online-boutique.yaml`, `sock-shop.yaml` from the apps' public architecture. Add to "human must check".

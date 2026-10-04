@@ -8,8 +8,9 @@ anything waiting on you, then the machine setup and the full list of decisions a
 
 ## Current status
 - Current milestone: M1 (Python PARE core)
-- Next task: M2.2 (inspect the RE1-OB folders and write down their structure, column names, inject
-  time and ground-truth labelling in this file **before** writing the adapter)
+- Next task: M2.3 (`experiments/adapters/rcaeval.py` + a test loading 3 cases)
+- Blockers: none for writing the adapter, but **open question 6 needs an answer before any
+  indicator-level number is reported**: DISK, DELAY and LOSS faults have no matching metric column.
 - Blockers: none. Open question 3, which would have made the M1.10 synthetic check meaningless, was
   settled on 2026-10-03 (decision 38).
 
@@ -51,6 +52,76 @@ anything waiting on you, then the machine setup and the full list of decisions a
   linear dependency model stops working above about 0.7, because the non-linearity is invisible in
   the normal data it is fitted on. That is a limitation to measure and report in E6, not a bug to
   tune away.
+
+### 2026-10-04 - M2.2 - what is actually inside RE1 Online Boutique
+No code was written. This is the inspection `07` M2.2 asks for, recorded before the adapter is built.
+
+**Folder layout.** `data/RCAEval/RE1/RE1-OB/{service}_{faulttype}/{run}/`, 25 fault folders x 5 runs
+= **125 cases**. 5 services are broken (`adservice`, `cartservice`, `checkoutservice`,
+`currencyservice`, `productcatalogservice`) x 5 fault types (`cpu`, `delay`, `disk`, `loss`, `mem`).
+Each run folder holds `data.csv` and `inject_time.txt`.
+
+**`inject_time.txt`** is a bare epoch-seconds integer, 10 digits, no trailing newline, for example
+`1685202688`. Nothing else is in the file.
+
+**`data.csv`** has a `time` column in epoch seconds at exactly 1-second steps, no gaps.
+
+**The `time` column appears twice.** Columns 1 and 48 are both called `time`; pandas renames the
+second to `time.1`. They are identical values. The adapter must drop the duplicate rather than treat
+it as a metric - it is the single most likely cause of a confusing bug here.
+
+**Column names** are `{service}_{metric}`, splitting at the **last** underscore. Service names
+contain hyphens (`frontend-external`, `front-end`) but no underscores, so the split is safe. The
+metric vocabulary across all cases is: `cpu`, `mem`, `load`, `latency`, `latency-50`, `latency-90`,
+`workload`, `error`. **There is no `disk` metric and no `loss` metric anywhere**, which matters for
+ground truth below.
+
+**Two collection batches, and the split is perfectly systematic by fault type:**
+
+| fault types | rows per case | columns | percentile latency columns |
+|---|---|---|---|
+| `cpu`, `mem` | 4201 | 51 | **no** (0 of 50 cases) |
+| `delay`, `disk`, `loss` | 721 | 57 to 60 | **yes** (75 of 75 cases) |
+
+So a method that relies on `latency-90` can only be compared across the three fault types that have
+it. This was not obvious and would have produced a confusing partial-coverage result later.
+
+**Column sets are not uniform.** There are **15 distinct column sets** across the 125 cases, and only
+**25 columns appear in every case** - the `cpu` and `mem` columns of 12 services, plus `time`. The
+adapter must not assume a fixed schema.
+
+**One case is contaminated.** `productcatalogservice_cpu/3` carries the full Online Boutique column
+set **plus five stray Sock Shop columns** (`carts`, `catalogue`, `orders`, `front-end`,
+`InboundPassthroughClusterIpv4`) - a collection artefact, not mislabelled data. The case is still
+usable because its ground-truth service and column are present, but the adapter should restrict
+columns to the known services of the system and record what it dropped, or those five services would
+be ranked as candidates and could produce a false positive. `cartservice_disk/3` similarly carries a
+stray `frontend-check` column.
+
+**No cumulative counters.** `08` section 3 says to convert counters to rates if any exist. A first
+check appeared to find four, but that check was wrong - it counted **constant** columns as
+non-decreasing. On re-examination those columns are all-zero (`frontend_error`,
+`PassthroughCluster_error`, `PassthroughCluster_load` are flat zero in many cases). The only
+genuinely rising column is `main_mem`, in 3 of 8 sampled cases, and that is a memory figure drifting
+upward rather than an accumulating counter; converting it to a rate would be wrong. **Conclusion: no
+rate conversion is needed for RE1-OB.**
+
+**Inject time sits exactly at the midpoint** of every case - 2100 normal rows before it for the
+4201-row cases, 360 for the 721-row ones. Every case has at least 360 rows before the injection and
+361 after, so none is too short to learn a baseline from; **0 of 125 cases** have fewer than 60
+normal rows.
+
+**Ground truth.** The root-cause **service** is the folder-name prefix and is unambiguous. The
+root-cause **indicator** is not, and `08` section 3's first instruction cannot be followed: RCAEval's
+own fine-grained ground truth is **not in the installed package**. Its `Evaluator` compares
+`Node(entity, metric)` objects and scores fine-grained accuracy as `answer in ranks[:k]`, but the
+code that builds the answer node for a case is not shipped in the wheel. So the mapping is ours to
+choose and to declare. What the data shows, and the three options, are written up as **open question
+6**; CPU and MEM are settled by the evidence, DISK, DELAY and LOSS are not.
+
+- Files changed: `docs/07_TASKS.md`, `PROGRESS.md`. No code, by design.
+- Left open / next: M2.3, the adapter. It can be written now - only the indicator-level scoring waits
+  on open question 6.
 
 ### 2026-10-04 - M2.1 - RE1 Online Boutique downloaded
 - What was done: `experiments/download_rcaeval.py`, a thin wrapper over RCAEval's own download
@@ -938,7 +1009,46 @@ anything waiting on you, then the machine setup and the full list of decisions a
    come back `NO_CLEAR_CAUSE`. Worth revisiting together with question 3, since both are about how
    strong an injected fault should be. Not blocking M1.3.
 
-6. **Disk space** (less urgent than first reported). Now 24.4 GB free, not the 11.7 GB measured
+6. **Which metric counts as the ground-truth indicator for DISK, DELAY and LOSS faults?**
+   Raised by M2.2. `08` section 3 says to take the fine-grained ground truth from RCAEval's own
+   evaluation code if it exists, and otherwise to pick a mapping and document it as an assumption.
+   **It does not exist in the installed package**: the shipped `Evaluator` compares `Node(entity,
+   metric)` objects but the code that builds the ground-truth node for a case is not in the wheel.
+   So the assumption is ours to make, and it is not obvious, because two of the five fault types have
+   no corresponding metric at all - there is no `disk` column and no `loss` column anywhere in
+   RE1-OB.
+
+   What the data says. For each case, the robust z of the broken service's own metrics, abnormal
+   window against normal, 125 cases:
+
+   | fault | metric that moves most | reading |
+   |---|---|---|
+   | CPU | `cpu` 25/25 | unambiguous |
+   | MEM | `mem` 18/25, `latency` 7/25 | clear enough; the runner-up is the service slowing down, which is the same effect we built into the synthetic generator |
+   | DELAY | `latency-90` 14/25, `latency-50` 11/25 | a latency column, but **never plain `latency`** - it splits between the two percentiles |
+   | LOSS | `latency-90` 14/25, `latency-50` 9/25, `mem` 2/25 | same shape as DELAY |
+   | DISK | `cpu` 10/25, `latency-90` 10/25, `latency-50` 4/25, `mem` 1/25 | **no clear answer at all** |
+
+   Options:
+   a. **Accept a set of indicators per fault type.** CPU -> `{svc}_cpu`, MEM -> `{svc}_mem`,
+      DELAY and LOSS -> any of the service's latency columns, DISK -> any of cpu or latency. ExpAC@k
+      counts a hit if the top indicator is in the accepted set. Honest, uses all 125 cases, but
+      makes ExpAC@k easier for the fault types with a larger accepted set, which must be said.
+   b. **Report indicator-level accuracy only for CPU and MEM**, where the answer is unambiguous, and
+      report service-level accuracy for all five. Cleanest claim, uses 50 of 125 cases for the
+      indicator metric.
+   c. Something else.
+
+   Recommendation: **(b) for the headline ExpAC@k, with (a) reported alongside as a secondary
+   table.** The paper's contribution C1 is about whether explanations point at the right *indicator*,
+   so that number has to rest on cases where "right" is not a judgement call. Reporting (a) as well
+   keeps all 125 cases visible and lets a reader see the effect of the looser definition. Either way
+   the choice must be stated in the paper, because it moves the numbers.
+
+   Not blocking: the adapter can load every case and record the fault type; only the indicator-level
+   scoring depends on this.
+
+7. **Disk space** (less urgent than first reported). Now 24.4 GB free, not the 11.7 GB measured
    earlier that day. Still worth planning: `analyzer/.venv` already takes 644 MB, and the RCAEval
    RE2/RE3 downloads with their logs and traces plus torch are the big items still to come. Keeping
    only one RCAEval system on disk at a time (which `08_EXPERIMENTS_SPEC.md` section 2 already
@@ -949,7 +1059,8 @@ under "Decisions made" below.
 
 ## Things the human must check by hand
 - Static call graphs in experiments/graphs/*.yaml (M2.5)
-- Ground-truth indicator mapping for RCAEval (M2.2)
+- Ground-truth indicator mapping for RCAEval - **investigated in M2.2, now open question 6**. CPU
+  and MEM are settled by the data; DISK, DELAY and LOSS need a human decision
 - Whether the M1.10 synthetic check supports the cause-versus-symptom story (gate before M2)
 - Whether the first RE1 results in M3.2 support it on real data (gate before the application track)
 
