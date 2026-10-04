@@ -137,6 +137,15 @@ class EngineSpec:
     """Overrides the configured aggregation. Only SHAP_IFOREST sets it, because
     the method it reproduces sums a service's columns."""
 
+    use_graph: bool = True
+    """May this engine see the call graph at all?
+
+    False for every baseline. They do not take a graph as a feature, and they must
+    not get one through the back door either: the ranking step can walk the graph
+    to move a service up, and leaving that switched on for a baseline would be
+    quietly handing it the one piece of information the proposed method is
+    supposed to be contributing."""
+
 
 ENGINES: dict[str, EngineSpec] = {
     "PARE": EngineSpec(
@@ -171,6 +180,7 @@ ENGINES: dict[str, EngineSpec] = {
         use_residuals=False,
         scorer="nsigma",
         window_to_end=True,
+        use_graph=False,
     ),
     "SHAP_IFOREST": EngineSpec(
         name="SHAP_IFOREST",
@@ -180,6 +190,7 @@ ENGINES: dict[str, EngineSpec] = {
         scorer="shap_iforest",
         window_to_end=True,
         service_agg="sum",
+        use_graph=False,
     ),
     "ECDF": EngineSpec(
         name="ECDF",
@@ -188,6 +199,7 @@ ENGINES: dict[str, EngineSpec] = {
         use_residuals=False,
         scorer="ecdf",
         window_to_end=True,
+        use_graph=False,
     ),
     "PCA_RECON": EngineSpec(
         name="PCA_RECON",
@@ -196,6 +208,7 @@ ENGINES: dict[str, EngineSpec] = {
         use_residuals=False,
         scorer="pca_recon",
         window_to_end=True,
+        use_graph=False,
     ),
 }
 
@@ -269,7 +282,10 @@ def analyze(request: AnalyzeRequest) -> AnalyzeResult:
     else:
         residuals = _scores_only(clean, abnormal, spec, settings)
 
-    ranking = rank_all(residuals, request.graph, settings)
+    # A baseline is ranked without the graph, so the traversal step cannot move a
+    # service for it. See EngineSpec.use_graph.
+    ranking_graph = request.graph if spec.use_graph else CallGraph.empty()
+    ranking = rank_all(residuals, ranking_graph, settings)
     took_ms = int(round((time.perf_counter() - started) * 1000))
 
     return AnalyzeResult(

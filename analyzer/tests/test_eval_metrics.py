@@ -330,3 +330,54 @@ def test_the_metrics_are_the_only_place_ground_truth_appears():
     source = inspect.getsource(engine)
     for forbidden in ("gt_service", "gt_column", "ground_truth"):
         assert forbidden not in source, f"{forbidden} must not appear in engine.py"
+
+
+# --- ranking by what the engine actually answered ---------------------------
+
+
+def test_rank_in_order_respects_a_traversal_that_overrode_the_scores():
+    """PARE's graph traversal promotes the service the walk ends at, even when a
+    caller scores higher - that is the step working, not failing.
+
+    Scoring from the raw numbers instead would mark the engine wrong exactly when
+    it followed the graph past a loud symptom to the real source. This was a bug
+    in the first version of the M1 gate script and it cost PARE 0.24 of accuracy
+    on cpu faults.
+    """
+    from pare.eval_metrics import rank_in_order
+
+    order = ["svc-07", "frontend", "svc-04"]
+    scores = {"svc-07": 4.00, "frontend": 5.07, "svc-04": 1.32}
+
+    assert rank_in_order(order, scores, "svc-07").best == 1
+    # re-deriving from scores would have said 2
+    assert rank_of(scores, "svc-07").best == 2
+
+
+def test_rank_in_order_still_honours_a_genuine_tie():
+    from pare.eval_metrics import rank_in_order
+
+    order = ["a", "b", "c", "d"]
+    scores = {"a": 6.0, "b": 6.0, "c": 6.0, "d": 1.0}
+
+    rank = rank_in_order(order, scores, "b")
+    assert (rank.best, rank.tied) == (1, 3)
+    assert rank.hit_fraction(1) == pytest.approx(1 / 3)
+
+
+def test_rank_in_order_counts_only_neighbours_that_share_a_score():
+    """A tie the engine's ordering has already separated on other grounds is not
+    a tie: only an unbroken run of equal scores counts."""
+    from pare.eval_metrics import rank_in_order
+
+    order = ["a", "b", "c"]
+    scores = {"a": 5.0, "b": 3.0, "c": 5.0}  # a and c share, but b sits between
+
+    assert rank_in_order(order, scores, "a").tied == 1
+    assert rank_in_order(order, scores, "c").tied == 1
+
+
+def test_rank_in_order_returns_nothing_for_a_service_that_was_not_ranked():
+    from pare.eval_metrics import rank_in_order
+
+    assert rank_in_order(["a"], {"a": 1.0}, "missing") is None

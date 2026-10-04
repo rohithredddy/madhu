@@ -94,6 +94,40 @@ def rank_of(scores: Mapping[str, float], target: str) -> Rank | None:
     return Rank(best=above + 1, tied=tied)
 
 
+def rank_in_order(
+    ordered: Sequence[str], scores: Mapping[str, float], target: str
+) -> Rank | None:
+    """Where ``target`` sits in the order an engine actually returned.
+
+    Use this rather than :func:`rank_of` whenever the engine's ordering is its
+    answer, which is the normal case. The two differ for `PARE`, because the
+    graph traversal in ``docs/05`` step 4 deliberately promotes the service the
+    walk ends at to rank 1 even when another service scores higher - that is the
+    whole point of the step, following the graph down past a loud caller to the
+    service the trouble started in. Re-deriving the rank from scores would throw
+    that away and mark the engine wrong for being right.
+
+    Ties are still honoured, but only where the engine genuinely could not
+    separate two services: a run of **neighbours in its own ordering** that share
+    an identical score. A tie that the engine's ordering has already broken on
+    other grounds is not a tie.
+    """
+    if target not in ordered:
+        return None
+
+    position = list(ordered).index(target)
+    target_score = scores.get(target)
+
+    first, last = position, position
+    if target_score is not None:
+        while first > 0 and scores.get(ordered[first - 1]) == target_score:
+            first -= 1
+        while last + 1 < len(ordered) and scores.get(ordered[last + 1]) == target_score:
+            last += 1
+
+    return Rank(best=first + 1, tied=last - first + 1)
+
+
 # --- grounding --------------------------------------------------------------
 
 

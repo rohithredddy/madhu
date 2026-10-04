@@ -218,6 +218,13 @@ estimated change point, the window bounds, at most `top_k` indicators, timing (`
 | `PARE_NO_CP` | Full method, window starts at alarm time | Ablation |
 | `PARE_LGBM` | LightGBM dependency model | Ablation (measured: no better, and much slower - see below) |
 | `NSIGMA` | Mean of abnormal vs mean/std of normal, max per service. Abnormal window is `[alarm_time, end of recent]`; it **never** uses the change point | Baseline (must match Java FallbackRanker) |
+
+**The baselines are never given the call graph, in any form.** That includes the traversal step in
+ranking, which walks the graph to promote a service: it is switched off for `NSIGMA`,
+`SHAP_IFOREST`, `ECDF` and `PCA_RECON` through `EngineSpec.use_graph`. Leaving it on would hand a
+baseline the one piece of information the proposed method is supposed to contribute, and the
+comparison would be meaningless. A behavioural test checks each baseline returns an identical
+ranking with and without a graph.
 | `SHAP_IFOREST` | IsolationForest(n_estimators=200, random_state=seed) on normal rows; TreeSHAP on abnormal rows; mean absolute SHAP per column; service score = sum over its columns (GAL-MAD style) | Baseline / C1 explainer |
 | `ECDF` | ECOD-style per-column tail score: `-log` of the empirical two-sided tail probability of the abnormal median under the normal ECDF; service score = max | C1 explainer |
 | `PCA_RECON` | PCA (keep 95% variance) on standardized normal rows; per-column squared reconstruction error on abnormal rows | C1 explainer |

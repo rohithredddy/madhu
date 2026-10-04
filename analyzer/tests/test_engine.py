@@ -324,3 +324,59 @@ def test_pare_lgbm_differs_from_pare_only_in_its_dependency_model():
         pare.scorer,
         pare.window_to_end,
     )
+
+
+# --- the baselines must never touch the call graph --------------------------
+
+
+BASELINES = ["NSIGMA", "SHAP_IFOREST", "ECDF", "PCA_RECON"]
+
+
+@pytest.mark.parametrize("engine", BASELINES)
+def test_a_baseline_is_not_given_the_call_graph(engine):
+    """Checked at engine level, not just on the explainer functions.
+
+    An earlier version of this file only asserted that the explainer *functions*
+    take no graph argument, and that gave false assurance: the ranking step walks
+    the graph to promote a service, and it was switched on for every engine. A
+    baseline was therefore being handed the one piece of information the proposed
+    method is supposed to contribute.
+
+    The test for it is behavioural: the answer must be identical with and without
+    a graph, because the graph must make no difference at all.
+    """
+    case = make_case(
+        n_services=8, n_normal=400, n_abnormal=200, fault="latency",
+        propagation=0.9, amplification=0.25, seed=31,
+    )
+    frame = case.to_frame()
+    recent = frame.iloc[400:]
+
+    def run(graph):
+        return analyze(
+            AnalyzeRequest(
+                engine=engine,
+                alarm_time_sec=case.inject_time_sec + DELAY,
+                columns=case.columns,
+                normal=Window.of(
+                    case.normal.index.to_numpy(dtype=float), case.normal.to_numpy()
+                ),
+                recent=Window.of(recent.index.to_numpy(dtype=float), recent.to_numpy()),
+                graph=graph,
+            )
+        )
+
+    with_graph = run(CallGraph.from_edges(case.edges))
+    without = run(CallGraph.empty())
+
+    assert [s.service for s in with_graph.services] == [
+        s.service for s in without.services
+    ], f"{engine} ranked differently when given a graph, so it is using one"
+    assert ENGINES[engine].use_graph is False
+
+
+@pytest.mark.parametrize("engine", ["PARE", "PARE_NO_RESIDUAL", "PARE_NO_CP"])
+def test_the_pare_family_does_use_the_call_graph(engine):
+    """The counterpart: using the graph is the whole proposal, so these engines
+    must visibly change when it is taken away."""
+    assert ENGINES[engine].use_graph is True

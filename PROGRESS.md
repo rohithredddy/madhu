@@ -8,7 +8,8 @@ anything waiting on you, then the machine setup and the full list of decisions a
 
 ## Current status
 - Current milestone: M1 (Python PARE core)
-- Next task: M1.10 (`analyzer/scripts/synthetic_check.py`, the M1 gate)
+- Next task: M1.11 (save `analyzer/samples/` request and responses for the Java tests), which
+  finishes M1
 - Blockers: none. Open question 3, which would have made the M1.10 synthetic check meaningless, was
   settled on 2026-10-03 (decision 38).
 
@@ -50,6 +51,80 @@ anything waiting on you, then the machine setup and the full list of decisions a
   linear dependency model stops working above about 0.7, because the non-linearity is invisible in
   the normal data it is fitted on. That is a limitation to measure and report in E6, not a bug to
   tune away.
+
+### 2026-10-04 - M1.10 - the M1 gate: failed, then two bugs found, then passed
+- What was done: `analyzer/scripts/synthetic_check.py`, the gate M1 is allowed to finish on. 50
+  seeds x 4 fault types x 2 amplifications x engines, run in parallel, writing `summary.csv`,
+  `cases.csv` and `config.json` (settings, versions, platform, elapsed) under
+  `experiments/results/synthetic_check/`. Ten tests cover the gate logic itself, most importantly
+  that it **can fail** - a check that cannot fail is not a check.
+  - It sweeps amplification, which the task line does not ask for. Without that the gate is empty:
+    at amplification 0 there is no symptom trap, every engine finds the culprit, and PARE ties its
+    own ablation at 1.00 while appearing to pass. The 0 run is kept as the control.
+- **The first full run FAILED**, and that is worth recording rather than smoothing over:
+
+      amp 0.0   cpu   PARE 0.76 vs 1.00  gap -0.24  FAILED
+      amp 0.0   mem   PARE 0.78 vs 0.90  gap -0.12  FAILED
+      amp 0.25  cpu   PARE 0.76 vs 1.00  gap -0.24  FAILED
+      amp 0.25  mem   PARE 0.78 vs 0.90  gap -0.12  FAILED
+
+  The task says stop and report, do not tune, so nothing was tuned. Investigating found **two bugs,
+  both mine, neither in the method**.
+
+  **Bug 1, in the measurement.** A diagnostic found 0 of 50 cpu cases where `PARE_NO_RESIDUAL`'s
+  answer was right and `PARE`'s was wrong - by the engines' own answers PARE was never worse, so the
+  0.76 had to be an artefact. It was: the script computed the rank by re-sorting the engine's scores,
+  but `PARE` returns `[('svc-07', 4.00), ('frontend', 5.07), ...]` - the true culprit first with a
+  **lower** score than the caller behind it. That is the graph traversal in `05` step 4 working
+  exactly as specified, walking down past a loud symptom to the source, and "put the final node at
+  rank 1". Re-deriving the rank from scores marked the engine wrong precisely when the traversal
+  worked. Fixed by adding `rank_in_order()`, which ranks by the order the engine actually returned
+  and counts a tie only across an unbroken run of equal scores. **No threshold, engine or config
+  default was changed.**
+
+  **Bug 2, in the engines, and more serious.** Every baseline was being given the call graph. The
+  traversal step runs inside `rank_all`, which `analyze()` called with the request's graph for all
+  engines, so `NSIGMA`, `SHAP_IFOREST`, `ECDF` and `PCA_RECON` were quietly handed the one piece of
+  information the proposed method is supposed to contribute. The existing test gave false assurance
+  because it only checked that the explainer **functions** take no graph argument, not how the engine
+  wired them up. Fixed with `EngineSpec.use_graph`, and the new test is behavioural: a baseline must
+  return an identical ranking with and without a graph. On this data it barely moved the numbers, but
+  it would matter on RE1 where the graphs are real, and it was wrong regardless.
+- **The gate then passed**, on 50 seeds:
+
+  | amplification | fault | PARE | PARE_NO_RESIDUAL | gap |
+  |---|---|---|---|---|
+  | 0.00 | cpu | 1.00 | 1.00 | +0.00 |
+  | 0.00 | error | 1.00 | 0.98 | +0.02 |
+  | 0.00 | latency | 1.00 | 1.00 | +0.00 |
+  | 0.00 | mem | 0.90 | 0.90 | +0.00 |
+  | 0.25 | cpu | 1.00 | 1.00 | +0.00 |
+  | 0.25 | error | 1.00 | 0.98 | +0.02 |
+  | 0.25 | **latency** | **0.94** | **0.82** | **+0.12** |
+  | 0.25 | mem | 0.90 | 0.90 | +0.00 |
+
+  Condition 2 holds too: PARE on latency is 1.00 and 0.94, both above the 0.85 required.
+
+  **Read honestly, this is a narrower claim than "PARE beats its ablation".** The residual step earns
+  its keep in exactly one place - latency faults under congestion, +0.12 - and ties everywhere else.
+  That is the claim the paper should make, and it is the one worth making: it says *when* the method
+  helps rather than asserting it always does. PARE's latency accuracy over 50 seeds is 0.94, not the
+  1.00 that a 10-seed preview suggested; more seeds, smaller number.
+- How it was tested (commands + result):
+  - `pytest -q` -> **352 passed** (21 new) in 3 minutes. `ruff check .` -> clean.
+  - `python scripts/synthetic_check.py` prints the table and the gate verdict and writes the files.
+- **The saved result file covers six engines, not eight.** The full 8-engine run takes about 13
+  minutes because `SHAP_IFOREST` and `PARE_LGBM` cost 5 to 10 seconds per case, and the background
+  run was stopped at a 10-minute limit. The gate only concerns `PARE` and `PARE_NO_RESIDUAL`, both
+  of which are in the saved file. The two slow engines need a separate longer run before their
+  numbers go anywhere near the paper; their figures in the M1.8 entry came from the first run, which
+  used the buggy rank measurement, so **treat them as superseded**.
+- Files changed: new `analyzer/scripts/synthetic_check.py`, `analyzer/tests/test_synthetic_check.py`;
+  `analyzer/pare/eval_metrics.py` (`rank_in_order`), `analyzer/pare/engine.py`
+  (`EngineSpec.use_graph`), `analyzer/tests/test_eval_metrics.py`, `analyzer/tests/test_engine.py`,
+  `docs/05_PYTHON_ANALYZER_SPEC.md`, `docs/07_TASKS.md`, `PROGRESS.md`.
+- Left open / next: M1.11, the sample request and responses the Java tests will need, which closes
+  M1. Also worth doing before the paper: a long run covering `SHAP_IFOREST` and `PARE_LGBM`.
 
 ### 2026-10-03 - M1.9 - eval_metrics.py, and settling how ties are scored
 - What was done: `pare/eval_metrics.py`, the module that produces every number in the paper. It is
@@ -1146,6 +1221,28 @@ written into the spec files. One line of reason each.
     that was tested against the trap and passed, when it was never tested; and False for "no graph"
     would quietly understate the measured symptom rate across a dataset. `06` section 5 already says
     these fields are empty in that case.
+
+### M1.10 findings
+
+49. **Rank is measured from the order an engine returned, not by re-sorting its scores**
+    (`rank_in_order`). PARE's traversal deliberately promotes the service the graph walk ends at even
+    when a caller scores higher, so re-deriving the rank marks it wrong exactly when the traversal
+    did its job. This cost PARE 0.24 of apparent accuracy on cpu faults and failed the gate
+    spuriously. `rank_of` is kept for scoring plain score maps.
+
+50. **Baselines are denied the call graph entirely** (`EngineSpec.use_graph`). The traversal step
+    lives in the shared ranking code and was running for every engine, so `NSIGMA`, `SHAP_IFOREST`,
+    `ECDF` and `PCA_RECON` were using the graph without taking one as an argument.
+    Reason: the comparison in the paper is only meaningful if the baselines are the methods as
+    published. The old test checked the explainer functions' signatures, which is not the same thing
+    as checking the engine; the new one is behavioural and compares the ranking with and without a
+    graph.
+
+51. **`PARE_NO_RESIDUAL` keeps the traversal.** The ablation removes the dependency model and nothing
+    else, so the measured gap is attributable to that one change.
+    Reason: an ablation that alters two things at once measures neither. Worth stating in the paper,
+    because it means the +0.12 is the residual model's contribution on top of a graph-aware ranking,
+    not the value of using a graph at all.
 
 ### Order of work
 
