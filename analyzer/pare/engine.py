@@ -35,15 +35,16 @@ for field onto ``AnalyzeResponse`` in ``docs/06_DATA_CONTRACTS.md`` section 3.
 from __future__ import annotations
 
 import time
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
 
 from pare import __version__
 from pare.changepoint import estimate_change_point
-from pare.columns import ColumnInfo
+from pare.columns import ColumnInfo, columns_from_dicts
 from pare.config import PareConfig
 from pare.explainers import ecdf_explainer, pca_reconstruction, shap_iforest
 from pare.graph import CallGraph
@@ -95,6 +96,42 @@ class AnalyzeRequest:
     config: PareConfig = field(default_factory=PareConfig)
     request_id: str | None = None
 
+    def to_api_dict(self) -> dict[str, Any]:
+        """The JSON form from ``docs/06_DATA_CONTRACTS.md`` section 3.
+
+        Missing numbers become ``null``, never 0 and never the string "NaN", as
+        the contract requires. This lives here rather than in the service layer so
+        there is one implementation of the shape: the FastAPI models at M7.1
+        validate it, they do not define it a second time.
+        """
+        return {
+            "requestId": self.request_id,
+            "engine": self.engine,
+            "alarmTimeSec": self.alarm_time_sec,
+            "columns": [column.to_dict() for column in self.columns],
+            "normal": _window_to_api(self.normal),
+            "recent": _window_to_api(self.recent),
+            "graph": {"source": self.graph.source, "edges": self.graph.to_dicts()},
+            "params": self.config.to_api_params(),
+        }
+
+    @classmethod
+    def from_api_dict(cls, data: Mapping[str, Any]) -> AnalyzeRequest:
+        """Rebuild a request from its JSON form. ``null`` becomes NaN again."""
+        graph = data.get("graph") or {}
+        return cls(
+            engine=data["engine"],
+            alarm_time_sec=float(data["alarmTimeSec"]),
+            columns=columns_from_dicts(data["columns"]),
+            normal=_window_from_api(data["normal"]),
+            recent=_window_from_api(data["recent"]),
+            graph=CallGraph.from_dicts(
+                graph.get("edges", []), source=graph.get("source", "NONE")
+            ),
+            config=PareConfig.from_api_params(data.get("params")),
+            request_id=data.get("requestId"),
+        )
+
 
 @dataclass(frozen=True)
 class AnalyzeResult:
@@ -112,6 +149,46 @@ class AnalyzeResult:
     change_point_sec: float | None = None
     warnings: tuple[str, ...] = ()
     request_id: str | None = None
+
+    def to_api_dict(self) -> dict[str, Any]:
+        """The JSON form from ``docs/06_DATA_CONTRACTS.md`` section 3."""
+        return {
+            "requestId": self.request_id,
+            "engine": self.engine,
+            "engineVersion": self.engine_version,
+            "tookMs": self.took_ms,
+            "verdict": self.verdict,
+            "alarmTimeSec": self.alarm_time_sec,
+            "changePointSec": self.change_point_sec,
+            "windowStartSec": self.window_start_sec,
+            "windowEndSec": self.window_end_sec,
+            "services": [
+                {
+                    "service": item.service,
+                    "rank": item.rank,
+                    "score": _clean(item.score),
+                    "marginalScore": _clean(item.marginal_score),
+                    "inheritedFraction": _clean(item.inherited_fraction),
+                    "topIndicator": item.top_indicator,
+                    "role": item.role,
+                    "explainedBy": item.explained_by,
+                }
+                for item in self.services
+            ],
+            "indicators": [
+                {
+                    "column": item.column,
+                    "service": item.service,
+                    "metric": item.metric,
+                    "rank": item.rank,
+                    "selfScore": _clean(item.self_score),
+                    "marginalScore": _clean(item.marginal_score),
+                    "inheritedFraction": _clean(item.inherited_fraction),
+                }
+                for item in self.indicators
+            ],
+            "warnings": list(self.warnings),
+        }
 
 
 @dataclass(frozen=True)
@@ -403,6 +480,26 @@ def _empty_result(
         warnings=tuple(warnings),
         request_id=request.request_id,
     )
+
+
+def _clean(value: float) -> float | None:
+    """NaN and infinity become null: docs/06 forbids 0 or the string "NaN"."""
+    return None if not np.isfinite(value) else float(value)
+
+
+def _window_to_api(window: Window) -> dict[str, Any]:
+    return {
+        "timeSec": [float(t) for t in window.times_sec],
+        "values": [[_clean(v) for v in row] for row in window.values],
+    }
+
+
+def _window_from_api(data: Mapping[str, Any]) -> Window:
+    values = [
+        [np.nan if cell is None else float(cell) for cell in row]
+        for row in data["values"]
+    ]
+    return Window.of(data["timeSec"], values)
 
 
 # Re-exported so callers can build a result without importing three modules.

@@ -1,0 +1,156 @@
+{
+  "requestId": "sample-0001",
+  "engine": "NSIGMA",
+  "engineVersion": "0.1.0",
+  "tookMs": null,
+  "verdict": "ROOT_CAUSE_FOUND",
+  "alarmTimeSec": 1704067380.0,
+  "changePointSec": null,
+  "windowStartSec": 1704067380.0,
+  "windowEndSec": 1704067409.0,
+  "services": [
+    {
+      "service": "svc-02",
+      "rank": 1,
+      "score": 6.154463595237026,
+      "marginalScore": 6.154463595237026,
+      "inheritedFraction": 0.0,
+      "topIndicator": "svc-02_latency",
+      "role": "CAUSE",
+      "explainedBy": null
+    },
+    {
+      "service": "frontend",
+      "rank": 2,
+      "score": 5.754726703635627,
+      "marginalScore": 5.754726703635627,
+      "inheritedFraction": 0.0,
+      "topIndicator": "frontend_latency",
+      "role": "ALSO_ABNORMAL",
+      "explainedBy": null
+    },
+    {
+      "service": "svc-03",
+      "rank": 3,
+      "score": 4.225377691162373,
+      "marginalScore": 4.225377691162373,
+      "inheritedFraction": 0.0,
+      "topIndicator": "svc-03_rps",
+      "role": "ALSO_ABNORMAL",
+      "explainedBy": null
+    },
+    {
+      "service": "svc-04",
+      "rank": 4,
+      "score": 4.2154580819130905,
+      "marginalScore": 4.2154580819130905,
+      "inheritedFraction": 0.0,
+      "topIndicator": "svc-04_rps",
+      "role": "ALSO_ABNORMAL",
+      "explainedBy": null
+    },
+    {
+      "service": "svc-01",
+      "rank": 5,
+      "score": 4.1376837727131,
+      "marginalScore": 4.1376837727131,
+      "inheritedFraction": 0.0,
+      "topIndicator": "svc-01_rps",
+      "role": "ALSO_ABNORMAL",
+      "explainedBy": null
+    }
+  ],
+  "indicators": [
+    {
+      "column": "svc-02_latency",
+      "service": "svc-02",
+      "metric": "latency",
+      "rank": 1,
+      "selfScore": 6.154463595237026,
+      "marginalScore": 6.154463595237026,
+      "inheritedFraction": 0.0
+    },
+    {
+      "column": "frontend_latency",
+      "service": "frontend",
+      "metric": "latency",
+      "rank": 2,
+      "selfScore": 5.754726703635627,
+      "marginalScore": 5.754726703635627,
+      "inheritedFraction": 0.0
+    },
+    {
+      "column": "svc-02_rps",
+      "service": "svc-02",
+      "metric": "rps",
+      "rank": 3,
+      "selfScore": 4.309707020131927,
+      "marginalScore": 4.309707020131927,
+      "inheritedFraction": 0.0
+    },
+    {
+      "column": "svc-02_cpu",
+      "service": "svc-02",
+      "metric": "cpu",
+      "rank": 4,
+      "selfScore": 4.22897263828427,
+      "marginalScore": 4.22897263828427,
+      "inheritedFraction": 0.0
+    },
+    {
+      "column": "svc-03_rps",
+      "service": "svc-03",
+      "metric": "rps",
+      "rank": 5,
+      "selfScore": 4.225377691162373,
+      "marginalScore": 4.225377691162373,
+      "inheritedFraction": 0.0
+    },
+    {
+      "column": "svc-04_rps",
+      "service": "svc-04",
+      "metric": "rps",
+      "rank": 6,
+      "selfScore": 4.2154580819130905,
+      "marginalScore": 4.2154580819130905,
+      "inheritedFraction": 0.0
+    },
+    {
+      "column": "frontend_rps",
+      "service": "frontend",
+      "metric": "rps",
+      "rank": 7,
+      "selfScore": 4.1772648649461495,
+      "marginalScore": 4.1772648649461495,
+      "inheritedFraction": 0.0
+    },
+    {
+      "column": "svc-01_rps",
+      "service": "svc-01",
+      "metric": "rps",
+      "rank": 8,
+      "selfScore": 4.1376837727131,
+      "marginalScore": 4.1376837727131,
+      "inheritedFraction": 0.0
+    },
+    {
+      "column": "svc-04_cpu",
+      "service": "svc-04",
+      "metric": "cpu",
+      "rank": 9,
+      "selfScore": 3.8223113737226124,
+      "marginalScore": 3.8223113737226124,
+      "inheritedFraction": 0.0
+    },
+    {
+      "column": "svc-01_cpu",
+      "service": "svc-01",
+      "metric": "cpu",
+      "rank": 10,
+      "selfScore": 3.689856124997806,
+      "marginalScore": 3.689856124997806,
+      "inheritedFraction": 0.0
+    }
+  ],
+  "warnings": []
+}

@@ -129,7 +129,15 @@ the fault was injected. This is deliberate and worth stating plainly:
 - Roles, in the same strict precedence order: rank 1 is `CAUSE` only when the verdict is
   `ROOT_CAUSE_FOUND`; other services are `ALSO_ABNORMAL` if score >= 3 else `NORMAL`. This ranker
   has no residuals, so it never produces `SYMPTOM`.
-- Must give the same ranking as Python `NSIGMA` on the shared sample file `analyzer/samples/analyze_request.json` (test).
+- Must give the same ranking as Python `NSIGMA` on the shared sample file `analyzer/samples/analyze_request.json` (test). The expected answer is committed beside it as
+  `analyzer/samples/analyze_response_nsigma.json`; `analyze_response_pare.json` is a full-featured
+  response for the deserialisation tests, with roles, an `explainedBy` and a change point.
+  - The sample's numbers are rounded **before** the stored answers were computed, so Java scores
+    exactly the values it reads. A few readings are `null` on purpose, since the contract says a
+    missing number is `null` and both sides have to handle it.
+  - `tookMs` is `null` in the stored responses: it is machine-dependent, so do not assert on it.
+  - The Python side has a test that regenerates these files and fails if anything moved, so the
+    Java test cannot quietly end up checking a stale fixture.
 
 ### 4.5 AnalysisService
 `AnalysisRun analyze(caseId, engine, delaySeconds, mode)`:
