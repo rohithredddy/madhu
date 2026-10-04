@@ -164,6 +164,41 @@ def one_case(
     )
 
 
+def read_cases(path: Path) -> list[CaseResult]:
+    """Load a previous run's per-case rows back from disk.
+
+    Everything arrives from CSV as text, so each field is put back into the type
+    the summary expects; an empty cell means the value was absent, not zero.
+    """
+    def number(value: str, cast):
+        return None if value == "" else cast(value)
+
+    def flag(value: str):
+        return None if value == "" else value == "True"
+
+    with open(path, newline="", encoding="utf-8") as handle:
+        return [
+            CaseResult(
+                engine=row["engine"],
+                fault=row["fault"],
+                amplification=float(row["amplification"]),
+                seed=int(row["seed"]),
+                gt_service=row["gt_service"],
+                gt_column=row["gt_column"],
+                top1_service=row["top1_service"] or None,
+                top1_indicator=row["top1_indicator"] or None,
+                rank_gt_service=number(row["rank_gt_service"], int),
+                tied_gt_service=number(row["tied_gt_service"], int),
+                rank_gt_indicator=number(row["rank_gt_indicator"], int),
+                tied_gt_indicator=number(row["tied_gt_indicator"], int),
+                symptom_error=flag(row["symptom_error"]),
+                verdict=row["verdict"],
+                took_ms=int(row["took_ms"]),
+            )
+            for row in csv.DictReader(handle)
+        ]
+
+
 def summarise(results: list[CaseResult]) -> list[dict[str, object]]:
     """Accuracy per engine, fault type and amplification.
 
@@ -277,6 +312,13 @@ def main() -> int:
     )
     parser.add_argument("--jobs", type=int, default=-2, help="joblib n_jobs; 1 to disable")
     parser.add_argument(
+        "--append",
+        action="store_true",
+        help="keep the per-case rows already in --out for engines not being run now, "
+        "and re-summarise everything together. Lets the grid be built in pieces, "
+        "which matters because SHAP_IFOREST and PARE_LGBM take minutes per setting.",
+    )
+    parser.add_argument(
         "--out",
         type=Path,
         default=Path(__file__).resolve().parents[2]
@@ -332,7 +374,24 @@ def main() -> int:
         )
 
     elapsed = time.perf_counter() - started
-    rows = summarise(list(results))
+    results = list(results)
+
+    carried = 0
+    if args.append and (args.out / "cases.csv").exists():
+        # Keep rows for engines this run did not touch; anything re-run is
+        # replaced, so running the same engine twice refreshes rather than
+        # duplicates it.
+        just_run = set(args.engines)
+        previous = [
+            item for item in read_cases(args.out / "cases.csv")
+            if item.engine not in just_run
+        ]
+        carried = len(previous)
+        results = previous + results
+        print(f"carried {carried} rows forward for "
+              f"{len(sorted({item.engine for item in previous}))} other engine(s)")
+
+    rows = summarise(results)
 
     # --- write everything down before printing anything ---
     args.out.mkdir(parents=True, exist_ok=True)
@@ -367,6 +426,9 @@ def main() -> int:
                 "platform": platform.platform(),
                 "elapsed_s": round(elapsed, 1),
                 "gate_passed": passed,
+                "engines_run_this_time": args.engines,
+                "rows_carried_forward": carried,
+                "engines_in_file": sorted({item.engine for item in results}),
             },
             indent=2,
         ),

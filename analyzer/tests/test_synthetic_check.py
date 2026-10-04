@@ -202,3 +202,91 @@ def test_the_amplification_sweep_includes_a_control_and_a_trap():
     apart."""
     assert 0.0 in check.DEFAULT_AMPLIFICATIONS
     assert any(value > 0 for value in check.DEFAULT_AMPLIFICATIONS)
+
+
+# --- building the grid in pieces --------------------------------------------
+
+
+def a_case(engine, fault="latency", amplification=0.0, seed=0, rank=1, tied=1):
+    return check.CaseResult(
+        engine=engine,
+        fault=fault,
+        amplification=amplification,
+        seed=seed,
+        gt_service="svc-01",
+        gt_column="svc-01_latency",
+        top1_service="svc-01",
+        top1_indicator="svc-01_latency",
+        rank_gt_service=rank,
+        tied_gt_service=tied,
+        rank_gt_indicator=rank,
+        tied_gt_indicator=tied,
+        symptom_error=False,
+        verdict="ROOT_CAUSE_FOUND",
+        took_ms=42,
+    )
+
+
+def write_cases(path, results):
+    import csv
+
+    fields = list(check.CaseResult.__dataclass_fields__)
+    with open(path, "w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fields)
+        writer.writeheader()
+        for item in results:
+            writer.writerow({field: getattr(item, field) for field in fields})
+
+
+def test_cases_survive_a_round_trip_through_csv(tmp_path):
+    """Append reads a previous run back from disk, so the types have to come back
+    as they went in - a rank must be an int again, not the string "1"."""
+    path = tmp_path / "cases.csv"
+    original = [a_case("PARE"), a_case("NSIGMA", seed=1)]
+    write_cases(path, original)
+
+    assert check.read_cases(path) == original
+
+
+def test_an_absent_value_comes_back_as_none_not_zero(tmp_path):
+    """An unranked case is empty in the file. Reading it as 0 would turn "the
+    method never named it" into "it came first"."""
+    path = tmp_path / "cases.csv"
+    missing = check.CaseResult(
+        engine="PCA_RECON",
+        fault="mem",
+        amplification=0.0,
+        seed=3,
+        gt_service="svc-01",
+        gt_column="svc-01_mem",
+        top1_service=None,
+        top1_indicator=None,
+        rank_gt_service=None,
+        tied_gt_service=None,
+        rank_gt_indicator=None,
+        tied_gt_indicator=None,
+        symptom_error=None,
+        verdict="NO_CLEAR_CAUSE",
+        took_ms=7,
+    )
+    write_cases(path, [missing])
+
+    back = check.read_cases(path)[0]
+    assert back.rank_gt_service is None
+    assert back.symptom_error is None
+    assert back.top1_service is None
+
+
+def test_a_rerun_engine_replaces_its_rows_rather_than_duplicating_them(tmp_path):
+    """Appending the same engine twice must refresh it, not double it - otherwise
+    a repeated run would quietly weight that engine twice in the summary."""
+    path = tmp_path / "cases.csv"
+    write_cases(path, [a_case("PARE", seed=0), a_case("SHAP_IFOREST", seed=0)])
+
+    previous = [item for item in check.read_cases(path) if item.engine != "SHAP_IFOREST"]
+    merged = previous + [a_case("SHAP_IFOREST", seed=0, rank=3)]
+
+    assert len(merged) == 2
+    by_engine = {item.engine: item for item in merged}
+    assert by_engine["SHAP_IFOREST"].rank_gt_service == 3, "the fresh row should win"
+    assert by_engine["PARE"].rank_gt_service == 1, "the untouched engine is kept"

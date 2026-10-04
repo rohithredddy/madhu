@@ -52,6 +52,64 @@ anything waiting on you, then the machine setup and the full list of decisions a
   the normal data it is fitted on. That is a limitation to measure and report in E6, not a bug to
   tune away.
 
+### 2026-10-04 - Closing the M1.10 leftover: the two slow engines, re-measured
+- What was done: `SHAP_IFOREST` and `PARE_LGBM` were re-run through the synthetic check with the
+  corrected rank measurement and the graph-free baselines, so the result file now covers **all eight
+  engines over 3,200 cases** rather than six. The gate was re-checked on the merged file and still
+  passes, unchanged.
+  - To make that possible the script gained `--append`: it keeps the per-case rows already in the
+    output directory for engines it is not running, and re-summarises everything together. The full
+    grid takes longer than a single background run is allowed, and the alternative was leaving the
+    canonical result file permanently incomplete. Re-running an engine **replaces** its rows rather
+    than adding to them, so a repeat run refreshes instead of double-counting. Decision 54.
+- **`SHAP_IFOREST` was unaffected by the bug**, which is worth knowing rather than assuming: its
+  numbers came back identical to the first run. The rank bug only ever touched engines that use the
+  graph traversal, and `SHAP_IFOREST` does not. Its M1.8 figures stand.
+
+  The headline C1 number survives at scale: its **symptom rate is 1.0** on latency, cpu and error -
+  every single wrong answer blames a caller of the real culprit rather than an unrelated service,
+  now over 400 cases rather than 15.
+- **`PARE_LGBM` was affected, and my M1.7b report of it was wrong.** I reported it as five points
+  behind ridge at amplification 0.25 and fifteen behind at 0.50 on service accuracy. That was the
+  broken measurement penalising the traversal. Corrected over 400 cases:
+
+  | fault | amp | AC@1 ridge / lgbm | ExpAC@1 ridge / lgbm |
+  |---|---|---|---|
+  | cpu | 0.0 / 0.25 | 1.00 / 1.00 | 0.76 / 0.64 |
+  | error | 0.0 / 0.25 | 1.00 / 1.00 | 1.00 / 0.66 |
+  | latency | 0.0 | 1.00 / 1.00 | 1.00 / 0.68 |
+  | latency | 0.25 | 0.94 / 0.90 | **1.00 / 0.22** |
+  | mem | 0.0 / 0.25 | 0.90 / 0.90 | 0.78 / 0.54 |
+
+  Mean across all settings: service accuracy is effectively identical, indicator accuracy falls from
+  **0.89 to 0.58**, and it is about **9 times slower**.
+
+  This is a sharper finding than the one it replaces, and it fits the extrapolation limit found in
+  M1.6 better. A tree ensemble cannot extrapolate, so its residuals are distorted in **magnitude**.
+  Magnitude is what orders the columns inside a service, so the indicator ranking is scrambled -
+  while the question of *which service* is carried largely by the graph traversal and survives. The
+  ablation's real message is therefore: swapping the linear dependency model for a non-linear one
+  costs you the answer to "which metric", which is the question an engineer actually asks, and buys
+  nothing.
+- How it was tested (commands + result):
+  - `python scripts/synthetic_check.py --engines SHAP_IFOREST --append` (137 s) then
+    `--engines PARE_LGBM --append` (361 s). `config.json` records which engines each run touched and
+    how many rows were carried forward.
+  - `pytest -q` -> all tests pass, including four new ones for `--append`: that per-case rows survive
+    a CSV round trip with their types intact, that an absent value comes back as `None` rather than
+    `0` (reading it as 0 would turn "the method never named it" into "it came first"), and that
+    re-running an engine replaces its rows instead of duplicating them.
+  - The gate on the merged file is identical to the six-engine run, as it must be: the two engines
+    added are not part of it.
+- A caveat on the timings in the result file: these runs used every core, so the per-case
+  milliseconds are inflated by contention and are **not** comparable with the single-run figures in
+  `05` section 7. Use them to compare engines with each other, not against the 2-second budget.
+- Files changed: `analyzer/scripts/synthetic_check.py` (`--append`, `read_cases`),
+  `analyzer/tests/test_synthetic_check.py`, `docs/05_PYTHON_ANALYZER_SPEC.md` (the corrected
+  `PARE_LGBM` note), `PROGRESS.md`. The result files under `experiments/results/` are git-ignored by
+  design.
+- Left open / next: M2.1. Nothing from M1 is outstanding now.
+
 ### 2026-10-04 - Settling open question 1: RCAEval without PyTorch
 - What was done: established, by building the environment rather than by reading dependency lists,
   that RCAEval can be installed **without PyTorch**, so hard rule 1 needs no exception. The
@@ -353,9 +411,11 @@ anything waiting on you, then the machine setup and the full list of decisions a
     | 0.25 | 0.95 | 0.90 | 369 / 2196 |
     | 0.50 | 0.70 | 0.55 | 401 / 2397 |
 
-    **The ablation is a clean negative result.** With no congestion there is nothing to get wrong and
-    both are perfect. As soon as there is a trap to fall into, LightGBM is worse - five points behind
-    at amplification 0.25 and fifteen behind at 0.50 - and it is about six times slower throughout.
+    > **These service-level numbers are WRONG and are kept only for the record.** They were produced
+    > with the rank measurement that M1.10 later found to be broken, which penalised any engine using
+    > the graph traversal - and `PARE_LGBM` uses it. Corrected on 2026-10-04 over 400 cases:
+    > `PARE_LGBM`'s service accuracy is **the same** as ridge's, not worse. What it really costs is
+    > indicator accuracy and time. See the 2026-10-04 entry.
 
     The reason was already found in M1.6 and this confirms it at the engine level: a tree ensemble
     cannot extrapolate. A fault pushes a callee far outside anything in the normal period, where the
@@ -1369,6 +1429,16 @@ written into the spec files. One line of reason each.
     never asked for. Weakening a stated rule when the rule costs nothing would have been the wrong
     trade - and the environment is pinned in `experiments/requirements-rcaeval.txt` so the claim
     stays checkable rather than becoming folklore.
+
+### Closing M1.10
+
+54. **The synthetic check can build its result file in pieces (`--append`).** Rows already present
+    for engines not being run are kept and re-summarised with the new ones; re-running an engine
+    replaces its rows.
+    Reason: the full eight-engine grid takes longer than one background run is allowed, and the
+    alternative was a canonical result file that permanently omitted the two slow engines. Replacing
+    rather than appending per engine means a repeated run refreshes a result instead of silently
+    weighting that engine twice in the summary.
 
 ### Order of work
 

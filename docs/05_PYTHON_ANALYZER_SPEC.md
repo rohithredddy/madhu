@@ -216,7 +216,7 @@ estimated change point, the window bounds, at most `top_k` indicators, timing (`
 | `PARE` | Full method above | Proposed method |
 | `PARE_NO_RESIDUAL` | Ranking by marginal scores only (+ change point) | Ablation |
 | `PARE_NO_CP` | Full method, window starts at alarm time | Ablation |
-| `PARE_LGBM` | LightGBM dependency model | Ablation (measured: no better, and much slower - see below) |
+| `PARE_LGBM` | LightGBM dependency model | Ablation. Measured on 400 cases: the **same** service accuracy as ridge, but indicator accuracy falls from 0.89 to 0.58 and it is about 9 times slower |
 | `NSIGMA` | Mean of abnormal vs mean/std of normal, max per service. Abnormal window is `[alarm_time, end of recent]`; it **never** uses the change point | Baseline (must match Java FallbackRanker) |
 
 **The baselines are never given the call graph, in any form.** That includes the traversal step in
