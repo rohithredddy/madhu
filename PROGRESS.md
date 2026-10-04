@@ -8,8 +8,8 @@ anything waiting on you, then the machine setup and the full list of decisions a
 
 ## Current status
 - Current milestone: M1 (Python PARE core)
-- Next task: M2.1 (set up RCAEval, download RE1 Online Boutique) - the start of real data.
-  **M1 is complete.**
+- Next task: M2.2 (inspect the RE1-OB folders and write down their structure, column names, inject
+  time and ground-truth labelling in this file **before** writing the adapter)
 - Blockers: none. Open question 3, which would have made the M1.10 synthetic check meaningless, was
   settled on 2026-10-03 (decision 38).
 
@@ -51,6 +51,42 @@ anything waiting on you, then the machine setup and the full list of decisions a
   linear dependency model stops working above about 0.7, because the non-linearity is invisible in
   the normal data it is fitted on. That is a limitation to measure and report in E6, not a bug to
   tune away.
+
+### 2026-10-04 - M2.1 - RE1 Online Boutique downloaded
+- What was done: `experiments/download_rcaeval.py`, a thin wrapper over RCAEval's own download
+  helpers, and RE1 Online Boutique fetched with it into `data/RCAEval/RE1/RE1-OB`. The RCAEval
+  virtual environment was already built while settling open question 1, so that half of the task
+  was done.
+  - A script rather than a shell command, so getting the data is a recorded step someone can repeat
+    rather than something done once at a prompt. It handles all ten RE1/RE2/RE3 datasets, skips one
+    that is already present, and reports free disk before starting.
+- The API was read, not guessed (hard rule 9): `RCAEval.utility` exposes
+  `download_re1ob_dataset(local_path=None)`, which pulls
+  `https://zenodo.org/records/14590730/files/RE1-OB.zip`, unpacks it and deletes the archive. Two
+  behaviours worth knowing, both read from the source: it returns immediately if the target folder
+  exists, and it writes its temporary zip into the **current working directory**, which is why the
+  wrapper changes directory to the data folder first rather than leaving a 31 MB file in the project
+  root.
+- What arrived, confirmed rather than assumed:
+  - 31 MB compressed, **175 MB unpacked, 250 files**. Much smaller than feared - RE1 is metrics only.
+  - **125 cases**: 25 folders named `{service}_{faulttype}`, each holding 5 numbered runs.
+  - 5 services: `adservice`, `cartservice`, `checkoutservice`, `currencyservice`,
+    `productcatalogservice`.
+  - 5 fault types: `cpu`, `delay`, `disk`, `loss`, `mem`.
+  - Each run folder holds `data.csv` (about 2.7 MB) and `inject_time.txt` (10 bytes).
+  - That is a quarter of RE1's 375 cases, which is right: the other two systems are Sock Shop and
+    Train Ticket.
+  - The temporary archive was cleaned up, and `data/` is git-ignored, so none of this is committed
+    (hard rule 11). Disk went from 23.7 GB to 22 GB free.
+- How it was tested (commands + result): the download reported 250 files and 175 MB; the folder tree
+  was listed to confirm the shape above; `find data -name "*.zip"` found nothing left behind;
+  `git check-ignore` confirmed the data cannot be committed.
+- **Deliberately not done here**: reading the CSV columns, the inject-time format or how ground truth
+  is labelled. `07` M2.2 says to inspect those and write the findings in this file **before** writing
+  the adapter, and that is the next task rather than this one.
+- Files changed: new `experiments/download_rcaeval.py`; `docs/08_EXPERIMENTS_SPEC.md` (section 2 now
+  names the script), `docs/07_TASKS.md`, `PROGRESS.md`.
+- Left open / next: M2.2, the inspection.
 
 ### 2026-10-04 - Closing the M1.10 leftover: the two slow engines, re-measured
 - What was done: `SHAP_IFOREST` and `PARE_LGBM` were re-run through the synthetic check with the

@@ -64,7 +64,16 @@ uv pip install --python .venv-rcaeval/Scripts/python.exe -r requirements-rcaeval
 
 Note that the `default` extra also pins `networkx==2.5`; that pin is not needed either, and the
 methods above run on networkx 3.4.2.
-- Put data under `data/RCAEval/RE1`, `RE2`, `RE3`.
+- Put data under `data/RCAEval/RE1`, `RE2`, `RE3`. Use `experiments/download_rcaeval.py`, which
+  wraps RCAEval's own download helpers so fetching the data is a recorded, repeatable step:
+
+  ```
+  experiments/.venv-rcaeval/Scripts/python.exe experiments/download_rcaeval.py --dataset RE1-OB
+  ```
+
+  It skips a dataset that is already present, so re-running is cheap. RE1-OB is about 31 MB
+  compressed and 175 MB unpacked - far smaller than feared, because RE1 is metrics only. RE2 and RE3
+  carry logs and traces and will be very much larger.
 - Start with RE1 Online Boutique only. Add the other systems after the pipeline works end to end.
 
 ## 3. The RCAEval adapter (`adapters/rcaeval.py`)
