@@ -30,7 +30,40 @@ experiments/
 
 ## 2. Getting the data
 
-- Install the RCAEval package in a separate Python 3.10 virtual env if its dependencies clash with ours (`experiments/.venv-rcaeval`). Read the RCAEval GitHub README for the exact download function and folder structure. Do not guess.
+- Install the RCAEval package in a separate Python 3.10 virtual env (`experiments/.venv-rcaeval`).
+  It is separate because RCAEval needs `numpy<2` while the analyzer uses numpy 2.x; they cannot
+  share an environment. Read the RCAEval GitHub README for the exact download function and folder
+  structure. Do not guess.
+
+#### Install it without PyTorch
+
+Do **not** use `pip install RCAEval[default]`. That extra pulls `torch`, which hard rule 1 in
+`PROJECT_RULES.md` forbids. It is not needed: `RCAEval/e2e/__init__.py` imports each method inside a
+`try/except` and skips any whose dependencies are absent, so a torch-free install simply leaves out
+the torch methods. Verified on 2026-10-04, with no torch installed:
+
+| method | available without torch |
+|---|---|
+| NSigma, BARO | yes |
+| epsilon-Diagnosis (`e_diagnosis`) | yes |
+| CIRCA, RCD, PC-PageRank, MicroCause | yes |
+| CausalRCA, MSCRED | **no** - both import `torch` |
+
+Every baseline named in `00_RESEARCH_PLAN.md` section 8.1 is in the first group, so nothing the plan
+asks for is lost. CausalRCA and MSCRED are deep models and are **out of scope by rule, not by
+accident**; the paper should say so plainly rather than let a reader wonder why they are absent.
+
+The exact environment is pinned in `experiments/requirements-rcaeval.txt` (46 packages, about
+420 MB, no torch and no tensorflow):
+
+```
+cd experiments
+uv venv .venv-rcaeval --python 3.10
+uv pip install --python .venv-rcaeval/Scripts/python.exe -r requirements-rcaeval.txt
+```
+
+Note that the `default` extra also pins `networkx==2.5`; that pin is not needed either, and the
+methods above run on networkx 3.4.2.
 - Put data under `data/RCAEval/RE1`, `RE2`, `RE3`.
 - Start with RE1 Online Boutique only. Add the other systems after the pipeline works end to end.
 
