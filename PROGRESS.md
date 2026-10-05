@@ -7,12 +7,17 @@ Order of this file: what is happening now, then the log of what was done (newest
 anything waiting on you, then the machine setup and the full list of decisions as reference.
 
 ## Current status
-- Current milestone: M1 (Python PARE core)
-- Next task: M2.4 (reproduce RCAEval's NSigma and BARO on RE1-OB and compare with our NSIGMA)
-- Blockers: none for M2.4. **Open question 6 still needs an answer before any indicator-level number
-  is reported**: DISK, DELAY and LOSS faults have no matching metric column.
-- Blockers: none. Open question 3, which would have made the M1.10 synthetic check meaningless, was
-  settled on 2026-10-03 (decision 38).
+- Current milestone: M2 (RCAEval data and baseline reproduction)
+- Next task: M2.5 (static call graphs `experiments/graphs/online-boutique.yaml` and
+  `sock-shop.yaml`, from the apps' public architecture). This is the last piece of M2, and it is the
+  one PARE has been waiting for: with no graph there is nothing to subtract, so PARE is currently
+  just a re-anchored robust-z method.
+- Blockers: none for M2.5. **Open question 6 still needs an answer before any indicator-level number
+  goes in the paper**: DISK, DELAY and LOSS have no matching metric column. M2.4 now shows what the
+  choice is worth - ExpAC@1 for our NSIGMA is 0.92 under the strict definition and 0.784 under the
+  loose one, so the two readings differ by 14 points and the paper cannot leave it implicit.
+- Open question 3, which would have made the M1.10 synthetic check meaningless, was settled on
+  2026-10-03 (decision 38).
 
 ## Log
 <!-- Template for each entry:
@@ -52,6 +57,92 @@ anything waiting on you, then the machine setup and the full list of decisions a
   linear dependency model stops working above about 0.7, because the non-linearity is invisible in
   the normal data it is fitted on. That is a limitation to measure and report in E6, not a bug to
   tune away.
+
+### 2026-10-05 - M2.4 - reproducing their NSigma and BARO, and accounting for the difference
+- What was done: two scripts, because the two environments cannot be joined.
+  `experiments/run_rcaeval_baselines.py` runs in `.venv-rcaeval` and calls RCAEval's own `nsigma`
+  and `baro` on all 125 RE1-OB cases, recording the ranking each produced to
+  `results/m2_4/rcaeval_rankings.jsonl`. `experiments/run_m24_compare.py` runs in the analyzer
+  environment, scores those rankings, runs our `NSIGMA`, and attributes the difference.
+  `experiments/baseline_formulas.py` holds a re-implementation of their two formulas so that one
+  thing at a time can be changed between their setup and ours.
+- **The reproduction succeeded, and ours scores higher.** AC@1 over 125 cases: their NSigma 0.728,
+  their BARO 0.720, our NSIGMA **0.848**. Avg@5 0.8816 / 0.8784 / 0.9344. Indicator accuracy on the
+  50 CPU and MEM cases where the ground truth is unambiguous: 0.74 / 0.66 / **0.92**.
+- The gap is not reported as a mystery. Changing one thing at a time from their setup to ours:
+
+  | step | AC@1 | ExpAC@1 |
+  |---|---|---|
+  | start: RCAEval NSigma, reproduced | 0.728 | 0.740 |
+  | + formula: their signed max of per-row z -> our shift of the window mean | +0.104 | +0.180 |
+  | + windows: the 30 s gap, and an abnormal window ending 120 s after the alarm | +0.016 | +0.000 |
+  | + candidates: their `preprocess` -> our cleaning and service allowlist | +0.000 | +0.000 |
+  | end: our NSIGMA | 0.848 | 0.920 |
+
+  So **almost all of it is the formula**, and the window and candidate-set differences are nearly
+  free. Their score for a column is `max` over the abnormal rows of its z-score; ours is the shift
+  of the window's median-free mean. One unusual row is enough to put a column first for them, which
+  is what the extra 10 points of AC@1 and 18 points of indicator accuracy are made of. This is the
+  answer to M2's "done when": the difference is explained, and it is explained by one line of their
+  source.
+- How it was tested (commands + result):
+  - `experiments/.venv-rcaeval/Scripts/python.exe experiments/run_rcaeval_baselines.py` -> 250
+    rankings, 0 failures, about 25 s.
+  - `analyzer/.venv/Scripts/python.exe experiments/run_m24_compare.py` -> the tables above, saved to
+    `results/m2_4/comparison.txt`, `summary.csv`, `summary_by_fault.csv`, `cases.csv`.
+  - `pytest experiments/tests -q` -> **44 passed** (24 new). `pytest -q` in `analyzer/` ->
+    **367 passed**. `ruff check .` -> clean.
+  - **The re-implementation is checked, not trusted.** Cell `A_theirs` reproduces their package's
+    own top-1 on **125 of 125** cases and the entire ranking on 124 of 125, and every accuracy number
+    it produces is identical to theirs to four decimal places. Cell `D_ours` reproduces our engine's
+    full ranking on 125 of 125. Without both of those the attribution above would be worthless, so
+    the script prints them before anything else.
+  - The 125-vs-124 case is explained below; it is not an error in the re-implementation.
+- **Three findings about the baseline, all of which belong in the paper.**
+  1. **Their sort is broken when any score is NaN, and on RE1-OB it happens on 4 of 125 cases.**
+     A column with no valid rows in one window scores NaN. Their ranking is
+     `sorted(pairs, key=score, reverse=True)`, and every comparison with NaN is False, so the sort
+     has no valid ordering and returns a list in which even the real scores are misplaced
+     (`their_sort(["a","b","c"], [1.0, nan, 5.0])` returns `["a","b","c"]`; `c` scores 5 and comes
+     last). On two cases this puts `frontend_error` - which has **zero** readings in the whole
+     normal window - in first place. Their `drop_constant` cannot remove it, because `NaN != NaN`
+     means an all-NaN column never looks constant. Reproduced rather than repaired: it is how the
+     published ranking is produced, and the four cases are counted in `summary.csv`
+     (`cases_with_nan_score`).
+  2. **Both methods are signed, not absolute.** `max(zscores)`, not `max(|zscores|)`, so a fault
+     that *reduces* a metric is invisible to them. Ours takes the absolute shift. Not a factor on
+     RE1-OB, but a limitation to state rather than discover later.
+  3. **`convert_mem_mb` cannot change their answer.** Both their scalers are scale-invariant, so
+     dividing a memory column by 1e6 leaves every z-score untouched. Kept in the faithful path
+     anyway, and worth knowing before anyone reads significance into it.
+- **Where ours is worse, which the honesty checklist requires.** Per fault type, AC@1, theirs then
+  ours: CPU 0.68 -> 0.96, DISK 0.64 -> 0.92, MEM 0.96 -> 1.00, LOSS 0.40 -> 0.48, but
+  **DELAY 0.96 -> 0.88**. Delay faults are the one place their `max` wins, and it is the mechanism
+  you would expect: an injected network delay shows up as latency spikes, which a maximum catches
+  and a window mean dilutes. Both steps of the ladder cost DELAY a little (0.96 -> 0.92 on the
+  formula, 0.92 -> 0.88 on the window).
+  LOSS is poor for everyone (0.40 to 0.48), which is hypothesis H4 in the research plan arriving on
+  schedule: network faults stay hard for metric-only methods.
+- **The improvement is not noise.** Paired over the 125 cases: 86 both right, 14 both wrong, 20 where
+  only ours is right, 5 where only theirs is. McNemar exact test on the 25 disagreements,
+  **p = 0.0041**. Four of the 5 cases theirs wins are DELAY or DISK. (The paper's full statistics
+  are M4.4; this is one descriptive number about the pair M2.4 is about.)
+- Also found and fixed: `pare.scores._quiet_all_nan` silenced two of the three warnings numpy
+  raises for a column with no readings but not `np.nanstd`'s "Degrees of freedom <= 0". Nothing had
+  fed `nsigma_score` such a column before, because our own preprocessing drops it; the ladder does,
+  on purpose, by scoring our formula over their candidate set. No score changes - the result was
+  already mapped to 0 - but a 125-case run printed hundreds of lines of warning noise. One filter
+  added, with the reason.
+- Note on what M2.4 does **not** claim: BARO here is RCAEval's `baro` function, which is the ranking
+  half of the BARO paper. The other half, multivariate Bayesian online change-point detection, finds
+  the incident time, and the benchmark hands every method the injection time instead, so that half
+  never runs. The paper must say this rather than claim to have evaluated all of BARO.
+- Files changed: new `experiments/run_rcaeval_baselines.py`, `experiments/run_m24_compare.py`,
+  `experiments/baseline_formulas.py`, `experiments/tests/test_baseline_formulas.py`,
+  `experiments/tests/test_m24_compare.py`, `experiments/results/m2_4/*`;
+  `analyzer/pare/scores.py` (one warning filter), `docs/07_TASKS.md`, `PROGRESS.md`.
+- Left open / next: M2.5, the static call graphs. Open question 6 is now quantified (14 points
+  between the strict and loose indicator definitions) and still needs the human's ruling.
 
 ### 2026-10-05 - M2.3 - the RCAEval adapter
 - What was done: `experiments/adapters/rcaeval.py` with `list_cases()` and `load_case()`, returning
@@ -1091,8 +1182,30 @@ choose and to declare. What the data shows, and the three options, are written u
    keeps all 125 cases visible and lets a reader see the effect of the looser definition. Either way
    the choice must be stated in the paper, because it moves the numbers.
 
-   Not blocking: the adapter can load every case and record the fault type; only the indicator-level
-   scoring depends on this.
+   **How much it moves them, measured in M2.4.** ExpAC@1 for our `NSIGMA` on RE1-OB is **0.92**
+   under the strict definition (b), over the 50 CPU and MEM cases, and **0.784** under the loose
+   definition (a), over all 125. Their NSigma: 0.74 strict, 0.68 loose. So the two readings differ by
+   about 14 points for us and 6 for them, and the strict definition is the more flattering one for
+   both. That asymmetry is itself a reason to report both: picking (b) alone would look like
+   cherry-picking the higher number, and the honest framing is that (b) measures a cleaner question
+   on fewer cases.
+
+   Not blocking: the adapter loads every case and records the fault type, and
+   `run_m24_compare.py` already reports both numbers side by side. Only the choice of which one the
+   paper calls its headline depends on this.
+
+8. **`.gitignore` does not do what `docs/08` section 1 says about results.** The spec says
+   `results/` is "git-ignored except small summary CSVs"; the actual rule is
+   `experiments/results/*` with only `.gitkeep` allowed back, so **nothing** is tracked - not
+   M1.10's `synthetic_check/summary.csv` and not M2.4's `summary.csv` (788 bytes) or
+   `comparison.txt` (2.4 KB). Noticed in M2.4, not caused by it.
+   It matters a little: PROGRESS.md and the paper quote numbers from those files, and a reader with
+   a fresh clone cannot see them without downloading 175 MB and running two scripts. It is also
+   genuinely arguable the other way - committed result files churn on every run.
+   Options: (a) add negative patterns for `summary*.csv` and `comparison.txt` so the small summaries
+   are tracked, matching the spec; (b) change `docs/08` to say results are never committed, and rely
+   on the scripts being reproducible. Not blocking anything; needs one line either way, and it
+   should be a deliberate choice rather than drift.
 
 7. **Disk space** (less urgent than first reported). Now 24.4 GB free, not the 11.7 GB measured
    earlier that day. Still worth planning: `analyzer/.venv` already takes 644 MB, and the RCAEval
@@ -1648,6 +1761,45 @@ written into the spec files. One line of reason each.
     evenly between `cpu` and the latency percentiles. Any single choice would be an invention
     presented as data. Leaving it None forces an experiment to state which definition it is using,
     which is exactly the decision open question 6 is waiting on.
+
+### M2.4 choices
+
+57. **Their half and our half are separate scripts, and their half never reads the ground truth.**
+    `run_rcaeval_baselines.py` records only the ranking; all scoring happens in
+    `run_m24_compare.py`.
+    Reason: the two environments cannot be joined (numpy 1.x against 2.x), so a split was forced.
+    Given that, putting every scoring decision on one side means there is one ground-truth mapping
+    and one definition of each metric rather than two that could drift. It also makes hard rule 4
+    mechanical instead of a matter of care: a file that never reads the answer cannot leak it, and
+    a test asserts the recorded JSON carries no ground-truth key.
+
+58. **Their formulas are re-implemented as well as called.** `baseline_formulas.py`.
+    Reason: a reproduction only needs their code, but *explaining* a difference needs their formula
+    and ours applied to the same window, which one process cannot do across two environments.
+    The re-implementation is validated against their real output on all 125 cases - identical top-1
+    on 125, identical accuracy to four decimals - and the script prints that check before the
+    attribution, so a future RCAEval release that changes the method makes the check fail loudly
+    instead of quietly invalidating the table.
+
+59. **Their sort is reproduced, NaN bug included, and used for every ladder cell.**
+    Reason: replacing it with a correct sort would hide a real property of the published baseline
+    (finding 1 in the M2.4 log entry). Using it for our cells too costs nothing, because our formula
+    never returns NaN, and it holds the sort fixed so that the formula step of the ladder measures
+    the formula alone.
+
+60. **Two service-level conventions are both reported, neither is called the answer.**
+    Their `Evaluator` reads AC@k off the top k *columns* without removing repeats; the rest of this
+    project ranks distinct services. Columns `ac3_raw` / `avg5_raw` are theirs, `ac3_distinct` /
+    `avg5_distinct` are ours.
+    Reason: at k=1 the two are identical, so the headline comparison is unaffected; above it theirs
+    is stricter. Quietly picking one would move the numbers for a reason that has nothing to do with
+    method quality. A test pins the case where they differ.
+
+61. **`cases.csv` stays exactly as `docs/06` section 5 defines it; the loose indicator scoring goes
+    in `indicator_scoring.csv`.**
+    Reason: open question 6 is not settled, so neither definition should be written into the
+    contract yet. When it is settled, `docs/06` and the writers change once, deliberately, rather
+    than the contract having grown an extra column by accident (hard rule 6).
 
 ### Order of work
 

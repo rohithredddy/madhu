@@ -78,6 +78,13 @@ def _quiet_all_nan() -> Iterator[None]:
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", message="All-NaN slice encountered")
         warnings.filterwarnings("ignore", message="Mean of empty slice")
+        # The same empty column, reached through `np.nanstd`, which complains in
+        # different words. Missed when this helper was written because no caller
+        # had yet fed `nsigma_score` a column with no readings at all; M2.4 did,
+        # by scoring our formula over RCAEval's candidate set, whose
+        # `drop_constant` keeps an all-NaN column (NaN != NaN, so it never looks
+        # constant). No score changes: the result was already mapped to 0.
+        warnings.filterwarnings("ignore", message="Degrees of freedom <= 0")
         yield
 
 
