@@ -17,14 +17,16 @@ import pandas as pd
 import pytest
 import yaml
 
-from experiments.run_c1_grounding import _read_config, _summarise
+from experiments.run_c1_grounding import _combine, _read_config, _summarise
 from experiments.runner import (
     CASES_CSV_COLUMNS,
     CaseRow,
     ranks_from,
     run_case,
     symptom_rate,
+    symptom_rate_chance,
     write_run,
+    wrong_probabilities,
 )
 
 ROOT = Path(__file__).resolve().parents[2] / "data" / "RCAEval"
@@ -70,7 +72,8 @@ def test_a_written_run_has_exactly_the_contract_columns(tmp_path: Path):
         delay_s=0.0, seed=42, rank_gt_service=1, rank_gt_indicator=1,
         rank_gt_indicator_loose=1, top1_service="a", top1_indicator="a_cpu",
         tied_gt_service=1, tied_gt_indicator=1, tied_gt_indicator_loose=1,
-        symptom_error=False, verdict="ROOT_CAUSE_FOUND", runtime_s=0.1,
+        symptom_error=False, tied_top1=1, symptom_share=0.0, symptom_chance=0.2,
+        verdict="ROOT_CAUSE_FOUND", runtime_s=0.1,
     )
     write_run([row], tmp_path, {"run_id": "t"}, ["a line"])
 
@@ -103,6 +106,26 @@ def test_an_unranked_truth_becomes_none_and_counts_as_a_miss():
     assert ranks[2].tied == 2
 
 
+def _symptom_frame(shares, ranks, ties=None, chances=None) -> pd.DataFrame:
+    """The columns the symptom rate reads, one case per entry.
+
+    `ranks` is the culprit's service rank (1 = right, "" = never ranked) and
+    `shares` the share of the rank-1 tie group calling the culprit, as the runner
+    writes them; "" means no graph.
+    """
+    n = len(shares)
+    if ties is None:
+        ties = [1 if rank != "" else "" for rank in ranks]
+    return pd.DataFrame(
+        {
+            "symptom_share": shares,
+            "symptom_chance": chances if chances is not None else [""] * n,
+            "rank_gt_service": ranks,
+            "tied_gt_service": ties,
+        }
+    )
+
+
 def test_symptom_rate_divides_by_the_wrong_answers_only():
     """`docs/08` section 4: "symptom errors / wrong top-1", not / all cases.
 
@@ -110,17 +133,12 @@ def test_symptom_rate_divides_by_the_wrong_answers_only():
     could not tell a right answer from one wrong in an unrelated way - both are
     False. It passed against an implementation that divided by all 125 cases, which
     understated every symptom rate in the project by a factor of two or three. The
-    correctness of the top-1 is therefore part of the input now.
+    correctness of the top-1 is therefore part of the input - since M3.2 as the
+    culprit's service rank, which is what lets ties be scored as ties.
     """
-    frame = pd.DataFrame(
-        {
-            # two right, two wrong in an unrelated way, one wrong by blaming a
-            # caller, and one with no graph to judge by
-            "symptom_error": [False, False, False, False, True, ""],
-            "top1_service": ["a", "b", "x", "y", "z", "w"],
-            "gt_service": ["a", "b", "c", "d", "e", "f"],
-        }
-    )
+    # two right, two wrong in an unrelated way, one wrong by blaming a caller, and
+    # one with no graph to judge by
+    frame = _symptom_frame(shares=[0.0, 0.0, 0.0, 0.0, 1.0, ""], ranks=[1, 1, 3, 4, 2, 5])
     # Three wrong answers are judged - the sixth is excluded for having no graph,
     # not counted as a non-symptom - and one of them is a symptom error.
     assert symptom_rate(frame) == pytest.approx(1 / 3)
@@ -134,38 +152,44 @@ def test_symptom_rate_is_not_diluted_by_correct_answers():
     make a method look better at this the more often it was right, which is
     precisely backwards.
     """
-    many_right = pd.DataFrame(
-        {
-            "symptom_error": [False] * 100 + [False, False, False, True],
-            "top1_service": ["a"] * 100 + ["x", "y", "z", "w"],
-            "gt_service": ["a"] * 100 + ["b", "c", "d", "e"],
-        }
+    many_right = _symptom_frame(
+        shares=[0.0] * 100 + [0.0, 0.0, 0.0, 1.0], ranks=[1] * 100 + [2, 3, 4, 5]
     )
     assert symptom_rate(many_right) == pytest.approx(0.25)
 
 
 def test_symptom_rate_is_none_when_every_answer_was_right():
-    frame = pd.DataFrame(
-        {
-            "symptom_error": [False, False],
-            "top1_service": ["a", "b"],
-            "gt_service": ["a", "b"],
-        }
-    )
-    assert symptom_rate(frame) is None
+    assert symptom_rate(_symptom_frame(shares=[0.0, 0.0], ranks=[1, 1])) is None
 
 
 def test_symptom_rate_is_none_rather_than_zero_when_there_was_no_graph():
     """A rate over an empty denominator is not 0, and printing 0 would read as
     "this method never blamed a victim" when it never had the chance."""
-    frame = pd.DataFrame(
-        {
-            "symptom_error": ["", ""],
-            "top1_service": ["x", "y"],
-            "gt_service": ["a", "b"],
-        }
-    )
-    assert symptom_rate(frame) is None
+    assert symptom_rate(_symptom_frame(shares=["", ""], ranks=[3, 2])) is None
+
+
+def test_symptom_rate_scores_a_tie_at_rank_1_as_a_tie():
+    """M3.2. A case whose top two services tie, one of them a caller of the culprit
+    and the other unrelated, is half a symptom error - whichever the engine
+    happened to list first. Before this, ECDF's symptom rate on RE1-SS was 0.0
+    only because `carts` sorts first among the services it tied."""
+    frame = _symptom_frame(shares=[0.5, 0.5], ranks=[4, 4])
+    assert symptom_rate(frame) == pytest.approx(0.5)
+
+
+def test_an_unranked_culprit_counts_as_wrong():
+    """A culprit the method never ranked is a wrong answer with certainty, not a
+    case to leave out of the denominator."""
+    frame = _symptom_frame(shares=[1.0, 0.0], ranks=["", 2])
+    assert wrong_probabilities(frame) == [1.0, 1.0]
+    assert symptom_rate(frame) == pytest.approx(0.5)
+
+
+def test_the_chance_rate_is_weighted_like_the_symptom_rate():
+    """Both are over the same wrong answers: a right answer's chance value must
+    not enter the floor, or the two would be computed over different cases."""
+    frame = _symptom_frame(shares=[0.0, 1.0, 0.0], ranks=[1, 2, 3], chances=[0.9, 0.2, 0.4])
+    assert symptom_rate_chance(frame) == pytest.approx((0.2 + 0.4) / 2)
 
 
 # --- running a case ---------------------------------------------------------
@@ -323,35 +347,52 @@ def test_an_empty_method_or_delay_list_is_refused(tmp_path: Path):
 def test_wrong_top1_is_the_denominator_symptom_rate_uses():
     """They have to agree, or the printed table contradicts itself.
 
-    Written because the first version derived `wrong_top1` from the tie-aware rank,
-    which reported "0 wrong" beside an AC@1 of 0.46 for a method whose top scores
-    were tied.
+    The first version derived `wrong_top1` from the tie-aware rank and printed
+    "0 wrong" beside an AC@1 of 0.46; the second counted "the service listed first
+    is not the culprit", which for a tie is decided by naming. Since M3.2 it is the
+    expected count under the same tie rule as AC@1, so it is exactly
+    (1 - AC@1) x cases.
     """
-    frame = pd.DataFrame(
-        {
-            "method": ["ECDF"] * 3,
-            "fault_type": ["CPU"] * 3,
-            "gt_service": ["a", "b", "c"],
-            "gt_indicator": ["a_cpu", "b_cpu", "c_cpu"],
-            # Two wrong, and a tie group at rank 1 on the first case.
-            "top1_service": ["x", "b", "y"],
-            "rank_gt_service": [1, 1, 4],
-            "tied_gt_service": [3, 1, 1],
-            "rank_gt_indicator": [1, 1, 4],
-            "tied_gt_indicator": [3, 1, 1],
-            "rank_gt_indicator_loose": [1, 1, 4],
-            "tied_gt_indicator_loose": [3, 1, 1],
-            "symptom_error": [True, "", False],
-            "verdict": ["ROOT_CAUSE_FOUND"] * 3,
-            "runtime_s": [0.1] * 3,
-        }
+    frame = _summary_frame(
+        # A tie of three at rank 1 that holds the culprit, one clean hit, and one
+        # clean miss on a case with no graph to judge it by.
+        rank_gt_service=[1, 1, 4],
+        tied_gt_service=[3, 1, 1],
+        symptom_share=[1 / 3, 0.0, ""],
     )
     summary = _summarise(frame, by=None)
-    assert int(summary["wrong_top1"].iloc[0]) == 2
-    # One symptom error among the two non-empty symptom flags.
+    ac1 = (1 / 3 + 1 + 0) / 3
+    assert summary["ac1"].iloc[0] == pytest.approx(ac1, abs=1e-4)
+    assert summary["wrong_top1"].iloc[0] == pytest.approx((1 - ac1) * 3, abs=0.01)
+    # Only the first case can be judged: wrong 2/3 of the time, a caller blamed
+    # 1/3 of the time.
+    assert summary["symptom_judged"].iloc[0] == pytest.approx(2 / 3, abs=0.01)
     assert summary["symptom_rate"].iloc[0] == pytest.approx(0.5)
-    # And AC@1 honours the tie rather than scoring it as a clean hit.
-    assert summary["ac1"].iloc[0] == pytest.approx((1 / 3 + 1 + 0) / 3, abs=1e-4)
+
+
+def _summary_frame(**columns) -> pd.DataFrame:
+    """A minimal cases.csv for `_summarise`, with harmless defaults."""
+    n = len(next(iter(columns.values())))
+    frame = {
+        "method": ["ECDF"] * n,
+        "system": ["online-boutique"] * n,
+        "fault_type": ["CPU"] * n,
+        "gt_service": [f"s{i}" for i in range(n)],
+        "gt_indicator": [f"s{i}_cpu" for i in range(n)],
+        "top1_service": [f"s{i}" for i in range(n)],
+        "rank_gt_service": [1] * n,
+        "tied_gt_service": [1] * n,
+        "rank_gt_indicator": [1] * n,
+        "tied_gt_indicator": [1] * n,
+        "rank_gt_indicator_loose": [1] * n,
+        "tied_gt_indicator_loose": [1] * n,
+        "symptom_share": [""] * n,
+        "symptom_chance": [""] * n,
+        "verdict": ["ROOT_CAUSE_FOUND"] * n,
+        "runtime_s": [0.1] * n,
+    }
+    frame.update(columns)
+    return pd.DataFrame(frame)
 
 
 def test_the_strict_indicator_score_uses_only_cases_that_have_one():
@@ -369,7 +410,8 @@ def test_the_strict_indicator_score_uses_only_cases_that_have_one():
             "tied_gt_indicator": [1, ""],
             "rank_gt_indicator_loose": [1, 2],
             "tied_gt_indicator_loose": [1, 1],
-            "symptom_error": ["", ""],
+            "symptom_share": ["", ""],
+            "symptom_chance": ["", ""],
             "verdict": ["ROOT_CAUSE_FOUND"] * 2,
             "runtime_s": [0.1] * 2,
         }
@@ -379,3 +421,107 @@ def test_the_strict_indicator_score_uses_only_cases_that_have_one():
     assert summary["exp_ac1"].iloc[0] == pytest.approx(1.0)
     # The loose score covers both, and the second case ranked 2nd.
     assert summary["exp_ac1_loose"].iloc[0] == pytest.approx(0.5)
+
+
+# --- pooling runs (M3.2) ----------------------------------------------------
+
+
+def _finished_run(root: Path, run_id: str, system: str, frame: pd.DataFrame, **config):
+    """Lay out a run folder the way `run_c1_grounding.py` leaves one."""
+    folder = root / run_id
+    folder.mkdir(parents=True)
+    frame.assign(run_id=run_id, system=system).to_csv(folder / "cases.csv", index=False)
+    settings = {
+        "run_id": run_id,
+        "dataset": "RE1",
+        "system": system,
+        "methods": ["ECDF"],
+        "delays_s": [0.0],
+        "seed": 42,
+        "normal_mode": "inject_gap",
+        "graph": system,
+    }
+    settings.update(config)
+    (folder / "config.yaml").write_text(yaml.safe_dump(settings), encoding="utf-8")
+
+
+def test_pooling_scores_every_case_exactly_as_its_own_run_did(tmp_path: Path):
+    """Pooling must not change how any case is scored, only which cases are
+    summarised together. So the pooled per-system rows equal each run's own
+    summary."""
+    first = _summary_frame(rank_gt_service=[1, 2], symptom_share=[0.0, 1.0])
+    first = first.assign(case_id=["a", "b"])
+    second = _summary_frame(rank_gt_service=[3, 1, 1], symptom_share=[0.0, 0.0, 0.0])
+    second = second.assign(case_id=["c", "d", "e"], gt_service=["t0", "t1", "t2"])
+    _finished_run(tmp_path, "one", "online-boutique", first)
+    _finished_run(tmp_path, "two", "sock-shop", second)
+
+    assert _combine({"run_id": "both", "combine_runs": ["one", "two"]}, tmp_path) == 0
+
+    by_system = pd.read_csv(tmp_path / "both" / "summary_by_system.csv")
+    for system, own in (("online-boutique", first), ("sock-shop", second)):
+        pooled_row = by_system[by_system["system"] == system].iloc[0]
+        alone = _summarise(own.assign(system=system), by=None).iloc[0]
+        assert pooled_row["ac1"] == pytest.approx(alone["ac1"])
+        assert pooled_row["symptom_rate"] == pytest.approx(alone["symptom_rate"])
+        assert pooled_row["cases"] == alone["cases"]
+    overall = pd.read_csv(tmp_path / "both" / "summary.csv").iloc[0]
+    assert overall["cases"] == 5
+    for name in ("cases.csv", "config.yaml", "env.txt", "log.txt", "report.txt"):
+        assert (tmp_path / "both" / name).exists()
+
+
+@pytest.mark.parametrize(
+    "difference",
+    [
+        {"methods": ["PCA_RECON"]},
+        {"delays_s": [30.0]},
+        {"seed": 7},
+        {"normal_mode": "alarm_lookback"},
+    ],
+)
+def test_pooling_refuses_runs_that_measured_different_things(tmp_path: Path, difference):
+    """Averaging a delay-30 run with a delay-0 run would print one number for two
+    different questions."""
+    frame = _summary_frame(rank_gt_service=[1]).assign(case_id=["a"])
+    _finished_run(tmp_path, "one", "online-boutique", frame)
+    _finished_run(
+        tmp_path, "two", "sock-shop", frame.assign(case_id=["b"]), **difference
+    )
+    with pytest.raises(ValueError, match="cannot pool"):
+        _combine({"run_id": "both", "combine_runs": ["one", "two"]}, tmp_path)
+
+
+def test_pooling_refuses_runs_that_share_a_case(tmp_path: Path):
+    frame = _summary_frame(rank_gt_service=[1]).assign(case_id=["same"])
+    _finished_run(tmp_path, "one", "online-boutique", frame)
+    _finished_run(tmp_path, "two", "online-boutique", frame)
+    with pytest.raises(ValueError, match="share cases"):
+        _combine({"run_id": "both", "combine_runs": ["one", "two"]}, tmp_path)
+
+
+def test_a_pooling_config_needs_at_least_two_runs(tmp_path: Path):
+    path = tmp_path / "c.yaml"
+    path.write_text(
+        yaml.safe_dump({"run_id": "x", "combine_runs": ["one"]}), encoding="utf-8"
+    )
+    with pytest.raises(ValueError, match="at least two"):
+        _read_config(path)
+
+
+def test_the_committed_pooling_config_reads():
+    path = Path(__file__).resolve().parents[1] / "configs" / "c1_re1.yaml"
+    config = _read_config(path)
+    assert config["combine_runs"] == ["e1_re1_ob", "e1_re1_ss", "e1_re1_tt"]
+
+
+def test_the_three_system_configs_differ_only_in_system_graph_and_run_id():
+    """What makes them poolable. A setting changed in one and not the others would
+    be refused at pooling time; this catches it at review time instead."""
+    configs_dir = Path(__file__).resolve().parents[1] / "configs"
+    configs = [_read_config(configs_dir / f"c1_re1_{s}.yaml") for s in ("ob", "ss", "tt")]
+    allowed = {"run_id", "system", "graph"}
+    for other in configs[1:]:
+        keys = set(configs[0]) | set(other)
+        differing = {key for key in keys if configs[0].get(key) != other.get(key)}
+        assert differing <= allowed

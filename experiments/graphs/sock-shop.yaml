@@ -5,12 +5,10 @@
 # and it needs the check more than the Online Boutique one does, for two reasons
 # stated plainly here:
 #
-#   1. RE1-SS has NOT been downloaded, so unlike the Online Boutique graph this
-#      one has not been checked against the service names the data actually uses.
-#      Run the validation in `experiments/adapters/graphs.py` once RE1-SS exists.
-#      The only Sock Shop names seen so far come from the one contaminated RE1-OB
-#      case that M2.2 found - `carts`, `catalogue`, `orders`, `front-end` - and all
-#      four match the names below, which is weak but encouraging evidence.
+#   1. When this file was written RE1-SS had not been downloaded. It has now
+#      (M3.2) and every service name below matches the data exactly - see
+#      `checked_against_data` under `origin`. What the data cannot check is
+#      whether each edge is real, which is what point 2 is about.
 #   2. Sock Shop does not declare its dependencies in its Kubernetes manifests the
 #      way Online Boutique does. Each service hard-codes its callees' DNS names in
 #      its own source, so every edge below was read out of a specific source file
@@ -32,14 +30,25 @@ origin:
     below. `master` rather than a tag because the project is archived and its
     manifests have not changed in years; there is no release tag to pin.
   not_pinned_to_a_date: >
-    Unlike the Online Boutique graph, this is not matched to the data's collection
-    date, because there is no data yet to match. Revisit when RE1-SS is downloaded.
+    RE1-SS was collected between 2023-08-26 and 2023-12-12 (the inject_time
+    range over its 125 cases, read in M3.2). The repository was already archived
+    and its manifests unchanged long before that, so `master` is what was
+    running; there is no dated release to pin to instead.
+  checked_against_data: >
+    M3.2, 2026-10-05, all 125 RE1-SS cases (metrics from simple_data.csv). Every
+    one of the 14 services named below appears in the data under exactly this
+    spelling, so no renames were needed. The data has one further service,
+    listed under no_edges.
 
-# All 14 Deployments are covered by the edges below, so nothing is isolated. Any
-# Istio telemetry entries RE1-SS turns out to carry (the RE1-OB equivalents are
-# `PassthroughCluster` and friends) will have no edges, for the same reason as
-# there: inventing them would be worse than leaving them out.
-no_edges: {}
+# All 14 Deployments are covered by the edges below. The data adds one service
+# that is not a Deployment of its own, and it is left without edges for the same
+# reason as the Online Boutique telemetry entries: inventing an edge would be
+# worse than leaving it out.
+no_edges:
+  rabbitmq-exporter: >
+    The Prometheus exporter sidecar in the rabbitmq pod. It carries only cpu and
+    mem. It scrapes the broker for metrics but serves no application traffic, so
+    no service calls it and it calls nothing on a request path. Left isolated.
 
 # 15 edges over 14 services.
 edges:

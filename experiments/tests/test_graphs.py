@@ -28,6 +28,7 @@ from experiments.adapters.rcaeval import SYSTEM_SERVICES, list_cases
 
 ROOT = Path(__file__).resolve().parents[2] / "data" / "RCAEval"
 HAVE_OB = (ROOT / "RE1" / "RE1-OB").exists()
+HAVE_SS = (ROOT / "RE1" / "RE1-SS").exists()
 
 needs_ob = pytest.mark.skipif(
     not HAVE_OB,
@@ -168,8 +169,8 @@ def test_sock_shop_has_the_topology_its_architecture_implies():
 def test_every_sock_shop_service_is_connected():
     """All 14 Deployments appear, so nothing was forgotten.
 
-    Unlike Online Boutique there is no data to validate against yet, so this
-    structural check is the only guard the file has.
+    Written before RE1-SS was downloaded, when this structural check was the only
+    guard the file had. The data check below now backs it up.
     """
     expected = {
         "carts",
@@ -235,3 +236,28 @@ def test_the_online_boutique_graph_matches_the_data():
     # redis specifically, because it is the one renamed service.
     assert "redis" in check.graph_services
     assert "redis" in check.data_services
+
+
+@pytest.mark.skipif(not HAVE_SS, reason="RE1-SS not downloaded")
+def test_the_sock_shop_graph_matches_the_data():
+    """M3.2. Every one of the 14 services the file names exists in RE1-SS under
+    the same spelling, and the one extra service in the data, the RabbitMQ
+    exporter, is declared under `no_edges` rather than silently isolated."""
+    import pandas as pd
+
+    from experiments.adapters.rcaeval import METRICS_FILE
+
+    allowed = SYSTEM_SERVICES["sock-shop"]
+    seen: set[str] = set()
+    for case in list_cases(ROOT, "RE1", "sock-shop"):
+        header = pd.read_csv(case.path / METRICS_FILE["sock-shop"], nrows=0).columns
+        for name in header:
+            service, _, metric = name.rpartition("_")
+            if service and metric and service in allowed:
+                seen.add(service)
+
+    check = validate_against_cases("sock-shop", seen)
+    assert check.missing_from_data == ()
+    assert check.undeclared_isolated == ()
+    assert check.is_usable
+    assert check.missing_from_graph == ("rabbitmq-exporter",)

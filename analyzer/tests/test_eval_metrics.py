@@ -402,3 +402,111 @@ def test_rank_in_order_returns_nothing_for_a_service_that_was_not_ranked():
     from pare.eval_metrics import rank_in_order
 
     assert rank_in_order(["a"], {"a": 1.0}, "missing") is None
+
+
+# --- rank-1 ties in the symptom rate (M3.2) ----------------------------------
+#
+# A chain a -> b -> c (a calls b, b calls c), plus an unrelated d. With c the
+# culprit, a and b are its callers: blaming either is a symptom error, blaming d
+# is a plain mistake.
+
+
+def _chain() -> CallGraph:
+    return CallGraph.from_edges([("a", "b"), ("b", "c")])
+
+
+def test_top_tie_group_is_the_leading_run_of_equal_scores():
+    from pare.eval_metrics import top_tie_group
+
+    assert top_tie_group(["a", "b", "c"], {"a": 6.0, "b": 6.0, "c": 2.0}) == ("a", "b")
+    assert top_tie_group(["a", "b"], {"a": 6.0, "b": 5.0}) == ("a",)
+    assert top_tie_group([], {}) == ()
+
+
+def test_top_tie_group_respects_an_order_the_engine_already_broke():
+    """PARE's traversal can list a lower score first. Equal scores further down,
+    separated by a different one, are not tied with the leader - the same rule as
+    rank_in_order."""
+    from pare.eval_metrics import top_tie_group
+
+    assert top_tie_group(["c", "a", "b"], {"c": 4.0, "a": 6.0, "b": 4.0}) == ("c",)
+
+
+def test_symptom_share_is_the_fraction_of_the_tie_that_calls_the_culprit():
+    from pare.eval_metrics import symptom_share
+
+    graph = _chain()
+    assert symptom_share(("a", "d"), "c", graph) == pytest.approx(0.5)
+    assert symptom_share(("a", "b", "c", "d"), "c", graph) == pytest.approx(0.5)
+    # With no tie it is symptom_error as a number.
+    assert symptom_share(("b",), "c", graph) == 1.0
+    assert symptom_share(("d",), "c", graph) == 0.0
+    # The culprit is never its own caller, so a right answer contributes nothing.
+    assert symptom_share(("c",), "c", graph) == 0.0
+
+
+def test_symptom_share_is_none_without_a_graph():
+    from pare.eval_metrics import symptom_share
+
+    assert symptom_share(("a",), "c", None) is None
+    assert symptom_share(("a",), "c", CallGraph.empty()) is None
+
+
+def test_expected_symptom_rate_equals_the_plain_rate_when_nothing_ties():
+    """The tie rule must change nothing for a method whose scores are distinct,
+    exactly as decision 47's rule changes nothing for AC@k."""
+    from pare.eval_metrics import expected_symptom_rate
+
+    errors = [False, False, True, False, True, None]
+    correct = [True, False, False, False, False, False]
+    shares = [None if e is None else (1.0 if e else 0.0) for e in errors]
+    wrong = [0.0 if c else 1.0 for c in correct]
+    assert expected_symptom_rate(shares, wrong) == pytest.approx(
+        symptom_rate(errors, correct)
+    )
+
+
+def test_expected_symptom_rate_does_not_depend_on_how_tied_services_are_named():
+    """The defect it exists to remove. Two cases, each a tie between a caller of
+    the culprit and an unrelated service. Whichever is listed first, the plain rate
+    swings between 0 and 1; the expected rate is 0.5 either way."""
+    from pare.eval_metrics import expected_symptom_rate, symptom_error, symptom_share
+
+    graph = _chain()
+    for order in (("a", "d"), ("d", "a")):
+        plain = symptom_rate(
+            [symptom_error(order[0], "c", graph)] * 2, [False, False]
+        )
+        assert plain in (0.0, 1.0)
+        share = symptom_share(order, "c", graph)
+        assert expected_symptom_rate([share, share], [1.0, 1.0]) == pytest.approx(0.5)
+
+
+def test_expected_symptom_rate_counts_a_tie_containing_the_culprit_as_part_wrong():
+    """A tie of three with the culprit in it is wrong two times in three, and the
+    one caller in it is blamed one time in three - a rate of 1/2, not 1/3."""
+    from pare.eval_metrics import expected_symptom_rate, symptom_share
+
+    share = symptom_share(("b", "c", "d"), "c", _chain())
+    assert share == pytest.approx(1 / 3)
+    assert expected_symptom_rate([share], [2 / 3]) == pytest.approx(0.5)
+
+
+def test_expected_symptom_rate_is_none_over_nothing():
+    from pare.eval_metrics import expected_symptom_rate
+
+    assert expected_symptom_rate([0.0, 0.0], [0.0, 0.0]) is None
+    assert expected_symptom_rate([None, None], [1.0, 1.0]) is None
+    assert expected_symptom_rate([], []) is None
+
+
+def test_symptom_chance_is_the_share_of_other_services_that_call_the_culprit():
+    from pare.eval_metrics import symptom_chance
+
+    graph = _chain()
+    # Other than c: a and b call it, d does not.
+    assert symptom_chance(["a", "b", "c", "d"], "c", graph) == pytest.approx(2 / 3)
+    # Nothing calls a, the root.
+    assert symptom_chance(["a", "b", "c", "d"], "a", graph) == 0.0
+    assert symptom_chance(["c"], "c", graph) is None
+    assert symptom_chance(["a", "c"], "c", None) is None

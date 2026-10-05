@@ -101,6 +101,15 @@ load_case(case, delay_s, normal_minutes=None) -> CaseData
 - Delays: 0 s only for E1 main table; delays are E3.
 - For each case and method record `rank_gt_service`, `rank_gt_indicator`, `symptom_error`.
 - Outputs: ExpAC@1, ExpAC@3, ExpAC@5 for indicators; AC@1/AC@3/Avg@5 for services; symptom rate = symptom errors / wrong top-1. Broken down by system and fault type.
+- **The symptom rate is always reported next to its chance floor** (`symptom_chance`): the rate a wrong
+  answer picked at random among the ranked services would get on the same cases. Callers are common in
+  these graphs (`frontend` calls almost everything), so the floor is not zero - about 0.13 to 0.16 on
+  RE1 - and only the excess over it says a method is drawn to victims.
+- **The service-versus-metric gap is measured on the same cases**: AC@1 restricted to the strict (CPU
+  and MEM) cases, minus ExpAC@1. Comparing AC@1 over every case with ExpAC@1 over the strict ones mixes
+  two populations, which is how M3.1 first reported it.
+- Run one system at a time (`configs/c1_re1_ob.yaml`, `_ss`, `_tt`), then pool them with
+  `configs/c1_re1.yaml`, which re-scores nothing and refuses runs whose settings differ.
 - This experiment alone is a paper section. Do it first.
 
 ### E2 - RCA accuracy (RQ3) - `run_rca.py`
@@ -180,6 +189,14 @@ because it changes the numbers for any saturating method.
 Measured on 15 synthetic cases, it changes nothing for `PARE`, `NSIGMA`, `SHAP_IFOREST` or
 `PCA_RECON` (no ties at the top), and moves `ECDF`'s indicator accuracy from 0.13 to 0.46 - the
 earlier figure was an artefact of column naming, not a property of the method.
+
+**The same rule applies to the symptom rate** (added in M3.2). "Symptom errors / wrong top-1" is
+computed with both counts as expected values under a shuffle of each case's rank-1 tie group: a
+case contributes `symptom_share` (the fraction of its tied top group that calls the culprit) to the
+numerator and `1 - its AC@1 contribution` to the denominator. With no tie at rank 1 this is exactly
+the plain definition. Without it, a method that ties is judged on whichever tied service sorts first
+by name: on RE1-SS `ECDF` listed `carts` first in 104 of 125 cases out of a tie of about ten
+services, and its symptom rate read 0.0 for that reason alone.
 
 ### E5 - Explanation quality (C3) - `run_faithfulness.py`, `run_stability.py`
 - Faithfulness (deletion test): system anomaly score = mean over the analysis window of the max robust z over columns. For k = 0..10, replace the top-k columns of a method's indicator ranking by their normal medians and recompute the score. Report the normalized area under this curve (lower = more faithful) and compare with a random ranking (average of 10 random orders).

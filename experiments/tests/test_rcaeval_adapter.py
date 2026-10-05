@@ -13,13 +13,16 @@ numbers.
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from experiments.adapters.rcaeval import (
     INDICATOR_METRICS,
+    METRICS_FILE,
     SYSTEM_SERVICES,
     UNAMBIGUOUS_FAULTS,
     Case,
+    acceptable_metrics,
     list_cases,
     load_case,
     summarise,
@@ -262,3 +265,95 @@ def test_a_loaded_case_can_be_analysed(cases):
     assert result.services
     assert result.verdict in {"ROOT_CAUSE_FOUND", "NO_CLEAR_CAUSE"}
     assert all(np.isfinite(s.score) for s in result.services)
+
+
+
+# --- Sock Shop and Train Ticket (M3.2) ----------------------------------------
+#
+# Their run folders hold two files: `data.csv`, about 436 raw Prometheus series
+# for Sock Shop, and `simple_data.csv`, the 57 to 238 per-service series RCAEval's
+# README counts as the benchmark. The findings of the M3.2 inspection are pinned
+# here as M2.2's were for Online Boutique.
+
+HAVE_SS = (ROOT / "RE1" / "RE1-SS").exists()
+HAVE_TT = (ROOT / "RE1" / "RE1-TT").exists()
+
+
+def test_each_system_reads_the_file_the_benchmark_is_defined_on():
+    assert METRICS_FILE == {
+        "online-boutique": "data.csv",
+        "sock-shop": "simple_data.csv",
+        "train-ticket": "simple_data.csv",
+    }
+
+
+def test_the_acceptable_set_holds_only_metrics_the_system_has():
+    """Sock Shop and Train Ticket have no plain `latency`, so a DELAY case there
+    accepts two latency metrics where Online Boutique accepts three. Reading a
+    loose score against the larger number would understate how lenient it is."""
+    assert acceptable_metrics("online-boutique", "DELAY") == (
+        "latency-90", "latency-50", "latency",
+    )
+    assert acceptable_metrics("sock-shop", "DELAY") == ("latency-90", "latency-50")
+    assert acceptable_metrics("train-ticket", "DISK") == ("cpu", "latency-90", "latency-50")
+    # The strict faults are unaffected: one metric, present everywhere.
+    for system in ("online-boutique", "sock-shop", "train-ticket"):
+        assert acceptable_metrics(system, "CPU") == ("cpu",)
+        assert acceptable_metrics(system, "MEM") == ("mem",)
+
+
+@pytest.mark.skipif(not HAVE_SS, reason="RE1-SS not downloaded")
+def test_sock_shop_has_125_cases_and_drops_only_the_init_container():
+    cases = list_cases(ROOT, "RE1", "sock-shop")
+    assert summarise(cases)["cases"] == 125
+    assert summarise(cases)["by_service"] == {
+        "carts": 25, "catalogue": 25, "orders": 25, "payment": 25, "user": 25,
+    }
+    dropped: set[str] = set()
+    for case in cases:
+        header = pd.read_csv(case.path / "simple_data.csv", nrows=0).columns
+        dropped |= {
+            name for name in header
+            if name != "time" and name.rpartition("_")[0] not in SYSTEM_SERVICES["sock-shop"]
+        }
+    # `istio-init` is an init container seen in one case; nothing else is foreign.
+    assert dropped == {"istio-init_mem"}
+
+
+@pytest.mark.skipif(not HAVE_SS, reason="RE1-SS not downloaded")
+def test_rows_without_a_timestamp_are_dropped_and_reported():
+    """Two RE1-SS cases end with a block of rows whose `time` is empty. They sit
+    more than 120 s after the injection, so no window at delay 0 reaches them."""
+    case = next(
+        c for c in list_cases(ROOT, "RE1", "sock-shop") if c.case_id == "re1-ss-user_mem-1"
+    )
+    data = load_case(case)
+    assert any("no time value" in warning for warning in data.warnings)
+    assert not data.recent["time"].isna().any()
+    assert not data.normal["time"].isna().any()
+    # The recent window is still complete: 300 s before the alarm to 120 s after.
+    assert data.recent["time"].max() == data.alarm_time_sec + 120
+
+
+@pytest.mark.skipif(not HAVE_TT, reason="RE1-TT not downloaded")
+def test_train_ticket_has_125_cases_over_64_known_services():
+    cases = list_cases(ROOT, "RE1", "train-ticket")
+    assert summarise(cases)["cases"] == 125
+    assert len(SYSTEM_SERVICES["train-ticket"]) == 64
+    data = load_case(cases[0])
+    assert {column.service for column in data.columns} <= SYSTEM_SERVICES["train-ticket"]
+    assert not any("not belonging" in warning for warning in data.warnings)
+
+
+@pytest.mark.skipif(not (HAVE_SS and HAVE_TT), reason="RE1-SS or RE1-TT not downloaded")
+@pytest.mark.parametrize("system", ["sock-shop", "train-ticket"])
+def test_the_injected_metric_exists_for_every_strict_case(system):
+    """The strict ExpAC@k rests on `{service}_cpu` and `{service}_mem` being real
+    columns of every CPU and MEM case. M3.2 measured that they also move clearly
+    (median robust z over 100 in both systems), which is why the fault label is
+    trusted as the answer even where latency moves more."""
+    for case in list_cases(ROOT, "RE1", system):
+        if case.gt_indicator is None:
+            continue
+        header = pd.read_csv(case.path / METRICS_FILE[system], nrows=0).columns
+        assert case.gt_indicator in header, case.case_id

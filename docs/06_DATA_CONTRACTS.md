@@ -205,7 +205,7 @@ run_id, dataset, system, case_id, fault_type, gt_service, gt_indicator,
 method, delay_s, seed, rank_gt_service, rank_gt_indicator,
 rank_gt_indicator_loose, top1_service, top1_indicator,
 tied_gt_service, tied_gt_indicator, tied_gt_indicator_loose,
-symptom_error, verdict, runtime_s
+symptom_error, tied_top1, symptom_share, symptom_chance, verdict, runtime_s
 ```
 - `rank_gt_*`: 1-based, empty if not ranked. When several items share the ground truth's score, this
   records the **best** rank the tied group occupies, and `tied_gt_service` / `tied_gt_indicator`
@@ -220,6 +220,16 @@ symptom_error, verdict, runtime_s
   differ only where the strict one is empty. Which of the two a table reports is a stated choice, not
   a detail: see `08_EXPERIMENTS_SPEC.md` section 4, "Which indicator counts as correct".
 - `symptom_error`: true if top-1 is wrong AND top-1 calls the true root cause directly or indirectly; empty if no graph.
+- `tied_top1`: how many services share the rank-1 score in the engine's own order (1 = no tie).
+  When it is more than 1, `top1_service` and `symptom_error` describe whichever tied service the
+  engine happened to list first, which is decided by naming, not by the method.
+- `symptom_share`: the share of that rank-1 tie group that calls the true root cause, i.e. the
+  probability of a symptom error if the tie were broken at random. Equal to `symptom_error` as
+  1.0 / 0.0 when `tied_top1` is 1; empty if no graph. **The symptom rate is computed from this
+  column, not from `symptom_error`**, by the tie rule in `08_EXPERIMENTS_SPEC.md` section 4.
+- `symptom_chance`: of the services the engine ranked, other than the true root cause, the share that
+  call it - the symptom rate a wrong answer picked at random would get on this case. Empty if no
+  graph. A symptom rate is reported next to this floor, never alone.
 
 - `verdict`: `ROOT_CAUSE_FOUND` or `NO_CLEAR_CAUSE`, as returned by the engine.
 

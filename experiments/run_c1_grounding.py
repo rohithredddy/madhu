@@ -46,10 +46,13 @@ from experiments.adapters.graphs import load_graph  # noqa: E402
 from experiments.adapters.rcaeval import list_cases, summarise  # noqa: E402
 from experiments.runner import (  # noqa: E402
     CaseRow,
+    environment_report,
     ranks_from,
     run_case,
     symptom_rate,
+    symptom_rate_chance,
     write_run,
+    wrong_probabilities,
 )
 
 REQUIRED_KEYS = ("run_id", "dataset", "system", "methods", "delays_s")
@@ -74,6 +77,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     config = _read_config(args.config)
+    if "combine_runs" in config:
+        return _combine(config, args.results_root)
     if args.limit is not None:
         config["limit"] = args.limit
 
@@ -182,22 +187,172 @@ def main(argv: Sequence[str] | None = None) -> int:
     return 0
 
 
+# --- pooling runs across systems --------------------------------------------
+
+
+def _combine(config: dict, results_root: Path) -> int:
+    """Pool finished per-system runs into one result, without re-running anything.
+
+    E1 runs one system at a time - each needs its own call graph, and the data is
+    downloaded one system at a time - but "all of RE1" is one population. This
+    reads the `cases.csv` of each listed run, checks they are compatible, and
+    summarises them together, adding a per-system breakdown. The numbers are
+    computed by the same `_summarise` as a single run, so pooling cannot change
+    how any case is scored.
+    """
+    run_ids = [str(run) for run in config["combine_runs"]]
+    log: list[str] = []
+
+    def note(line: str) -> None:
+        print(line)
+        log.append(line)
+
+    frames: list[pd.DataFrame] = []
+    failures: list[pd.DataFrame] = []
+    sources: dict[str, dict] = {}
+    for run_id in run_ids:
+        folder = results_root / run_id
+        cases_file = folder / "cases.csv"
+        if not cases_file.exists():
+            raise FileNotFoundError(
+                f"{cases_file} does not exist; run that configuration first"
+            )
+        # keep_default_na=False keeps empty cells as "" - the contract's spelling
+        # of "missing" - rather than turning them into NaN.
+        frame = pd.read_csv(cases_file, keep_default_na=False)
+        frames.append(frame)
+        failures_file = folder / "failures.csv"
+        if failures_file.exists() and failures_file.stat().st_size > 2:
+            failures.append(pd.read_csv(failures_file))
+        with (folder / "config.yaml").open(encoding="utf-8") as handle:
+            sources[run_id] = yaml.safe_load(handle)
+
+    _check_combinable(sources, frames)
+
+    frame = pd.concat(frames, ignore_index=True)
+    # Columns read back from disk are strings; the metrics only need the ranks
+    # and flags, which `ranks_from` and `symptom_rate` parse themselves.
+    frame["runtime_s"] = pd.to_numeric(frame["runtime_s"])
+
+    note(f"E1 grounding, pooled: {config['run_id']}")
+    for run_id in run_ids:
+        part = frame[frame["run_id"] == run_id]
+        note(
+            f"  {run_id}: {sources[run_id]['system']}, "
+            f"{part['case_id'].nunique()} cases, graph "
+            f"{sources[run_id].get('graph') or 'none'}"
+        )
+    note(f"  {frame['case_id'].nunique()} cases in total")
+
+    overall = _summarise(frame, by=None)
+    by_system = _summarise(frame, by="system")
+    by_fault = _summarise(frame, by="fault_type")
+    by_system_fault = _summarise(frame, by=["system", "fault_type"])
+
+    report = "\n".join(
+        [
+            f"--- E1 grounding, pooled over {', '.join(run_ids)} ---",
+            "",
+            _format(overall, "method"),
+            "",
+            "--- by system ---",
+            _format(by_system, "method", "system"),
+            "",
+            "--- by fault type, pooled over systems ---",
+            _format(by_fault, "method", "fault_type"),
+            "",
+            "--- by system and fault type ---",
+            _format(by_system_fault, "method", "system", "fault_type"),
+            "",
+            _legend(),
+            _pooling_note(sources),
+        ]
+    )
+    note("")
+    note(report)
+
+    results_dir = results_root / str(config["run_id"])
+    results_dir.mkdir(parents=True, exist_ok=True)
+    frame.to_csv(results_dir / "cases.csv", index=False)
+    (pd.concat(failures, ignore_index=True) if failures else pd.DataFrame()).to_csv(
+        results_dir / "failures.csv", index=False
+    )
+    overall.to_csv(results_dir / "summary.csv", index=False)
+    by_system.to_csv(results_dir / "summary_by_system.csv", index=False)
+    by_fault.to_csv(results_dir / "summary_by_fault.csv", index=False)
+    by_system_fault.to_csv(results_dir / "summary_by_system_fault.csv", index=False)
+    (results_dir / "report.txt").write_text(report + "\n", encoding="utf-8")
+    saved = dict(config)
+    saved["pare_version"] = _pare_version()
+    saved["source_configs"] = sources
+    (results_dir / "config.yaml").write_text(
+        yaml.safe_dump(saved, sort_keys=False), encoding="utf-8"
+    )
+    (results_dir / "env.txt").write_text(environment_report(), encoding="utf-8")
+    (results_dir / "log.txt").write_text("\n".join(log) + "\n", encoding="utf-8")
+    print(f"\nwrote {results_dir}")
+    return 0
+
+
+def _check_combinable(sources: dict[str, dict], frames: Sequence[pd.DataFrame]) -> None:
+    """Refuse to pool runs that did not measure the same thing.
+
+    Pooling runs with different methods, delays, seeds or normal windows would
+    average unlike quantities and print them as one number, so each of those must
+    match exactly. Overlapping cases would count a case twice.
+    """
+    keys = ("methods", "delays_s", "seed", "normal_mode", "dataset")
+    first_id, first = next(iter(sources.items()))
+    for run_id, config in sources.items():
+        for key in keys:
+            if config.get(key) != first.get(key):
+                raise ValueError(
+                    f"cannot pool {run_id} with {first_id}: {key} differs "
+                    f"({config.get(key)!r} against {first.get(key)!r})"
+                )
+    seen: set[str] = set()
+    for frame in frames:
+        ids = set(frame["case_id"])
+        overlap = seen & ids
+        if overlap:
+            raise ValueError(f"the runs share cases, e.g. {sorted(overlap)[:3]}")
+        seen |= ids
+
+
+def _pooling_note(sources: dict[str, dict]) -> str:
+    without_graph = [
+        f"{run_id} ({config['system']})"
+        for run_id, config in sources.items()
+        if not config.get("graph")
+    ]
+    if not without_graph:
+        return ""
+    return (
+        "\nNOTE: no call graph for "
+        + ", ".join(without_graph)
+        + ". symptom_error is empty for those cases, so the pooled symptom_rate\n"
+        "covers only the systems that have a graph. Read the per-system table."
+    )
+
+
 # --- the metrics E1 reports -------------------------------------------------
 
 
-def _summarise(frame: pd.DataFrame, by: str | None) -> pd.DataFrame:
+def _summarise(frame: pd.DataFrame, by: str | Sequence[str] | None) -> pd.DataFrame:
     """ExpAC@k for indicators, AC@k for services, and the symptom rate.
 
     `docs/08` section 4 asks for all three, broken down by system and fault type.
-    One system runs at a time, so `by` is the fault type.
+    `by` is one column name, several, or None for one row per method.
     """
-    keys = ["method"] + ([by] if by else [])
+    extra = [] if by is None else ([by] if isinstance(by, str) else list(by))
+    keys = ["method"] + extra
     out: list[dict[str, object]] = []
     for values, group in frame.groupby(keys, sort=True):
         values = values if isinstance(values, tuple) else (values,)
         row: dict[str, object] = dict(zip(keys, values, strict=True))
 
         service = ranks_from(group, "rank_gt_service", "tied_gt_service")
+        wrong = wrong_probabilities(group)
         # The strict indicator score covers only the cases where "the right
         # metric" is not a judgement call - CPU and MEM. docs/08 section 4.
         strict_rows = group[group["gt_indicator"].astype(str) != ""]
@@ -214,6 +369,19 @@ def _summarise(frame: pd.DataFrame, by: str | None) -> pd.DataFrame:
             exp_ac3=_round(eval_metrics.exp_ac_at_k(strict, 3)) if strict else "",
             exp_ac5=_round(eval_metrics.exp_ac_at_k(strict, 5)) if strict else "",
             strict_cases=len(strict_rows),
+            # AC@1 on the same strict cases. E1's headline is the gap between
+            # naming the right service and naming the right metric, and that gap
+            # only means something when both are measured on the same cases - ac1
+            # below covers every fault type, exp_ac1 only CPU and MEM.
+            ac1_strict=(
+                _round(
+                    eval_metrics.ac_at_k(
+                        ranks_from(strict_rows, "rank_gt_service", "tied_gt_service"), 1
+                    )
+                )
+                if strict
+                else ""
+            ),
             # The looser reading, over every case. Only interpretable next to the
             # size of the acceptable set, which is why it is in the per-fault table.
             exp_ac1_loose=_round(eval_metrics.exp_ac_at_k(loose, 1)),
@@ -223,34 +391,54 @@ def _summarise(frame: pd.DataFrame, by: str | None) -> pd.DataFrame:
             ac1=_round(eval_metrics.ac_at_k(service, 1)),
             ac3=_round(eval_metrics.ac_at_k(service, 3)),
             avg5=_round(eval_metrics.avg_at_5(service)),
-            # RQ2. `wrong_top1` counts the cases where the service the method
-            # actually returned first is not the culprit, which is exactly the
-            # denominator `symptom_rate` divides by. Deliberately not derived from
-            # the tie-aware rank: a tie group starting at rank 1 has `best == 1`
-            # while only counting as a partial hit for AC@1, so counting ranks here
-            # would print "0 wrong" beside an AC@1 of 0.46 - which is how this was
-            # first written and it read as a contradiction.
-            wrong_top1=int((group["top1_service"] != group["gt_service"]).sum()),
+            # RQ2. `wrong_top1` is the expected number of wrong top-1 answers with
+            # rank-1 ties broken at random - the same rule as AC@1, so it is
+            # exactly (1 - AC@1) x cases and can be fractional. It replaced a
+            # count of "the service listed first is not the culprit", which for a
+            # method that ties is decided by the alphabetical order of the tied
+            # services (M3.2, decision 77).
+            wrong_top1=round(sum(wrong), 2),
+            # The part of wrong_top1 that could be judged, i.e. had a call graph
+            # to ask "does the blamed service call the culprit?". symptom_rate's
+            # denominator. Equal to wrong_top1 for a system with a graph; smaller
+            # when a graph-less system is pooled in.
+            symptom_judged=round(
+                sum(
+                    w
+                    for w, share in zip(wrong, group["symptom_share"], strict=True)
+                    if str(share) not in ("", "nan", "None")
+                ),
+                2,
+            ),
             symptom_rate=_round(symptom_rate(group)),
+            # What random wrong answers would score on the same cases. A symptom
+            # rate is evidence of being drawn to victims only when it is above this.
+            symptom_chance=_round(symptom_rate_chance(group)),
             no_clear_cause=int((group["verdict"] == "NO_CLEAR_CAUSE").sum()),
             mean_ms=round(float(group["runtime_s"].mean() * 1000), 1),
         )
-        if by == "fault_type":
+        if "fault_type" in extra:
             row["acceptable_indicators"] = _acceptable_count(group)
         out.append(row)
     return pd.DataFrame(out)
 
 
-def _acceptable_count(group: pd.DataFrame) -> int:
+def _acceptable_count(group: pd.DataFrame) -> object:
     """How many metrics count as correct for this fault type.
 
     Printed beside the loose score because without it that score is not
-    interpretable: 1 of 51 and 4 of 51 are different questions.
+    interpretable: 1 of 51 and 4 of 51 are different questions. Sock Shop has no
+    plain `latency` metric, so the size depends on the system as well as the
+    fault; pooled over systems where it differs, it is printed as a range such as
+    "2-3" rather than one number that is true of neither.
     """
-    from experiments.adapters.rcaeval import INDICATOR_METRICS
+    from experiments.adapters.rcaeval import acceptable_metrics
 
     fault = str(group["fault_type"].iloc[0])
-    return len(INDICATOR_METRICS.get(fault, ()))
+    sizes = sorted(
+        {len(acceptable_metrics(str(system), fault)) for system in group["system"]}
+    )
+    return sizes[0] if len(sizes) == 1 else f"{sizes[0]}-{sizes[-1]}"
 
 
 def _round(value: float | None) -> object:
@@ -283,12 +471,22 @@ def _legend() -> str:
             "           calls the real culprit - so it was a victim, not the cause. "
             "RQ2.",
             "           Empty when nothing was wrong or no graph was available.",
-            "wrong_top1 : cases where the service the method returned first is not "
-            "the culprit.",
-            "           This is symptom_rate's denominator. It can exceed "
-            "(1 - AC@1) x cases",
-            "           for a method that ties, since a tie at rank 1 is scored as a "
-            "part hit.",
+            "           Rank-1 ties are scored as ties, like AC@k: a case counts by "
+            "the share of",
+            "           its tied top group that calls the culprit, not by whichever "
+            "was listed first.",
+            "wrong_top1 : expected wrong top-1 answers, ties broken at random; "
+            "exactly",
+            "           (1 - AC@1) x cases, so it can be fractional.",
+            "symptom_judged : the part of wrong_top1 with a call graph to judge by; "
+            "symptom_rate's",
+            "           denominator.",
+            "symptom_chance : the symptom rate random wrong answers would get on the "
+            "same cases -",
+            "           the share of non-culprit services that call the culprit. Read "
+            "symptom_rate",
+            "           against it: only the excess says a method is drawn to "
+            "victims.",
             "no_clear_cause : NOT comparable between methods. The rule is a fixed "
             "threshold on",
             "           the rank-1 score (min_cause_score, 3.0), and these methods "
@@ -313,6 +511,15 @@ def _read_config(path: Path) -> dict:
         config = yaml.safe_load(handle)
     if not isinstance(config, dict):
         raise ValueError(f"{path} should hold a mapping, got {type(config).__name__}")
+
+    # A pooling config names finished runs instead of describing a new one; what
+    # those runs measured is checked against each other in `_check_combinable`.
+    if "combine_runs" in config:
+        if "run_id" not in config:
+            raise ValueError(f"{path} is missing ['run_id']")
+        if len(config["combine_runs"] or []) < 2:
+            raise ValueError(f"{path} combine_runs should list at least two runs")
+        return config
 
     missing = [key for key in REQUIRED_KEYS if key not in config]
     if missing:

@@ -1,0 +1,25 @@
+# E1, explanation grounding, pooled over all of RCAEval RE1 (task M3.2).
+#
+# Runs nothing. It reads the cases.csv of the three per-system runs and
+# summarises them together, adding a per-system table, so "all of RE1" is one
+# population scored by exactly the same code as each system on its own. It
+# refuses to pool runs that differ in methods, delays, seed, normal window or
+# dataset, or that share a case.
+#
+# Run the three systems first (each needs its data downloaded), then this:
+#
+#   analyzer/.venv/Scripts/python.exe experiments/run_c1_grounding.py \
+#       --config experiments/configs/c1_re1_ob.yaml   (and _ss, _tt)
+#   analyzer/.venv/Scripts/python.exe experiments/run_c1_grounding.py \
+#       --config experiments/configs/c1_re1.yaml
+#
+# Train Ticket has no call graph until M5.2, so its cases carry no symptom
+# judgement: the pooled symptom_rate covers Online Boutique and Sock Shop only,
+# and the report says so.
+
+run_id: e1_re1
+
+combine_runs:
+  - e1_re1_ob
+  - e1_re1_ss
+  - e1_re1_tt

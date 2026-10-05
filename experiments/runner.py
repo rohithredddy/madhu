@@ -68,6 +68,9 @@ CASES_CSV_COLUMNS = (
     "tied_gt_indicator",
     "tied_gt_indicator_loose",
     "symptom_error",
+    "tied_top1",
+    "symptom_share",
+    "symptom_chance",
     "verdict",
     "runtime_s",
 )
@@ -102,6 +105,21 @@ class CaseRow:
     tied_gt_indicator: object
     tied_gt_indicator_loose: object
     symptom_error: object
+    tied_top1: object
+    """How many services share the rank-1 score (1 means no tie). When it is more
+    than 1, ``top1_service`` and ``symptom_error`` describe whichever of them the
+    engine happened to list first, which is an accident of naming."""
+
+    symptom_share: object
+    """The share of the rank-1 tie group that calls the culprit: the chance of a
+    symptom error if the tie were broken at random. Equals ``symptom_error`` as
+    1.0 / 0.0 when there is no tie. Empty when there is no graph."""
+
+    symptom_chance: object
+    """Of the services ranked other than the culprit, the share that call it: the
+    symptom rate a wrong answer picked at random would have on this case. The
+    floor a symptom rate has to be read against. Empty when there is no graph."""
+
     verdict: str
     runtime_s: float
     error: str = ""
@@ -191,6 +209,12 @@ def run_case(
     symptom = eval_metrics.symptom_error(
         top1_service or None, case.gt_service, scoring_graph
     )
+    # Ties at rank 1 are scored as ties here too (docs/08 section 4): which of
+    # several equally scored services is listed first says nothing about the
+    # method, so the symptom question is asked of the whole group.
+    top_group = eval_metrics.top_tie_group(service_order, service_scores)
+    share = eval_metrics.symptom_share(top_group, case.gt_service, scoring_graph)
+    chance = eval_metrics.symptom_chance(service_order, case.gt_service, scoring_graph)
 
     return CaseRow(
         run_id=run_id,
@@ -212,6 +236,9 @@ def run_case(
         tied_gt_indicator=_tied(rank_strict),
         tied_gt_indicator_loose=_tied(rank_loose),
         symptom_error="" if symptom is None else symptom,
+        tied_top1=len(top_group) if top_group else "",
+        symptom_share="" if share is None else round(share, 6),
+        symptom_chance="" if chance is None else round(chance, 6),
         verdict=result.verdict,
         runtime_s=runtime_s,
     )
@@ -270,6 +297,9 @@ def _failed_row(
         tied_gt_indicator="",
         tied_gt_indicator_loose="",
         symptom_error="",
+        tied_top1="",
+        symptom_share="",
+        symptom_chance="",
         verdict="",
         runtime_s=runtime_s,
         error=error,
@@ -324,27 +354,58 @@ def ranks_from(frame: pd.DataFrame, best: str, tied: str) -> list[Rank | None]:
     return out
 
 
+def wrong_probabilities(frame: pd.DataFrame) -> list[float]:
+    """Per case, the chance the top-1 service is wrong, ties scored as ties.
+
+    ``1 - AC@1`` contribution of each case, so these sum to ``(1 - AC@1) x cases``
+    exactly. A case whose culprit was never ranked is wrong with certainty.
+    """
+    return [
+        1.0 if rank is None else 1.0 - rank.hit_fraction(1)
+        for rank in ranks_from(frame, "rank_gt_service", "tied_gt_service")
+    ]
+
+
 def symptom_rate(frame: pd.DataFrame) -> float | None:
     """The share of wrong top-1 answers that blamed a caller of the real culprit.
 
-    A thin adapter over :func:`pare.eval_metrics.symptom_rate`, which owns the
-    definition, so there is one implementation of it in the project. It needs the
-    correctness of each answer as well as the flag, because `symptom_error` is
-    False both for a right answer and for one that is wrong in an unrelated way -
-    see that function for the mistake this caused.
+    A thin adapter over :func:`pare.eval_metrics.expected_symptom_rate`, which owns
+    the definition, so there is one implementation of it in the project. Rank-1
+    ties are scored as ties: each case contributes the share of its rank-1 tie
+    group that calls the culprit, over its chance of being wrong. With no ties
+    this is exactly "symptom errors / wrong top-1".
 
     Returns None when nothing was wrong or no graph was available: a rate over an
     empty denominator is not 0.
     """
-    errors: list[bool | None] = [
-        True if str(value) == "True" else (False if str(value) == "False" else None)
-        for value in frame["symptom_error"]
+    shares: list[float | None] = [
+        None if str(value) in ("", "nan", "None") else float(value)
+        for value in frame["symptom_share"]
     ]
-    correct = [
-        str(top1) == str(truth)
-        for top1, truth in zip(frame["top1_service"], frame["gt_service"], strict=True)
+    return eval_metrics.expected_symptom_rate(shares, wrong_probabilities(frame))
+
+
+def symptom_rate_chance(frame: pd.DataFrame) -> float | None:
+    """The symptom rate random wrong answers would score on the same cases.
+
+    Each judged case's `symptom_chance`, weighted by its chance of being wrong -
+    the same weights :func:`symptom_rate` divides by - so the two are computed over
+    exactly the same mix of cases and can be set side by side.
+    """
+    pairs = [
+        (float(chance), wrong)
+        for chance, share, wrong in zip(
+            frame["symptom_chance"],
+            frame["symptom_share"],
+            wrong_probabilities(frame),
+            strict=True,
+        )
+        if str(share) not in ("", "nan", "None") and str(chance) not in ("", "nan", "None")
     ]
-    return eval_metrics.symptom_rate(errors, correct)
+    total = sum(wrong for _, wrong in pairs)
+    if total <= 0:
+        return None
+    return sum(chance * wrong for chance, wrong in pairs) / total
 
 
 # --- writing a run ----------------------------------------------------------
@@ -386,14 +447,15 @@ def write_run(
     (results_dir / "config.yaml").write_text(
         yaml.safe_dump(config, sort_keys=False), encoding="utf-8"
     )
-    (results_dir / "env.txt").write_text(_environment(), encoding="utf-8")
+    (results_dir / "env.txt").write_text(environment_report(), encoding="utf-8")
     if log_lines:
         (results_dir / "log.txt").write_text(
             "\n".join(log_lines) + "\n", encoding="utf-8"
         )
 
 
-def _environment() -> str:
+def environment_report() -> str:
+    """Python, platform and package versions, for the `env.txt` beside every run."""
     from importlib.metadata import PackageNotFoundError, version
 
     lines = [

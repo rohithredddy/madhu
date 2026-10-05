@@ -227,6 +227,104 @@ def symptom_rate(
     return float(np.mean([1.0 if error else 0.0 for error in judged]))
 
 
+def top_tie_group(ordered: Sequence[str], scores: Mapping[str, float]) -> tuple[str, ...]:
+    """The services an engine could not separate at rank 1.
+
+    The leading run of neighbours in the engine's own order that share the first
+    service's score - the same notion of a tie as :func:`rank_in_order`, so a tie
+    the engine's ordering already broke on other grounds (PARE's traversal) is not
+    one. Empty when nothing was ranked.
+    """
+    if not ordered:
+        return ()
+    first_score = scores.get(ordered[0])
+    if first_score is None:
+        return (ordered[0],)
+    end = 1
+    while end < len(ordered) and scores.get(ordered[end]) == first_score:
+        end += 1
+    return tuple(ordered[:end])
+
+
+def symptom_share(
+    group: Sequence[str], gt_service: str, graph: CallGraph | None
+) -> float | None:
+    """The chance that a shuffled rank-1 tie group puts a caller of the culprit first.
+
+    :func:`symptom_error` asks the question of one named service. When several
+    services tie at rank 1, which of them an engine happens to list first is an
+    accident of their names, so the honest per-case answer is the share of the
+    group that calls the culprit: the probability of a symptom error if the tie
+    were broken at random. With a group of one it is exactly ``symptom_error``
+    as 1.0 or 0.0. The culprit itself is never its own caller, so a right answer
+    contributes nothing here.
+
+    None when there is no graph to judge by, as for ``symptom_error``.
+    """
+    if graph is None or graph.is_empty or not group:
+        return None
+    callers = graph.ancestors(gt_service)
+    return sum(1 for service in group if service != gt_service and service in callers) / len(
+        group
+    )
+
+
+def symptom_chance(
+    candidates: Iterable[str], gt_service: str, graph: CallGraph | None
+) -> float | None:
+    """The symptom rate a wrong answer picked at random would have on this case.
+
+    Of the candidate services other than the culprit, the share that call it. A
+    method whose wrong answers blame callers no more often than this is not
+    drawn to symptoms at all - callers are simply that common - so a symptom rate
+    means something only next to this number. In Online Boutique, for instance,
+    `frontend` calls nearly everything, which alone puts the floor above zero.
+
+    None when there is no graph, or no other candidate to pick.
+    """
+    if graph is None or graph.is_empty:
+        return None
+    others = [service for service in set(candidates) if service != gt_service]
+    if not others:
+        return None
+    callers = graph.ancestors(gt_service)
+    return sum(1 for service in others if service in callers) / len(others)
+
+
+def expected_symptom_rate(
+    shares: Iterable[float | None], wrong_probabilities: Iterable[float]
+) -> float | None:
+    """The symptom rate with rank-1 ties scored as ties.
+
+    The same definition as :func:`symptom_rate` - symptom errors over wrong top-1
+    answers (``docs/08`` section 4) - with both counts taken as their expected
+    values under a random shuffle of each case's rank-1 tie group, which is the
+    rule decision 47 set for AC@k. With no ties anywhere it equals
+    :func:`symptom_rate` exactly. Without it, a saturating method's symptom rate is
+    decided by which tied service sorts first alphabetically: on RE1-SS, ``ECDF``
+    put ``carts`` first in 104 of 125 cases from a tie of about ten, and read 0.0.
+
+    Args:
+        shares: :func:`symptom_share` per case; None (no graph) excludes the case
+            from both parts of the fraction.
+        wrong_probabilities: Per case, the chance the top-1 answer is wrong, which
+            is ``1 - Rank.hit_fraction(1)`` of the culprit's service rank (1 when
+            it was never ranked).
+
+    Returns None when the expected number of judged wrong answers is zero - a rate
+    over nothing is not 0.
+    """
+    judged = [
+        (share, wrong)
+        for share, wrong in zip(shares, wrong_probabilities, strict=True)
+        if share is not None
+    ]
+    denominator = sum(wrong for _, wrong in judged)
+    if denominator <= 0:
+        return None
+    return float(sum(share for share, _ in judged) / denominator)
+
+
 # --- explanation quality ----------------------------------------------------
 
 

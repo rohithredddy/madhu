@@ -60,6 +60,136 @@ SYSTEM_SERVICES: dict[str, frozenset[str]] = {
             "PassthroughCluster",
         }
     ),
+    # The 14 Deployments of experiments/graphs/sock-shop.yaml, plus the RabbitMQ
+    # metrics exporter, which RE1-SS measures as a service of its own. Found in the
+    # M3.2 inspection (PROGRESS.md). `istio-init` is deliberately absent: it is an
+    # init container that exits before the run, appears in 1 of 125 cases with a
+    # single memory column, and is a collection artefact rather than a candidate.
+    "sock-shop": frozenset(
+        {
+            "carts",
+            "carts-db",
+            "catalogue",
+            "catalogue-db",
+            "front-end",
+            "orders",
+            "orders-db",
+            "payment",
+            "queue-master",
+            "rabbitmq",
+            "rabbitmq-exporter",
+            "session-db",
+            "shipping",
+            "user",
+            "user-db",
+        }
+    ),
+    # Every service RE1-TT names, all 64 of them, read off all 125 cases in M3.2.
+    # Each is a `ts-*` Deployment of Train Ticket (services and their MongoDB /
+    # MySQL stores); unlike the other two systems no stray or telemetry entries
+    # appear, so the list is exactly what the data contains. Kept explicit anyway,
+    # so that a future release carrying a contaminated case is caught, not ranked.
+    "train-ticket": frozenset(
+        {
+            "ts-admin-basic-info-service",
+            "ts-admin-order-service",
+            "ts-admin-route-service",
+            "ts-admin-travel-service",
+            "ts-admin-user-service",
+            "ts-assurance-mongo",
+            "ts-assurance-service",
+            "ts-auth-mongo",
+            "ts-auth-service",
+            "ts-avatar-service",
+            "ts-basic-service",
+            "ts-cancel-service",
+            "ts-config-mongo",
+            "ts-config-service",
+            "ts-consign-mongo",
+            "ts-consign-price-mongo",
+            "ts-consign-price-service",
+            "ts-consign-service",
+            "ts-contacts-mongo",
+            "ts-contacts-service",
+            "ts-execute-service",
+            "ts-food-map-mongo",
+            "ts-food-map-service",
+            "ts-food-mongo",
+            "ts-food-service",
+            "ts-inside-payment-mongo",
+            "ts-inside-payment-service",
+            "ts-news-service",
+            "ts-notification-service",
+            "ts-order-mongo",
+            "ts-order-other-mongo",
+            "ts-order-other-service",
+            "ts-order-service",
+            "ts-payment-mongo",
+            "ts-payment-service",
+            "ts-preserve-other-service",
+            "ts-preserve-service",
+            "ts-price-mongo",
+            "ts-price-service",
+            "ts-rebook-service",
+            "ts-route-mongo",
+            "ts-route-plan-service",
+            "ts-route-service",
+            "ts-seat-service",
+            "ts-security-mongo",
+            "ts-security-service",
+            "ts-station-mongo",
+            "ts-station-service",
+            "ts-ticket-office-mongo",
+            "ts-ticket-office-service",
+            "ts-ticketinfo-service",
+            "ts-train-mongo",
+            "ts-train-service",
+            "ts-travel-mongo",
+            "ts-travel-plan-service",
+            "ts-travel-service",
+            "ts-travel2-mongo",
+            "ts-travel2-service",
+            "ts-ui-dashboard",
+            "ts-user-mongo",
+            "ts-user-service",
+            "ts-verification-code-service",
+            "ts-voucher-mysql",
+            "ts-voucher-service",
+        }
+    ),
+}
+
+# Which file in a run folder holds the metrics, per system.
+#
+# RE1-OB ships one file, `data.csv`. RE1-SS ships two: `data.csv` holds about 436
+# raw Prometheus series (cumulative `*-total` counters, node-exporter series keyed
+# by IP address), and `simple_data.csv` holds 57 to 63 derived per-service series
+# in the same vocabulary as RE1-OB (`cpu`, `mem`, `workload`, `error`,
+# `latency-50`, `latency-90`). RCAEval's own README gives RE1-SS as "57-63
+# metrics", which is `simple_data.csv` and not `data.csv`, so the benchmark as
+# published is defined on that file and so are we. Measured in M3.2.
+METRICS_FILE: dict[str, str] = {
+    "online-boutique": "data.csv",
+    "sock-shop": "simple_data.csv",
+    # The same two-file layout, and the README's "198-238 metrics" for RE1-TT is
+    # simple_data.csv again (198 to 238 columns besides `time`, measured in M3.2).
+    "train-ticket": "simple_data.csv",
+}
+
+# The metric names each system's data actually uses, read off every case in the
+# M2.2 (Online Boutique) and M3.2 (Sock Shop, Train Ticket) inspections. Used only to say how
+# many metrics are acceptable for a fault type *on this system*: Sock Shop has no
+# plain `latency`, so a DELAY case there has two acceptable latency metrics where
+# Online Boutique has three, and the loose score must be read against the right
+# number.
+SYSTEM_METRICS: dict[str, frozenset[str]] = {
+    "online-boutique": frozenset(
+        {"cpu", "mem", "load", "latency", "latency-50", "latency-90", "workload", "error"}
+    ),
+    "sock-shop": frozenset({"cpu", "mem", "workload", "error", "latency-50", "latency-90"}),
+    "train-ticket": frozenset(
+        {"cpu", "mem", "workload", "error", "latency-50", "latency-90"}
+    ),
 }
 
 # Folder name suffix -> the fault type recorded on a Case. Uppercase, as
@@ -84,22 +214,46 @@ FAULT_TYPES = {
 #
 # DISK, DELAY and LOSS have **no matching metric at all** - RE1-OB contains no
 # `disk` and no `loss` column - so they get a set of acceptable answers rather
-# than one, and `gt_indicator` is left None. Open question 6 in PROGRESS.md
-# records the choice still to be made about how to score them; until it is
-# settled, an experiment should use `gt_indicator` (strict) or
-# `acceptable_indicators` (loose) explicitly rather than guessing.
+# than one, and `gt_indicator` is left None. How each is scored is settled in
+# docs/08 section 4 (decision 64): `gt_indicator` is the strict headline,
+# `acceptable_indicators` the loose secondary score.
 INDICATOR_METRICS: dict[str, tuple[str, ...]] = {
     "CPU": ("cpu",),
     "MEM": ("mem",),
     # measured: never plain `latency`, it splits between the two percentiles
     "DELAY": ("latency-90", "latency-50", "latency"),
     "LOSS": ("latency-90", "latency-50", "latency"),
-    # measured: splits roughly evenly between cpu and the latency percentiles
+    # measured: splits roughly evenly between cpu and the latency percentiles.
+    # Fixed on that RE1-OB evidence and deliberately not redefined after seeing the
+    # other systems, although they disagree: on RE1-SS `cpu` moves most in 17 of
+    # 25 DISK cases, but on RE1-TT `mem` does in 23 of 25, and `mem` is not in this
+    # set. Open question 10 in PROGRESS.md. Affects only the loose (secondary)
+    # score; DISK has no strict one.
     "DISK": ("cpu", "latency-90", "latency-50", "latency"),
 }
 
 # Fault types whose indicator is a single, unambiguous metric.
+#
+# On Sock Shop and Train Ticket the injected metric is often *not* the loudest of
+# the broken service's own metrics - on Sock Shop `cpu` is in 6 of 25 CPU cases and
+# `mem` in 4 of 25 MEM cases, latency outshouting both; on Train Ticket `cpu` is in
+# 9 of 25 CPU cases, `mem` moving more - but it moves unmistakably in every one of
+# them (median robust z: Sock Shop 408 for `cpu` and 2610 for `mem`, Train Ticket
+# 149 and about 10,000; all 100 cases above 3). The fault label says which
+# resource was stressed, so the answer is still not a judgement call; the
+# measurement says only that naming it is harder there. M3.2.
 UNAMBIGUOUS_FAULTS = frozenset({"CPU", "MEM"})
+
+
+def acceptable_metrics(system: str, fault_type: str) -> tuple[str, ...]:
+    """The metrics that count as a correct indicator for one fault on one system.
+
+    `INDICATOR_METRICS` restricted to the metrics the system's data contains, so a
+    loose score is never read against a set padded with columns that cannot exist.
+    """
+    present = SYSTEM_METRICS.get(system)
+    metrics = INDICATOR_METRICS[fault_type]
+    return metrics if present is None else tuple(m for m in metrics if m in present)
 
 DATASET_SYSTEM_FOLDER = {
     ("RE1", "online-boutique"): "RE1-OB",
@@ -177,6 +331,7 @@ def list_cases(
             f"experiments/download_rcaeval.py --dataset {folder}"
         )
 
+    metrics_file = METRICS_FILE.get(system, "data.csv")
     cases: list[Case] = []
     for fault_folder in sorted(p for p in base.iterdir() if p.is_dir()):
         service, _, suffix = fault_folder.name.rpartition("_")
@@ -188,10 +343,10 @@ def list_cases(
             (p for p in fault_folder.iterdir() if p.is_dir()), key=_run_order
         ):
             inject_file = run_folder / "inject_time.txt"
-            if not (run_folder / "data.csv").exists() or not inject_file.exists():
+            if not (run_folder / metrics_file).exists() or not inject_file.exists():
                 continue
 
-            metrics = INDICATOR_METRICS[fault_type]
+            metrics = acceptable_metrics(system, fault_type)
             cases.append(
                 Case(
                     case_id=f"{dataset.lower()}-{folder.split('-')[-1].lower()}-"
@@ -244,7 +399,7 @@ def load_case(
             instead and never uses the injection time, which is the honest variant
             experiment E3 reports alongside (`docs/08` section 4).
     """
-    frame = pd.read_csv(case.path / "data.csv")
+    frame = pd.read_csv(case.path / METRICS_FILE.get(case.system, "data.csv"))
     frame, columns, warnings = _clean(frame, case)
 
     alarm_time_sec = float(case.inject_time_sec + delay_s)
@@ -305,7 +460,18 @@ def _clean(
         frame = frame.drop(columns=duplicates)
 
     if "time" not in frame.columns:
-        raise ValueError(f"{case.path / 'data.csv'} has no time column")
+        raise ValueError(f"{case.path} has no time column")
+
+    # Rows with no timestamp. Two RE1-SS cases end with a block of them
+    # (`catalogue_disk/3` 74 rows, `user_mem/1` 114 rows, M3.2) whose metric values
+    # are present but cannot be placed in time. Both blocks start well over 120 s
+    # after the injection, so no window at delay 0 reaches them. A row that belongs
+    # to no moment cannot be put in either window, so it is removed here, openly,
+    # rather than left to fall out of the window comparisons.
+    no_time = frame["time"].isna()
+    if no_time.any():
+        frame = frame[~no_time].reset_index(drop=True)
+        warnings.append(f"dropped {int(no_time.sum())} row(s) with no time value")
 
     columns: list[ColumnInfo] = []
     foreign: list[str] = []

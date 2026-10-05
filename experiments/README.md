@@ -18,6 +18,21 @@ CSV files with pandas and never imports RCAEval. Only two scripts need `.venv-rc
 Setting the RCAEval environment up is in `docs/08_EXPERIMENTS_SPEC.md` section 2. It carries no
 torch and no tensorflow, which hard rule 1 forbids.
 
+## E1 - explanation grounding on all of RE1 (M3)
+
+One system at a time, then pool, then build the tables and figure from the pooled summaries:
+
+    analyzer/.venv/Scripts/python.exe experiments/run_c1_grounding.py --config experiments/configs/c1_re1_ob.yaml
+    analyzer/.venv/Scripts/python.exe experiments/run_c1_grounding.py --config experiments/configs/c1_re1_ss.yaml
+    analyzer/.venv/Scripts/python.exe experiments/run_c1_grounding.py --config experiments/configs/c1_re1_tt.yaml
+    analyzer/.venv/Scripts/python.exe experiments/run_c1_grounding.py --config experiments/configs/c1_re1.yaml
+    analyzer/.venv/Scripts/python.exe experiments/make_tables.py
+    analyzer/.venv/Scripts/python.exe experiments/make_figures.py
+
+Each per-system run needs that system downloaded (`download_rcaeval.py --dataset RE1-SS`, ...).
+`make_tables.py` and `make_figures.py` read only the committed `summary*.csv` files, so they work
+on a fresh clone. Findings: `paper/notes/E1_findings.md`.
+
 ## M2.4 - reproducing RCAEval's own baselines
 
 Two steps, one per environment. The first records what their code ranked; the second scores it,

@@ -1,0 +1,64 @@
+run_id: e1_re1
+combine_runs:
+- e1_re1_ob
+- e1_re1_ss
+- e1_re1_tt
+pare_version: 0.1.0
+source_configs:
+  e1_re1_ob:
+    run_id: e1_re1_ob
+    dataset: RE1
+    system: online-boutique
+    methods:
+    - ECDF
+    - PCA_RECON
+    - SHAP_IFOREST
+    - PARE_NO_RESIDUAL
+    delays_s:
+    - 0.0
+    graph: online-boutique
+    normal_mode: inject_gap
+    seed: 42
+    n_jobs: -2
+    limit: null
+    elapsed_s: 44.8
+    cases: 125
+    pare_version: 0.1.0
+  e1_re1_ss:
+    run_id: e1_re1_ss
+    dataset: RE1
+    system: sock-shop
+    methods:
+    - ECDF
+    - PCA_RECON
+    - SHAP_IFOREST
+    - PARE_NO_RESIDUAL
+    delays_s:
+    - 0.0
+    graph: sock-shop
+    normal_mode: inject_gap
+    seed: 42
+    n_jobs: -2
+    limit: null
+    elapsed_s: 54.7
+    cases: 125
+    pare_version: 0.1.0
+  e1_re1_tt:
+    run_id: e1_re1_tt
+    dataset: RE1
+    system: train-ticket
+    methods:
+    - ECDF
+    - PCA_RECON
+    - SHAP_IFOREST
+    - PARE_NO_RESIDUAL
+    delays_s:
+    - 0.0
+    graph: null
+    normal_mode: inject_gap
+    seed: 42
+    n_jobs: -2
+    limit: null
+    elapsed_s: 65.5
+    cases: 125
+    pare_version: 0.1.0

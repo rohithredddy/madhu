@@ -7,39 +7,33 @@ Order of this file: what is happening now, then the log of what was done (newest
 anything waiting on you, then the machine setup and the full list of decisions as reference.
 
 ## Current status
-- Current milestone: M3 (E1 explanation grounding). **M3.1 is done and contribution C1 has its
-  headline result.** Next is M3.2.
-- Next task: M3.2, running E1 on the rest of RE1, which needs RE1-SS and RE1-TT downloaded (one system
-  at a time, decision 66). **Nothing is blocked and there are no open questions left.**
-- **C1's finding, which is a paper section on its own.** On 125 RE1-OB cases, explanations name the
-  right *service* far more often than the right *metric*. Isolation Forest with TreeSHAP - the popular
-  approach, and what GAL-MAD does - gets the service right 65% of the time and the metric right 24%, a
-  41-point gap. And **64% of its wrong answers blame a service that calls the real culprit** (0.82 on
-  DELAY faults, 0.86 on MEM). That is hypothesis H1 confirmed and RQ2 answered, on real data with real
-  ground truth. It also costs 3.5 s per case against ECDF's 58 ms.
-- **Where PARE actually stands on real data, which is the thing to know.** On RE1-OB at delay 0, with
-  the real call graph: AC@1 **0.384**, Avg@5 0.528, against NSIGMA's **0.848**. PARE is less than half
-  as accurate as the simplest baseline at naming the right service. The scaling defect found in M2.5 is
-  fixed (question 9, which lifted it from 0.240), so what remains is a research problem in the residual
-  step, not a bug. **This is the M3.2 gate arriving two tasks early**, which is exactly what it was put
-  there for.
-- **But the paper's central claim does land.** `symptom_rate` - the share of wrong answers that blamed
-  a service calling the real culprit - is **0.2208 without the call graph and 0.0779 with it**, same
-  engine, same cases. Nearly threefold. AC@1 is identical either way, so the graph is not making PARE
-  right more often; it is making its mistakes far less likely to accuse a victim. That is RQ2, and
-  `00_RESEARCH_PLAN.md` section 15 predicted this exact shape - claims should rest on grounding and
-  symptom rate, not on coarse ranking.
-- **Where to start M3's investigation.** PARE's AC@1 by fault type is MEM 0.600, DELAY 0.520, DISK
-  0.440, LOSS 0.240, **CPU 0.120** - and CPU is where NSIGMA is strongest (0.96). A CPU fault is the
-  easiest case there is, so PARE being worst precisely there points at the residual step misbehaving
-  when the culprit's signal sits in a metric its callees do not propagate.
-- All nine open questions are settled (decisions 38, 47, 53, 62 to 66, 72). The two items under
-  "Things the human must check by hand" are judgement calls for you, and the call-graph one is ready
-  for review now.
-- Indicator scoring, now fixed: the **headline ExpAC@k is strict** (CPU and MEM only, where the right
-  metric is not a judgement call); the loose definition is a secondary table, per fault type, with the
-  acceptable-set size beside it. Strict and loose score the CPU and MEM cases identically, so the two
-  numbers differ only in which cases they cover. `docs/08` section 4 is the rule.
+- Current milestone: **M3 (E1 explanation grounding) is done** - M3.1 to M3.4 all ticked. Next is
+  M4.1, `run_rca.py`. **Stop point:** `07` makes M3.2 the gate before the application track, and
+  decision 17 says to stop and report there. The E1 result below is in; PARE's own RE1 result is
+  M4's question, and what is already known about it is the fourth bullet.
+- **C1 holds on all of RE1, and more strongly than M3.1 reported.** Over 375 cases on three systems,
+  Isolation Forest + TreeSHAP names the right *service* 0.667 of the time on the CPU and MEM cases and
+  the right *metric* 0.100 of the time on the same cases - a 0.567 gap. **0.651 of its wrong answers
+  blame a service that calls the real culprit, against a chance floor of 0.145** - about 4.5 times
+  chance, and it holds on both systems that have a graph (0.636 Online Boutique, 0.667 Sock Shop).
+  Worst on DELAY faults, 0.862. Numbers in `paper/notes/E1_findings.md`, Table 2 and Figure 3.
+- **The best explainer is not the popular one.** PCA reconstruction beats TreeSHAP on both questions
+  (ExpAC@1 0.353 vs 0.100, AC@1 0.667 vs 0.549) at 146 ms a case against 3.6 s.
+- **Where PARE stands on real data is unchanged and still the thing to know.** On RE1-OB at delay 0:
+  AC@1 0.384 against NSIGMA's 0.848 (M2.5 / question 9). E1 does not run PARE by design; M4.1 will
+  measure it on all of RE1. The graph-as-symptom-filter result (symptom rate 0.2208 -> 0.0779 with the
+  graph) is OB only so far. CPU is where PARE is weakest (0.120) and is the place to start.
+- **Two numbers from M3.1 were wrong and are corrected in its entry**: ECDF's symptom rate (rank-1
+  ties were being broken alphabetically) and the service-versus-metric gap (compared over different
+  cases). Neither changes a conclusion; both changed figures already written down.
+- **Waiting on you**: open question 10 (one loose-scoring definition, secondary table only), the call
+  graphs on the "check by hand" list, and a disk note - all three RE1 systems are on disk (2.5 GB, 19 GB
+  free), which breaks decision 66's one-at-a-time policy because deleting data was not permitted from
+  here. Delete `data/RCAEval/RE1/RE1-SS` and `RE1-TT` yourself if you want the policy kept;
+  `download_rcaeval.py` re-fetches each in a minute or two.
+- Indicator scoring, unchanged: the **headline ExpAC@k is strict** (CPU and MEM only); the loose
+  definition is secondary, per fault type, with the acceptable-set size beside it - now per system,
+  since Sock Shop and Train Ticket have no plain `latency` metric.
 
 ## Log
 <!-- Template for each entry:
@@ -49,6 +43,121 @@ anything waiting on you, then the machine setup and the full list of decisions a
 - Files changed:
 - Left open / next:
 -->
+
+### 2026-10-05 - M3.2, M3.3, M3.4 - E1 on all of RE1, the tables and figure, the findings. M3 is done.
+- What was done:
+  - **M3.2.** RE1-SS and RE1-TT downloaded and inspected before any code changed (the M2.2 routine),
+    the adapter extended to both, and E1 run on each: `configs/c1_re1_ss.yaml`, `c1_re1_tt.yaml`.
+    `run_c1_grounding.py` gained a pooling mode, driven by `configs/c1_re1.yaml`, which reads the three
+    finished runs' `cases.csv`, re-scores nothing, refuses runs whose methods, delays, seed, normal
+    window or dataset differ (or that share a case), and adds per-system tables. Results:
+    `results/e1_re1_ss/`, `e1_re1_tt/`, `e1_re1/` (pooled), and `e1_re1_ob/` re-run.
+  - **M3.3.** `experiments/make_tables.py` writes Table 2 (E1 grounding) plus Table 1 (datasets) and
+    Table 2b (the loose score per system and fault) to `paper/tables/` as `.md` and `.tex`.
+    `experiments/make_figures.py` writes Figure 3 (symptom rate by fault type, chance floor on every
+    bar, the count of wrong answers above it) to `paper/figures/` as `.png` and `.pdf`. Both read only
+    the committed `summary*.csv` files, so they run on a fresh clone. The figure's four colours were
+    checked with the dataviz palette validator (all adjacent pairs pass; two sit under 3:1 contrast,
+    covered by the legend and the tables).
+  - **M3.4.** `paper/notes/E1_findings.md`, ten lines, every number copied from `results/e1_re1/`.
+- **What the inspection found, which shaped the adapter.**
+  - **Sock Shop and Train Ticket ship two metric files per run.** `data.csv` holds raw Prometheus
+    series - about 436 for Sock Shop, mostly cumulative `*-total` counters and node-exporter series
+    keyed by IP address. `simple_data.csv` holds per-service `cpu`, `mem`, `workload`, `error`,
+    `latency-50`, `latency-90`, the same vocabulary as RE1-OB. RCAEval's README gives RE1-SS as
+    "57-63 metrics" and RE1-TT as "198-238", which is `simple_data.csv` exactly (57-63 and 198-238
+    columns measured), so the benchmark is defined on that file and so are we (`METRICS_FILE`).
+  - **Neither has a plain `latency` metric**, so a DELAY case there has two acceptable metrics, not
+    three. The adapter now restricts the acceptable set to metrics the system has
+    (`acceptable_metrics`), and Table 2b prints the size per system.
+  - **Rows with no timestamp**: `catalogue_disk/3` (74 rows), `user_mem/1` (114) on Sock Shop,
+    `ts-order-service_mem/3` (113) on Train Ticket, all a block at the end of the file, at least 247 s
+    after the injection, so no window at delay 0 reaches them. Dropped with a warning.
+  - Sock Shop: 15 services, `istio-init` (an init container, one memory column in one case) dropped as
+    foreign. Train Ticket: 64 `ts-*` services, nothing foreign. Both: 125 cases, 25 per fault type,
+    injection at the midpoint (360 or 480 rows before it).
+  - **The Sock Shop graph matches the data.** All 14 service names appear exactly as written; the data
+    adds `rabbitmq-exporter`, now declared under `no_edges`. The file's "not yet verified" warning is
+    replaced by the record of the check, and a test pins it.
+  - **The strict ground truth holds on both, though naming it is harder there.** On Sock Shop the
+    broken service's `cpu` is its loudest metric in only 6 of 25 CPU cases and `mem` in 4 of 25 MEM
+    cases (latency moves more); on Train Ticket `cpu` in 9 of 25. But the injected metric moves
+    unmistakably in every one of the 100 cases (median robust z 408 and 2610 on Sock Shop, 149 and
+    about 10,000 on Train Ticket, every case above 3), so the fault label stays the answer.
+  - **No call graph for Train Ticket.** 64 services, no machine-readable dependency declaration, and
+    `docs/08` builds this graph from RE2 traces (M5.2). So Train Ticket's cases carry no symptom
+    judgement and every symptom rate covers Online Boutique and Sock Shop only. Said in the config, the
+    pooled report, Table 2's notes and the findings.
+- **The results** (pooled over 375 cases, delay 0, 0 failed runs of 1500):
+
+  | method | ExpAC@1 | AC@1 | AC@1 on CPU+MEM | gap | symptom rate | chance | ms |
+  |---|---|---|---|---|---|---|---|
+  | SHAP_IFOREST | 0.100 | 0.549 | 0.667 | **0.567** | **0.651** | 0.145 | 3564 |
+  | PCA_RECON | **0.353** | **0.667** | 0.667 | 0.313 | 0.366 | 0.144 | 146 |
+  | PARE_NO_RESIDUAL | 0.160 | 0.325 | 0.367 | 0.207 | 0.184 | 0.131 | 502 |
+  | ECDF | 0.105 | 0.135 | 0.172 | 0.067 | 0.192 | 0.132 | 123 |
+
+  H1 and RQ2 hold on all of RE1. Per system and fault type, and the loose score, are in Table 2,
+  Table 2b and Figure 3. The ms column is wall time with cases run in parallel; it varied by up to
+  about 25% between identical re-runs today, so compare methods, not runs.
+- **Two measurement defects found and fixed, both of which had already put numbers in this file.**
+  1. **Rank-1 ties were deciding the symptom rate by alphabetical order.** `symptom_rate` and
+     `wrong_top1` read `top1_service`, which for a tie is whichever tied service the engine happened
+     to list first. ECDF saturates (decision 47) and ties at rank 1 in 117 of 125 OB cases and all 125
+     on SS and TT, about ten services at a time; on Sock Shop it listed `carts` first in 104 of 125
+     cases and its symptom rate read **0.0** for that reason alone. Decision 47 already scores ties as
+     their expected value for AC@k; the same rule now applies to the symptom rate (decision 76). Two
+     new contract columns, `tied_top1` and `symptom_share`. Checked that it moved only what it should:
+     ECDF is the only method that ties at rank 1 anywhere, and on RE1-OB every accuracy number and
+     every other method's symptom rate came back identical. **ECDF's OB symptom rate 0.194 -> 0.224**;
+     its `wrong_top1` 62 -> 91.52, which is now exactly (1 - AC@1) x 125.
+  2. **The service-versus-metric gap compared different cases.** M3.1's headline "0.648 vs 0.240, a
+     41-point gap" set AC@1 over all 125 cases against ExpAC@1 over the 50 CPU and MEM cases. On the
+     same 50 cases SHAP_IFOREST's AC@1 is 0.760, so **the gap is 0.520, not 0.408**. The summary now
+     carries `ac1_strict` and Table 2 prints the gap on identical cases (decision 79). The conclusion
+     stands and is stronger.
+- **A chance floor for the symptom rate (decision 77).** Before reading 0.651 as evidence, it needed
+  checking against what a wrong answer picked at random would score, since callers are common
+  (`frontend` calls almost everything). New contract column `symptom_chance`; the summary reports the
+  floor weighted exactly like the rate. It is 0.13 to 0.16 on RE1, so TreeSHAP's 0.651 is about 4.5
+  times chance, while ECDF (0.192) and robust z (0.184) sit close to it.
+- How it was tested (commands + result):
+  - The four runs above, then `make_tables.py` and `make_figures.py`; the figure was opened and
+    checked by eye for collisions and overflow.
+  - `pytest -q` in `analyzer/` -> **388 passed** (9 new). `pytest experiments/tests -q` -> **113
+    passed** (27 new). `ruff check .` -> clean.
+  - New tests pin: the tie-aware rate equals the plain one when nothing ties, and does not change when
+    tied services are renamed (the defect itself); a culprit inside a rank-1 tie counts as part right;
+    the chance floor is weighted like the rate; pooling re-scores nothing (each system's pooled row
+    equals its own run) and refuses runs that differ in any of five settings or share a case; the three
+    system configs differ only in run id, system and graph; every number in Table 2 is in a summary
+    file except the stated Gap subtraction, and the Gap is on identical cases; a missing symptom rate
+    prints empty, not 0; the SS/TT findings above (file choice, acceptable sets, dropped rows, foreign
+    columns, the graph check, the strict indicator existing in every case).
+  - Five runner tests were rewritten, not just edited to pass (hard rule 12): they assert the same
+    properties as before - wrong answers only, not diluted by right ones, None over nothing, None
+    without a graph - but the inputs changed from `symptom_error` and `top1_service` to
+    `symptom_share` and the service rank, which is the deliberate contract change. One test built a
+    `CaseRow` under the old contract and gained the new fields.
+- Files changed: new `experiments/make_tables.py`, `experiments/make_figures.py`,
+  `experiments/configs/c1_re1_ss.yaml`, `c1_re1_tt.yaml`, `c1_re1.yaml`,
+  `experiments/tests/test_make_outputs.py`, `paper/tables/*`, `paper/figures/fig3_*`,
+  `paper/notes/E1_findings.md`, `experiments/results/e1_re1*/`; `experiments/adapters/rcaeval.py`,
+  `experiments/runner.py`, `experiments/run_c1_grounding.py`, `experiments/graphs/sock-shop.yaml`,
+  `analyzer/pare/eval_metrics.py`, `analyzer/tests/test_eval_metrics.py`,
+  `experiments/tests/test_runner.py`, `test_rcaeval_adapter.py`, `test_graphs.py`,
+  `docs/06_DATA_CONTRACTS.md` (three columns), `docs/08_EXPERIMENTS_SPEC.md`, `docs/07_TASKS.md`,
+  `experiments/README.md`, `PROGRESS.md`.
+- Left open / next:
+  - **Stop and report** - M3.2 is the gate before the application track (decision 17).
+  - Open question 10 (DISK's acceptable set on Train Ticket).
+  - `analyzer/scripts/synthetic_check.py` and `experiments/check_graph.py` still compute the symptom
+    rate the old way. Their numbers are unaffected for every engine that does not tie at rank 1, but
+    the M1.10 summary's ECDF symptom rate has the same alphabetical defect. To be moved onto the
+    tie-aware rate when E6 (M6.1) rebuilds the synthetic runner rather than patched twice.
+  - Bootstrap confidence intervals for Table 2 come with `stats.py` in M4.4.
+  - Train Ticket's symptom rate, once M5.2 builds its graph: re-run `c1_re1_tt.yaml` and the pooling
+    config, then the tables.
 
 ### 2026-10-03 - M1.2a - settling open question 3: the synthetic model could not produce the trap
 - What was done: added a non-linear congestion term and an `amplification` parameter to
@@ -91,10 +200,15 @@ anything waiting on you, then the machine setup and the full list of decisions a
 
   | method | ExpAC@1 (indicator) | AC@1 (service) | gap | symptom rate | ms |
   |---|---|---|---|---|---|
-  | SHAP_IFOREST | 0.240 | **0.648** | **0.408** | **0.636** | 3534 |
+  | SHAP_IFOREST | 0.240 | **0.648** | ~~**0.408**~~ | **0.636** | 3534 |
   | PCA_RECON | 0.300 | 0.592 | 0.292 | 0.216 | 83 |
   | PARE_NO_RESIDUAL | 0.200 | 0.384 | 0.184 | 0.221 | 480 |
-  | ECDF | 0.242 | 0.268 | 0.026 | 0.194 | 58 |
+  | ECDF | 0.242 | 0.268 | 0.026 | ~~0.194~~ | 58 |
+
+  > **Two figures above were corrected in M3.2** (see that entry). The gap column compares AC@1
+  > over all 125 cases with ExpAC@1 over the 50 CPU and MEM cases; on the same 50 cases
+  > SHAP_IFOREST's AC@1 is 0.760 and **the gap is 0.520**. ECDF's symptom rate was decided by
+  > alphabetical order inside rank-1 ties; scored as ties it is **0.224**. No conclusion changes.
 
   ExpAC@1 is the strict definition over the 50 CPU and MEM cases; AC@1 and the symptom rate are over
   all 125. **This is hypothesis H1 from the research plan, confirmed**: the method that looks best at
@@ -1416,6 +1530,17 @@ choose and to declare. What the data shows, and the three options, are written u
   M0.3 (fill in the Environment block) in one commit, then M1.1. No code written yet.
 ## Open questions (for the human)
 
+10. **Should DISK's loose acceptable set include `mem`?** Raised by M3.2. The set (`cpu` and the
+    latency metrics) was fixed from RE1-OB, where DISK split between `cpu` and latency. The other two
+    systems disagree with each other: on RE1-SS `cpu` moves most in 17 of 25 DISK cases, on RE1-TT
+    **`mem` moves most in 23 of 25**, and `mem` is not in the set. So TreeSHAP's and robust z's loose
+    DISK score on Train Ticket is 0.000 partly by definition. Options: (a) leave the set as fixed
+    before the other systems were seen - recommended, because widening a definition after looking at
+    the results is exactly what the strict/loose split exists to prevent, and the loose score is
+    secondary; (b) add `mem` for DISK everywhere, making DISK a 5-metric question; (c) make the set
+    per-system from measurement, which would let the data define its own answer key. Affects only
+    Table 2b's DISK rows; nothing strict, nothing at service level. Not blocking.
+
 9. ~~**A column with no robust scale is scored by dividing by the epsilon guard, and it wrecks PARE on
    real data.**~~ **SETTLED on 2026-10-05** - decision 72, option (a). When the MAD is 0 but the column
    is not constant, the scale is now the standard deviation; the epsilon is back to doing only the job
@@ -1632,8 +1757,9 @@ human must check by hand" are judgement calls for the human rather than question
     calls to approve or reject: `redis-cart` is renamed to `redis` to match the data, and
     `loadgenerator` is excluded because it appears in no column. Automatically verified against all
     125 cases, so the names are known to match.
-  - `sock-shop.yaml`: 15 edges over all 14 services. **Not yet verified against data**, because RE1-SS
-    is not downloaded. Sock Shop declares no dependencies in its manifests, so every edge was read out
+  - `sock-shop.yaml`: 15 edges over all 14 services. **Names verified against all 125 RE1-SS cases in
+    M3.2** (all 14 match exactly; `rabbitmq-exporter` added under `no_edges`). The edges themselves
+    still need your eye. Sock Shop declares no dependencies in its manifests, so every edge was read out
     of a service's source; the two worth a second look are `orders -> user` and `orders -> carts`,
     which happen through URLs that front-end passes in a request body rather than hostnames in the
     orders source.
@@ -1645,7 +1771,11 @@ human must check by hand" are judgement calls for the human rather than question
 - Ground-truth indicator mapping for RCAEval - **investigated in M2.2, now open question 6**. CPU
   and MEM are settled by the data; DISK, DELAY and LOSS need a human decision
 - Whether the M1.10 synthetic check supports the cause-versus-symptom story (gate before M2)
-- Whether the first RE1 results in M3.2 support it on real data (gate before the application track)
+- **Whether the first RE1 results in M3.2 support it on real data (gate before the application
+  track) - ready now.** E1 supports C1 strongly (current status, `paper/notes/E1_findings.md`).
+  PARE's own RE1 numbers are M4; on RE1-OB it is well below NSIGMA at service level.
+- `paper/figures/fig3_e1_symptom_rate_by_fault.png` and `paper/tables/table2_e1_grounding.md` -
+  first generated paper outputs; worth a look for wording and layout.
 
 ## Environment (measured 2026-10-03)
 
@@ -2370,6 +2500,48 @@ written into the spec files. One line of reason each.
     Reason: hard rule 6 says a format change must update the doc and all sides together. A test that
     reads the doc makes that mechanical instead of a matter of discipline - change one and the other
     fails.
+
+### M3.2 to M3.4 choices
+
+76. **Rank-1 ties are scored as ties in the symptom rate too.** Numerator: per case, the share of
+    its rank-1 tie group that calls the culprit (`symptom_share`); denominator: per case, the chance
+    its top-1 is wrong, `1 - its AC@1 contribution`. `pare.eval_metrics.expected_symptom_rate`.
+    Reason: decision 47 already settled that a tie is scored as its expected value under a shuffle,
+    and AC@k obeyed it while the symptom rate did not - so a saturating method's symptom rate was
+    whichever tied service sorts first by name (ECDF on Sock Shop: 0.0, because `carts` sorts first).
+    Applying the existing rule was the simplest consistent option. It equals the plain definition
+    whenever there is no tie at rank 1, which is every case for every method except ECDF, so nothing
+    else moved; a test pins that equality and another that renaming tied services changes nothing.
+    `symptom_error` stays in the contract as the literal answer, and `docs/06` says plainly that the
+    rate is computed from `symptom_share`.
+
+77. **Every symptom rate is reported beside a chance floor** (`symptom_chance`, weighted like the
+    rate). Reason: a symptom rate is only evidence of being drawn to victims if it exceeds what an
+    arbitrary wrong answer would score, and in these graphs callers are common - `frontend` calls
+    almost everything. Without the floor, ECDF's 0.192 and TreeSHAP's 0.651 would look like two
+    points on one scale; with it, one is near chance (0.132) and the other is 4.5 times it.
+
+78. **RE1-SS and RE1-TT are read from `simple_data.csv`, not `data.csv`.** Reason: RCAEval's README
+    gives their metric counts as 57-63 and 198-238, which match `simple_data.csv` column for column,
+    while `data.csv` is ~436 raw Prometheus series dominated by cumulative counters and per-IP
+    node-exporter series. The benchmark as published is defined on the simple file, and it shares
+    RE1-OB's metric vocabulary, which is what lets one indicator definition cover all three systems.
+
+79. **The headline gap is AC@1 minus ExpAC@1 on the same cases** (the strict CPU and MEM cases);
+    `ac1_strict` is in every summary. Reason: the gap is a claim about one set of failures - right
+    service, wrong metric - and computing its two halves on different populations made it partly a
+    claim about fault types instead. It moved M3.1's OB figure from 0.408 to 0.520.
+
+80. **E1 runs one system per config and is pooled by a separate config that runs nothing.** Reason:
+    each system needs its own graph and, by decision 66, its own download; pooling the finished
+    `cases.csv` files with the same `_summarise` means "all of RE1" is scored by exactly the code that
+    scored each system, and the pooling step refuses runs that measured different things.
+
+81. **Train Ticket runs without a call graph in M3, rather than with one written by hand.**
+    Reason: `docs/08` assigns this graph to `build_graph_from_traces.py` on RE2 (M5.2), and a
+    64-service graph read off source by hand would be the least checkable input in the project. The
+    explainer baselines never receive a graph, so their accuracy on Train Ticket does not depend on
+    it; only the symptom rate waits, and every place it is reported says so.
 
 ### Order of work
 
