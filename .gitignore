@@ -30,6 +30,15 @@ experiments/results/*/*
 !experiments/results/*/summary*.csv
 !experiments/results/*/comparison.txt
 !experiments/results/*/agreement.txt
+!experiments/results/*/report.txt
+# The three files docs/08 section 1 says every run folder carries, so a number in
+# the paper can be traced to the configuration and the machine that produced it.
+# The patterns above were written against M2.4's filenames and missed these.
+!experiments/results/*/config.yaml
+!experiments/results/*/env.txt
+!experiments/results/*/log.txt
+# Small, and docs/08 section 8 requires failures to be reported rather than dropped.
+!experiments/results/*/failures.csv
 !experiments/results/*/config*.json
 !experiments/results/*/env-*.txt
 # IDE / OS

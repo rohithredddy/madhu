@@ -1,0 +1,63 @@
+E1 grounding: e1_re1_ob
+  RE1 online-boutique, 125 cases
+  by fault type: {'CPU': 25, 'DELAY': 25, 'DISK': 25, 'LOSS': 25, 'MEM': 25}
+  50 cases have an unambiguous ground-truth indicator (CPU and MEM); the strict ExpAC@k uses those
+  methods: ECDF, PCA_RECON, SHAP_IFOREST, PARE_NO_RESIDUAL
+  delays: [0.0] s
+  graph: online-boutique, 11 services - used for scoring symptom_error, never given to a baseline engine
+  normal window: inject_gap
+
+running 500 (case, method, delay) combinations
+finished in 51.0 s
+
+no failures
+
+--- E1 grounding: RE1 online-boutique, delay [0.0] s ---
+
+          method  cases  failed  exp_ac1  exp_ac3  exp_ac5  strict_cases  exp_ac1_loose  exp_ac3_loose    ac1    ac3   avg5  wrong_top1  symptom_rate  no_clear_cause  mean_ms
+            ECDF    125       0   0.2415   0.6445   0.8092            50         0.1605         0.4454 0.2679 0.6276 0.5904          62        0.1935               0     58.3
+PARE_NO_RESIDUAL    125       0   0.2000   0.3600   0.4200            50         0.2880         0.4240 0.3840 0.5120 0.5264          77        0.2208              36    480.3
+       PCA_RECON    125       0   0.3000   0.3800   0.4200            50         0.5200         0.6320 0.5920 0.7520 0.7376          51        0.2157               0     83.0
+    SHAP_IFOREST    125       0   0.2400   0.5200   0.6400            50         0.3200         0.6560 0.6480 0.9280 0.8752          44        0.6364             125   3534.2
+
+--- by fault type ---
+          method fault_type  cases  failed exp_ac1 exp_ac3 exp_ac5  strict_cases  exp_ac1_loose  exp_ac3_loose    ac1    ac3   avg5  wrong_top1 symptom_rate  no_clear_cause  mean_ms  acceptable_indicators
+            ECDF        CPU     25       0  0.3135  0.8204  0.9374            25         0.3135         0.8204 0.4953 0.8860 0.8200           6          0.0               0     90.3                      1
+            ECDF      DELAY     25       0                                     0         0.1219         0.3656 0.2189 0.6567 0.6047          13       0.6154               0     37.2                      3
+            ECDF       DISK     25       0                                     0         0.0810         0.2429 0.1574 0.4721 0.4621          16       0.0625               0     37.9                      4
+            ECDF       LOSS     25       0                                     0         0.1166         0.3297 0.1746 0.5037 0.4797          16          0.0               0     36.6                      3
+            ECDF        MEM     25       0  0.1695  0.4686  0.6811            25         0.1695         0.4686 0.2931 0.6193 0.5853          11       0.2727               0     89.4                      1
+PARE_NO_RESIDUAL        CPU     25       0    0.08    0.12    0.16            25         0.0800         0.1200 0.1200 0.2800 0.2960          22       0.2273               6    518.2                      1
+PARE_NO_RESIDUAL      DELAY     25       0                                     0         0.4800         0.5600 0.4800 0.6400 0.6480          13       0.1538               8    444.6                      3
+PARE_NO_RESIDUAL       DISK     25       0                                     0         0.3600         0.4800 0.4400 0.4800 0.5200          14       0.2857               9    459.6                      4
+PARE_NO_RESIDUAL       LOSS     25       0                                     0         0.2000         0.3600 0.2400 0.4800 0.4800          19       0.2105               7    456.2                      3
+PARE_NO_RESIDUAL        MEM     25       0    0.32     0.6    0.68            25         0.3200         0.6000 0.6400 0.6800 0.6880           9       0.2222               6    522.7                      1
+       PCA_RECON        CPU     25       0    0.48    0.52    0.56            25         0.4800         0.5200 0.4800 0.6800 0.6720          13       0.1538               0    123.9                      1
+       PCA_RECON      DELAY     25       0                                     0         1.0000         1.0000 1.0000 1.0000 1.0000           0                            0     48.8                      3
+       PCA_RECON       DISK     25       0                                     0         0.6800         0.8800 0.7200 0.9200 0.8720           7       0.1429               0     50.6                      4
+       PCA_RECON       LOSS     25       0                                     0         0.3200         0.5200 0.3600 0.6000 0.5680          16       0.4375               0     53.4                      3
+       PCA_RECON        MEM     25       0    0.12    0.24    0.28            25         0.1200         0.2400 0.4000 0.5600 0.5760          15       0.0667               0    138.3                      1
+    SHAP_IFOREST        CPU     25       0    0.12     0.6    0.76            25         0.1200         0.6000 0.8000 1.0000 0.9440           5          0.2              25   3464.7                      1
+    SHAP_IFOREST      DELAY     25       0                                     0         0.3200         0.7200 0.3200 0.9200 0.7760          17       0.8235              25   3550.6                      3
+    SHAP_IFOREST       DISK     25       0                                     0         0.4000         0.8400 0.8000 1.0000 0.9600           5          0.4              25   3667.6                      4
+    SHAP_IFOREST       LOSS     25       0                                     0         0.4000         0.6800 0.6000 0.7600 0.8000          10          0.5              25   3660.3                      3
+    SHAP_IFOREST        MEM     25       0    0.36    0.44    0.52            25         0.3600         0.4400 0.7200 0.9600 0.8960           7       0.8571              25   3327.6                      1
+
+ExpAC@k  : the ground-truth INDICATOR is in the top k explained features. RQ1.
+           Strict: only the CPU and MEM cases, where the right metric is not a
+           judgement call. This is the headline (docs/08 section 4).
+exp_ac*_loose : every case, counting any plausible metric for the fault type as
+           correct. Read it only next to acceptable_indicators in the per-fault
+           table; pooled across fault types it means nothing.
+AC@k     : the ground-truth SERVICE is in the top k. The coarse question.
+symptom_rate : of the WRONG top-1 answers, the share that blamed a service which
+           calls the real culprit - so it was a victim, not the cause. RQ2.
+           Empty when nothing was wrong or no graph was available.
+wrong_top1 : cases where the service the method returned first is not the culprit.
+           This is symptom_rate's denominator. It can exceed (1 - AC@1) x cases
+           for a method that ties, since a tie at rank 1 is scored as a part hit.
+no_clear_cause : NOT comparable between methods. The rule is a fixed threshold on
+           the rank-1 score (min_cause_score, 3.0), and these methods do not share
+           a scale - SHAP_IFOREST reports mean absolute SHAP, which is almost never
+           above 3, so it reads NO_CLEAR_CAUSE on nearly every case while still
+           ranking well. Read it per method, never across them.
