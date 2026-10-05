@@ -160,20 +160,41 @@ def test_without_a_graph_we_cannot_tell():
 
 
 def test_symptom_rate_counts_only_the_wrong_answers():
-    # three wrong, two of them symptom errors; two right answers are excluded
+    """`docs/08` section 4: symptom errors divided by wrong top-1 answers.
+
+    This test previously asserted 1.0 here, which was wrong, and its own comment
+    admitted why: `symptom_error` returns False both for "right" and for "wrong in
+    an unrelated way", and the old implementation treated "not False" as wrong,
+    which left only the True values and made the rate 1.0 whenever any symptom
+    error existed. The test had been written to match the code rather than the
+    spec. Both are fixed; the rate now needs the correctness of each answer.
+    """
+    # Five cases: two symptom errors, one wrong in an unrelated way, two right.
     errors = [True, True, False, False, False]
-    # of the wrong answers... but False means "wrong in another way" as well as
-    # "right", so the rate is computed over entries that are not False
-    assert symptom_rate([True, True, None]) == pytest.approx(1.0)
-    assert symptom_rate(errors) == pytest.approx(1.0)
+    correct = [False, False, False, True, True]
+    assert symptom_rate(errors, correct) == pytest.approx(2 / 3)
+
+
+def test_symptom_rate_ignores_cases_with_no_graph():
+    errors = [True, None, False]
+    correct = [False, False, False]
+    # The None case is dropped from both parts of the fraction, leaving one symptom
+    # error out of two judged wrong answers.
+    assert symptom_rate(errors, correct) == pytest.approx(0.5)
 
 
 def test_symptom_rate_is_undefined_when_nothing_was_wrong():
     """Reporting 0 would suggest the method had been tested against the problem
     and passed. It has not been tested at all."""
-    assert symptom_rate([False, False]) is None
-    assert symptom_rate([]) is None
-    assert symptom_rate([None, None]) is None
+    assert symptom_rate([False, False], [True, True]) is None
+    assert symptom_rate([], []) is None
+    assert symptom_rate([None, None], [False, False]) is None
+
+
+def test_symptom_rate_refuses_mismatched_inputs():
+    """A silent zip would pair the wrong flags with the wrong cases."""
+    with pytest.raises(ValueError):
+        symptom_rate([True, False], [False])
 
 
 # --- the deletion test ------------------------------------------------------

@@ -7,8 +7,16 @@ Order of this file: what is happening now, then the log of what was done (newest
 anything waiting on you, then the machine setup and the full list of decisions as reference.
 
 ## Current status
-- Current milestone: **M2 is complete.** Next is M3 (E1 explanation grounding).
-- Next task: M3.1 (`run_c1_grounding.py`). **Nothing is blocked and there are no open questions left.**
+- Current milestone: M3 (E1 explanation grounding). **M3.1 is done and contribution C1 has its
+  headline result.** Next is M3.2.
+- Next task: M3.2, running E1 on the rest of RE1, which needs RE1-SS and RE1-TT downloaded (one system
+  at a time, decision 66). **Nothing is blocked and there are no open questions left.**
+- **C1's finding, which is a paper section on its own.** On 125 RE1-OB cases, explanations name the
+  right *service* far more often than the right *metric*. Isolation Forest with TreeSHAP - the popular
+  approach, and what GAL-MAD does - gets the service right 65% of the time and the metric right 24%, a
+  41-point gap. And **64% of its wrong answers blame a service that calls the real culprit** (0.82 on
+  DELAY faults, 0.86 on MEM). That is hypothesis H1 confirmed and RQ2 answered, on real data with real
+  ground truth. It also costs 3.5 s per case against ECDF's 58 ms.
 - **Where PARE actually stands on real data, which is the thing to know.** On RE1-OB at delay 0, with
   the real call graph: AC@1 **0.384**, Avg@5 0.528, against NSIGMA's **0.848**. PARE is less than half
   as accurate as the simplest baseline at naming the right service. The scaling defect found in M2.5 is
@@ -16,7 +24,7 @@ anything waiting on you, then the machine setup and the full list of decisions a
   step, not a bug. **This is the M3.2 gate arriving two tasks early**, which is exactly what it was put
   there for.
 - **But the paper's central claim does land.** `symptom_rate` - the share of wrong answers that blamed
-  a service calling the real culprit - is **0.136 without the call graph and 0.048 with it**, same
+  a service calling the real culprit - is **0.2208 without the call graph and 0.0779 with it**, same
   engine, same cases. Nearly threefold. AC@1 is identical either way, so the graph is not making PARE
   right more often; it is making its mistakes far less likely to accuse a victim. That is RQ2, and
   `00_RESEARCH_PLAN.md` section 15 predicted this exact shape - claims should rest on grounding and
@@ -72,6 +80,88 @@ anything waiting on you, then the machine setup and the full list of decisions a
   the normal data it is fitted on. That is a limitation to measure and report in E6, not a bug to
   tune away.
 
+### 2026-10-05 - M3.1 - E1, explanation grounding. Contribution C1 has its result.
+- What was done: `experiments/run_c1_grounding.py` with `experiments/configs/c1_re1_ob.yaml`, plus
+  `experiments/runner.py`, the shared core that every experiment runner from here on uses to turn an
+  engine's answer into a row of `cases.csv`. Putting that in one place matters: with a copy per script
+  there would eventually be several implementations of AC@k and no way to say which number the paper
+  should print.
+- **The headline finding, and it is the one contribution C1 was designed to test.** Explanations find
+  the right *service* far more often than the right *metric*:
+
+  | method | ExpAC@1 (indicator) | AC@1 (service) | gap | symptom rate | ms |
+  |---|---|---|---|---|---|
+  | SHAP_IFOREST | 0.240 | **0.648** | **0.408** | **0.636** | 3534 |
+  | PCA_RECON | 0.300 | 0.592 | 0.292 | 0.216 | 83 |
+  | PARE_NO_RESIDUAL | 0.200 | 0.384 | 0.184 | 0.221 | 480 |
+  | ECDF | 0.242 | 0.268 | 0.026 | 0.194 | 58 |
+
+  ExpAC@1 is the strict definition over the 50 CPU and MEM cases; AC@1 and the symptom rate are over
+  all 125. **This is hypothesis H1 from the research plan, confirmed**: the method that looks best at
+  naming the right service - Isolation Forest with TreeSHAP, the GAL-MAD-style approach - names the
+  right *metric* only 24% of the time, a 41-point gap. An engineer told "the problem is in
+  cartservice" is helped; one told "the problem is cartservice's request rate" when it is really the
+  memory is sent the wrong way.
+- **RQ2 is answered sharply, and it indicts the most popular method.** Of SHAP_IFOREST's 44 wrong
+  answers, **28 blamed a service that calls the real culprit** - 64%, nearly two in three. Per fault
+  type it is worse where the story matters most: **0.82 on DELAY** faults (14 of 17 wrong answers) and
+  **0.86 on MEM** (6 of 7). A memory leak's symptoms are downstream latency, and SHAP blames them
+  almost every time it is wrong. That is this project's motivating example, measured on real data.
+- Cost, which the paper should state next to the accuracy: SHAP_IFOREST takes **3.5 s per case**
+  against 58 ms for ECDF, about 60 times slower, for the worst symptom rate of the four.
+- **A bug found and fixed, which changes numbers already written down.**
+  `pare.eval_metrics.symptom_rate` divided by the wrong denominator. `symptom_error` returns False for
+  two different outcomes - the answer was right, and the answer was wrong but the service blamed does
+  not call the culprit - and the function treated "not False" as wrong, which left only the True
+  values and made it return **1.0 whenever any symptom error existed at all**. One boolean cannot carry
+  three outcomes, so the function now takes the correctness of each answer as a second argument.
+  - **The test had been written to match the code rather than the spec**, and its own comment admitted
+    the ambiguity before asserting 1.0. `docs/08` section 4 and the function's own docstring both say
+    "symptom errors / wrong top-1", so with three wrong answers and two symptom errors the answer is
+    2/3, not 1. Both the code and the test were wrong; the spec was right. Four tests now pin it,
+    including one stating the property directly: a method right on 100 cases and wrong on 4, one of
+    them a symptom error, has a symptom rate of 0.25 and not 0.01.
+  - **Numbers corrected.** M2.5's and question 9's `symptom_rate` figures were computed over all 125
+    cases instead of the wrong ones: **0.088 -> 0.2208** without the graph and **0.040 -> 0.0779** with
+    it (and the later pair 0.136/0.048 likewise). Both entries above now carry the correction. The
+    ratio happened to survive because both sides shared the same wrong denominator, so every
+    conclusion drawn from them stands - but the figures were understated by about 1.6x and the
+    `symptom_rate` column of the M1.10 gate summary was simply 1.0 wherever anything was wrong.
+  - The M1.10 gate was re-run in full (798 s, all 8 engines) to regenerate that column. **It still
+    passes**, and the re-run is a reproducibility check worth recording: of the 64 summary rows,
+    **every accuracy number - ac1, ac3, avg5, exp_ac1, exp_ac3, no_clear_cause - came back identical**,
+    and only `symptom_rate` changed. That independently confirms decision 72's claim that the
+    flat-column fix cannot touch synthetic data, since no synthetic column is ever flat. The corrected
+    rates are real fractions rather than 1.0: ECDF on cpu 0.25, ECDF on mem 0.167, PARE on mem 0.400.
+    My own mistake on the way: the first regeneration attempt omitted `--append`, which dropped the
+    other seven engines from `cases.csv`, so the full run was needed rather than a re-summarise.
+- How it was tested (commands + result):
+  - `analyzer/.venv/Scripts/python.exe experiments/run_c1_grounding.py --config
+    experiments/configs/c1_re1_ob.yaml` -> 500 runs (4 methods x 125 cases), **0 failures**, results in
+    `results/e1_re1_ob/`.
+  - `pytest -q` in `analyzer/` -> **379 passed**. `pytest experiments/tests -q` -> **86 passed**
+    (22 new). `ruff check .` -> clean.
+  - A test asserts `CASES_CSV_COLUMNS` matches the column list in `docs/06` section 5 **by parsing the
+    doc**, so the contract and the writer cannot drift apart silently.
+  - A test intercepts the request on its way into the engine and checks it carries no ground truth
+    (hard rule 4), and another checks a baseline returns the same answer with and without a graph, so
+    the runner cannot hand a baseline the one thing the proposed method is supposed to contribute.
+  - An engine made to raise produces a row with the error rather than a missing case.
+- Two things the report now says in words, because both were briefly misread while building it:
+  `wrong_top1` is `symptom_rate`'s denominator and can exceed `(1 - AC@1) x cases` for a method that
+  ties; and `no_clear_cause` is **not comparable between methods**, because the rule is a fixed
+  threshold of 3.0 on the rank-1 score and these methods do not share a scale - SHAP_IFOREST reports
+  mean absolute SHAP, which is almost never above 3, so it reads `NO_CLEAR_CAUSE` on all 125 cases
+  while ranking services better than anything else.
+- Files changed: new `experiments/run_c1_grounding.py`, `experiments/runner.py`,
+  `experiments/configs/c1_re1_ob.yaml`, `experiments/tests/test_runner.py`,
+  `experiments/results/e1_re1_ob/*`; `analyzer/pare/eval_metrics.py` (the `symptom_rate` fix),
+  `analyzer/tests/test_eval_metrics.py`, `analyzer/scripts/synthetic_check.py`,
+  `experiments/check_graph.py`, `experiments/results/synthetic_check/*`, `docs/07_TASKS.md`,
+  `PROGRESS.md`.
+- Left open / next: M3.2, running E1 on the rest of RE1, which needs RE1-SS and RE1-TT downloaded.
+  Note the disk policy in decision 66: one system at a time.
+
 ### 2026-10-05 - settling open question 9. PARE 0.240 -> 0.384, and the symptom claim lands.
 The last open question, raised by M2.5 the same day. There are now none.
 
@@ -105,8 +195,10 @@ The last open question, raised by M2.5 the same day. There are now none.
   question. This fixed the part that was a scaling defect, not the part that is a research problem.
 - **The symptom claim now lands clearly, which is the better news.** `symptom_rate`, the share of
   wrong top-1 answers that blamed a service calling the real culprit, on the same cases and the same
-  engine, differing only in whether the call graph was supplied: **0.136 without the graph, 0.048 with
-  it.** Close to a threefold reduction. This is RQ2, measured on real data, and it is the paper's
+  engine, differing only in whether the call graph was supplied: ~~0.136 without the graph, 0.048 with
+  it~~ **corrected on 2026-10-05 to 0.2208 without the graph and 0.0779 with it** - the denominator was
+  wrong, see the M3.1 entry. A 2.8-fold reduction; the conclusion is unchanged and the figures are
+  larger. This is RQ2, measured on real data, and it is the paper's
   central claim rather than a side effect. Note that AC@1 is *identical* (0.384) with and without the
   graph - the graph is not making PARE pick the right service more often, it is making its mistakes
   much less likely to be a victim. `00_RESEARCH_PLAN.md` section 15 anticipated exactly this shape of
@@ -172,8 +264,10 @@ The last open question, raised by M2.5 the same day. There are now none.
     without residuals the fraction is 0 by construction), and 20 cases produce at least one `SYMPTOM`
     role, a verdict unreachable without a graph.
   - The first `symptom_rate` the project has been able to compute at all, since the metric needs a
-    graph to ask "is the service we blamed an ancestor of the real cause": **0.088 without the graph,
-    0.040 with it**. The direction the paper predicts, on real data.
+    graph to ask "is the service we blamed an ancestor of the real cause": ~~0.088 without the graph,
+    0.040 with it~~ - **corrected on 2026-10-05 to 0.2208 and 0.0779**, because the denominator was
+    wrong (see the M3.1 entry). The direction the paper predicts, on real data, and by a wider margin
+    than first reported.
 - **The bad surprise, and it is the important part of this entry. PARE on RE1-OB is far worse than
   NSIGMA.** AC@1 0.240 against NSIGMA's 0.848 from M2.4, on the same 125 cases at the same delay, with
   41 of 125 coming back `NO_CLEAR_CAUSE`. This is not the graph's fault - the graph is verified above -
@@ -2246,6 +2340,36 @@ written into the spec files. One line of reason each.
       deviation is the only spread estimate such a column has.
     No knob was added for (b). Decision 63 argued against knobs that no planned experiment needs, and
     nothing in `08` asks for this ablation; the measurement above is on record if it is ever wanted.
+
+### M3.1 choices
+
+73. **`symptom_rate` takes the correctness of each answer, not just the symptom flags.**
+    `pare.eval_metrics.symptom_rate(errors, top1_correct)`.
+    Reason: it was returning 1.0 whenever any symptom error existed, because `symptom_error` is False
+    both for a right answer and for one wrong in an unrelated way, and the old code treated "not False"
+    as wrong - which left only the True values. One boolean cannot carry three outcomes. The
+    alternative was to make `symptom_error` return None for a correct answer, but None already means
+    "no graph to judge by" in `docs/06` section 5, and overloading it would move the same ambiguity
+    into the stored data. Passing the extra information explicitly keeps the CSV column's meaning
+    intact and makes the denominator impossible to get wrong, with `strict=True` on the zip so a
+    length mismatch is an error rather than a silent mispairing.
+    The existing test asserted the buggy value and its own comment admitted why. Per hard rule 12 the
+    question was which of the two was wrong: `docs/08` section 4 and the function's docstring both say
+    "symptom errors / wrong top-1", so the code and the test were both wrong and the spec was right.
+
+74. **One shared per-case runner, `experiments/runner.py`, from M3 onward.**
+    Reason: every runner needs to load a case, run an engine and reduce the answer to a row of
+    `cases.csv`. A copy per script means several implementations of AC@k, and the first time two
+    disagreed there would be no way to say which number the paper should print - which is exactly the
+    shape of the `symptom_rate` bug this task found. The experiment-specific choices (which engines,
+    which delays, how to summarise) stay in each script; only the row-producing core is shared.
+    `run_m24_compare.py` keeps its own path, because its ladder and its "their convention" service
+    ranks do not generalise, and its numbers are already verified against RCAEval's own output.
+
+75. **A test parses `docs/06` section 5 and asserts the column list matches the code.**
+    Reason: hard rule 6 says a format change must update the doc and all sides together. A test that
+    reads the doc makes that mechanical instead of a matter of discipline - change one and the other
+    fails.
 
 ### Order of work
 

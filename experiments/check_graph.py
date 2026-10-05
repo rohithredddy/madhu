@@ -37,7 +37,6 @@ import time
 from collections.abc import Sequence
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -394,12 +393,20 @@ def _summary_row(variant: str, fault: str, part: pd.DataFrame) -> dict[str, obje
     # A case whose truth was never ranked is a miss, not an omission, so pad the
     # list back to the full case count rather than averaging over fewer cases.
     padded = ranks + [None] * (len(part) - len(ranks))
-    symptoms = [
-        value
+    # The denominator is the wrong answers only, which needs the correctness of
+    # each top-1 as well as the flag: `symptom_error` is False both for a right
+    # answer and for one wrong in an unrelated way. Delegated to
+    # `pare.eval_metrics`, which owns the definition - this script used to compute
+    # it itself and got the denominator wrong.
+    errors: list[bool | None] = [
+        True if str(value) == "True" else (False if str(value) == "False" else None)
         for value in part["symptom_error"]
-        if isinstance(value, bool) or str(value) in ("True", "False")
     ]
-    symptom_flags = [str(value) == "True" for value in symptoms]
+    correct = [
+        str(top1) == str(truth)
+        for top1, truth in zip(part["top1_service"], part["gt_service"], strict=True)
+    ]
+    rate = eval_metrics.symptom_rate(errors, correct)
     inherited = pd.to_numeric(part["top1_inherited_fraction"], errors="coerce").dropna()
 
     return {
@@ -410,9 +417,7 @@ def _summary_row(variant: str, fault: str, part: pd.DataFrame) -> dict[str, obje
         "ac1": round(eval_metrics.ac_at_k(padded, 1), 4),
         "ac3": round(eval_metrics.ac_at_k(padded, 3), 4),
         "avg5": round(eval_metrics.avg_at_5(padded), 4),
-        "symptom_rate": (
-            round(float(np.mean(symptom_flags)), 4) if symptom_flags else ""
-        ),
+        "symptom_rate": "" if rate is None else round(float(rate), 4),
         "wrong_top1": int(sum(1 for rank in padded if rank is None or rank.best != 1)),
         "no_clear_cause": int((part["verdict"] == "NO_CLEAR_CAUSE").sum()),
         "mean_top1_inherited": round(float(inherited.mean()), 4) if len(inherited) else "",

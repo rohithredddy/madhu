@@ -191,19 +191,40 @@ def symptom_error(
     return top1 in graph.ancestors(gt_service)
 
 
-def symptom_rate(errors: Iterable[bool | None]) -> float | None:
+def symptom_rate(
+    errors: Iterable[bool | None], top1_correct: Iterable[bool]
+) -> float | None:
     """Of the wrong answers, the share that blamed a caller of the real cause.
 
-    The denominator is wrong answers only, not all cases. A method that is right
-    every time has no symptom rate at all, and reporting 0 for it would suggest it
-    had been tested against the problem and passed, which it has not. That is why
-    this returns None rather than 0 when nothing was wrong.
+    The denominator is wrong answers only, not all cases, exactly as ``docs/08``
+    section 4 defines it. A method that is right every time has no symptom rate at
+    all, and reporting 0 for it would suggest it had been tested against the
+    problem and passed, which it has not - so this returns None rather than 0 when
+    nothing was wrong.
+
+    **Why it needs `top1_correct`.** :func:`symptom_error` returns False for two
+    quite different outcomes: the answer was right, and the answer was wrong but
+    the service blamed does not call the culprit. One boolean cannot separate them,
+    so the denominator cannot be recovered from the flags alone. An earlier version
+    tried, by treating "not False" as wrong, which left only the True values and
+    made this function return 1.0 whenever any symptom error existed at all. It is
+    therefore given the correctness of each answer explicitly.
+
+    Args:
+        errors: One :func:`symptom_error` result per case. None means there was no
+            graph to judge by, and those cases are excluded from both parts of the
+            fraction.
+        top1_correct: Whether each case's top-ranked service was the culprit, in
+            the same order.
     """
-    judged = [error for error in errors if error is not None]
-    wrong = [error for error in judged if error is not False]
-    if not wrong:
+    judged = [
+        error
+        for error, correct in zip(errors, top1_correct, strict=True)
+        if error is not None and not correct
+    ]
+    if not judged:
         return None
-    return float(np.mean([1.0 if error else 0.0 for error in wrong]))
+    return float(np.mean([1.0 if error else 0.0 for error in judged]))
 
 
 # --- explanation quality ----------------------------------------------------

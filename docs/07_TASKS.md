@@ -42,7 +42,7 @@ If a working application is needed early: do M0, M1, M7, M8, M9, M10 (using synt
 - Done when: our NSIGMA matches theirs closely, or the difference is explained.
 
 ## M3 - E1 explanation grounding
-- [ ] M3.1 `run_c1_grounding.py` (YAML config, joblib, results format from `06_DATA_CONTRACTS.md` section 5).
+- [x] M3.1 `run_c1_grounding.py` (YAML config, joblib, results format from `06_DATA_CONTRACTS.md` section 5). Config `experiments/configs/c1_re1_ob.yaml`; the shared per-case core is `experiments/runner.py`, which every later runner uses. **C1's headline result is in**: explanations find the right service far more often than the right metric (SHAP_IFOREST AC@1 0.648 against ExpAC@1 0.240), and 64% of its wrong answers blame a service that calls the real culprit. See the M3.1 log entry in `PROGRESS.md`.
 - [ ] M3.2 Run RE1-OB, then all of RE1.
 - [ ] M3.3 `make_tables.py` (table 2), `make_figures.py` (figure 3).
 - [ ] M3.4 `paper/notes/E1_findings.md`: 10 plain lines, only numbers from result files.

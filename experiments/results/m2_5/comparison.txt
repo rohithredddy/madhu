@@ -1,17 +1,17 @@
 --- PARE on RE1 online-boutique, delay 0.0 s ---
    variant fault_type  cases  failed   ac1   ac3   avg5  symptom_rate  wrong_top1  no_clear_cause  mean_top1_inherited  cases_with_a_symptom  mean_ms
-with_graph        ALL    125       0 0.384 0.536 0.5280         0.048          77              39               0.0231                    13    226.0
-with_graph        CPU     25       0 0.120 0.360 0.3440         0.080          22               7               0.0091                     6    229.9
-with_graph      DELAY     25       0 0.520 0.600 0.6240         0.040          12              10               0.0197                     1    210.9
-with_graph       DISK     25       0 0.440 0.480 0.5040         0.040          14               9               0.0128                     1    218.1
-with_graph       LOSS     25       0 0.240 0.560 0.4720         0.080          19               7               0.0395                     2    224.6
-with_graph        MEM     25       0 0.600 0.680 0.6960         0.000          10               6               0.0343                     3    246.3
-  no_graph        ALL    125       0 0.384 0.512 0.5264         0.136          77              36               0.0000                     0    155.6
-  no_graph        CPU     25       0 0.120 0.280 0.2960         0.200          22               6               0.0000                     0    159.3
-  no_graph      DELAY     25       0 0.480 0.640 0.6480         0.080          13               8               0.0000                     0    145.4
-  no_graph       DISK     25       0 0.440 0.480 0.5200         0.160          14               9               0.0000                     0    153.9
-  no_graph       LOSS     25       0 0.240 0.480 0.4800         0.160          19               7               0.0000                     0    154.6
-  no_graph        MEM     25       0 0.640 0.680 0.6880         0.080           9               6               0.0000                     0    164.9
+with_graph        ALL    125       0 0.384 0.536 0.5280        0.0779          77              39               0.0231                    13    186.7
+with_graph        CPU     25       0 0.120 0.360 0.3440        0.0909          22               7               0.0091                     6    195.5
+with_graph      DELAY     25       0 0.520 0.600 0.6240        0.0833          12              10               0.0197                     1    180.8
+with_graph       DISK     25       0 0.440 0.480 0.5040        0.0714          14               9               0.0128                     1    182.1
+with_graph       LOSS     25       0 0.240 0.560 0.4720        0.1053          19               7               0.0395                     2    178.6
+with_graph        MEM     25       0 0.600 0.680 0.6960        0.0000          10               6               0.0343                     3    196.3
+  no_graph        ALL    125       0 0.384 0.512 0.5264        0.2208          77              36               0.0000                     0    121.5
+  no_graph        CPU     25       0 0.120 0.280 0.2960        0.2273          22               6               0.0000                     0    127.3
+  no_graph      DELAY     25       0 0.480 0.640 0.6480        0.1538          13               8               0.0000                     0    117.1
+  no_graph       DISK     25       0 0.440 0.480 0.5200        0.2857          14               9               0.0000                     0    115.6
+  no_graph       LOSS     25       0 0.240 0.480 0.4800        0.2105          19               7               0.0000                     0    117.2
+  no_graph        MEM     25       0 0.640 0.680 0.6880        0.2222           9               6               0.0000                     0    130.4
 
 --- the graph check ---
 graph for online-boutique: 11 services in 15 seen in the data

@@ -16,17 +16,31 @@
     "error"
   ],
   "engines": [
-    "PARE_LGBM"
+    "ECDF",
+    "NSIGMA",
+    "PARE",
+    "PARE_LGBM",
+    "PARE_NO_CP",
+    "PARE_NO_RESIDUAL",
+    "PCA_RECON",
+    "SHAP_IFOREST"
   ],
   "pare_version": "0.1.0",
   "python": "3.10.20",
   "platform": "Windows-10-10.0.26200-SP0",
-  "elapsed_s": 360.9,
+  "elapsed_s": 797.6,
   "gate_passed": true,
   "engines_run_this_time": [
-    "PARE_LGBM"
+    "ECDF",
+    "NSIGMA",
+    "PARE",
+    "PARE_LGBM",
+    "PARE_NO_CP",
+    "PARE_NO_RESIDUAL",
+    "PCA_RECON",
+    "SHAP_IFOREST"
   ],
-  "rows_carried_forward": 2800,
+  "rows_carried_forward": 0,
   "engines_in_file": [
     "ECDF",
     "NSIGMA",

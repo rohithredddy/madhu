@@ -224,7 +224,13 @@ def summarise(results: list[CaseResult]) -> list[dict[str, object]]:
             else Rank(item.rank_gt_indicator, item.tied_gt_indicator or 1)
             for item in items
         ]
-        rate = symptom_rate([item.symptom_error for item in items])
+        # The denominator is the wrong answers only, so the correctness of each
+        # top-1 has to be supplied: `symptom_error` is False both for a right
+        # answer and for one that is wrong in an unrelated way.
+        rate = symptom_rate(
+            [item.symptom_error for item in items],
+            [item.top1_service == item.gt_service for item in items],
+        )
 
         rows.append(
             {
