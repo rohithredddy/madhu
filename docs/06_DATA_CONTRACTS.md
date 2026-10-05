@@ -203,13 +203,22 @@ Per-case results `experiments/results/<run_id>/cases.csv`, one row per (case, me
 ```
 run_id, dataset, system, case_id, fault_type, gt_service, gt_indicator,
 method, delay_s, seed, rank_gt_service, rank_gt_indicator,
-top1_service, top1_indicator, tied_gt_service, tied_gt_indicator,
+rank_gt_indicator_loose, top1_service, top1_indicator,
+tied_gt_service, tied_gt_indicator, tied_gt_indicator_loose,
 symptom_error, verdict, runtime_s
 ```
 - `rank_gt_*`: 1-based, empty if not ranked. When several items share the ground truth's score, this
   records the **best** rank the tied group occupies, and `tied_gt_service` / `tied_gt_indicator`
   record how many items share it, so the metrics can score the tie properly rather than letting the
   order of column names decide. See `08_EXPERIMENTS_SPEC.md` section 4 for the rule.
+- `rank_gt_indicator` is the **strict** indicator rank: the one metric that is unambiguously the
+  right answer. It is empty whenever the fault type has no such metric, which for RCAEval RE1 means
+  every DISK, DELAY and LOSS case.
+- `rank_gt_indicator_loose` is the best rank reached by **any** metric that could reasonably be
+  called correct for that fault type, so it is filled in for every case. For CPU and MEM the
+  acceptable set holds exactly one metric, so the loose rank equals the strict one; the two columns
+  differ only where the strict one is empty. Which of the two a table reports is a stated choice, not
+  a detail: see `08_EXPERIMENTS_SPEC.md` section 4, "Which indicator counts as correct".
 - `symptom_error`: true if top-1 is wrong AND top-1 calls the true root cause directly or indirectly; empty if no graph.
 
 - `verdict`: `ROOT_CAUSE_FOUND` or `NO_CLEAR_CAUSE`, as returned by the engine.

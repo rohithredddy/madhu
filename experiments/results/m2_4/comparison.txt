@@ -1,0 +1,33 @@
+--- accuracy on RE1 online-boutique, delay 0.0 s ---
+        method  cases   ac1  ac3_distinct  avg5_distinct  ac3_raw  exp_ac1_strict  exp_ac1_loose  mean_candidates  cases_with_nan_score  mean_ms
+  RCAEVAL_BARO    125 0.720         0.912         0.8784    0.912            0.66          0.656           51.056                     0  32.6768
+RCAEVAL_NSIGMA    125 0.728         0.904         0.8816    0.896            0.74          0.680           51.056                     0  23.2680
+      A_theirs    125 0.728         0.904         0.8816    0.896            0.74          0.680           51.056                     4  14.7954
+     B_formula    125 0.832         0.920         0.9200    0.920            0.92          0.800           51.056                     0   6.6029
+      C_window    125 0.848         0.944         0.9360    0.936            0.92          0.784           50.232                     0   5.9840
+        D_ours    125 0.848         0.944         0.9344    0.936            0.92          0.784           51.280                     0   4.9000
+        NSIGMA    125 0.848         0.944         0.9344      NaN            0.92          0.784           51.280                     0  19.6106
+
+exp_ac1_strict: the headline, over the 50 CPU and MEM cases whose indicator is unambiguous.
+exp_ac1_loose*: pooled over all 125 cases. * Do not quote this: it averages a 1-of-51
+   question (CPU) with a 4-of-51 one (DISK). Quote summary_by_fault.csv, which splits it
+   per fault type with the size of the acceptable set. See docs/08 section 4.
+
+--- the ladder, one step at a time ---
+step                                                              AC@1  ExpAC@1
+start: RCAEval NSigma, reproduced                                0.728    0.740
+  + formula: their signed max of per-row z -> our mean shift    +0.104   +0.180
+  + windows: 30 s gap, window ends 120 s after the alarm        +0.016   +0.000
+  + candidates: their preprocess -> our cleaning and allowlist  +0.000   +0.000
+end: our NSIGMA                                                  0.848    0.920
+
+--- head to head, per case ---
+125 cases compared on top-1 service:
+  both right: 86
+  only RCAEVAL_NSIGMA: 5
+  only NSIGMA: 20
+  both wrong: 14
+  McNemar exact test on the 25 case(s) they disagree on: p = 0.0041
+  only RCAEVAL_NSIGMA right: re1-ob-cartservice_delay-3, re1-ob-currencyservice_delay-4, re1-ob-currencyservice_disk-4, re1-ob-currencyservice_disk-5, re1-ob-productcatalogservice_delay-1
+  only NSIGMA right: re1-ob-adservice_cpu-4, re1-ob-adservice_disk-2, re1-ob-adservice_disk-4, re1-ob-cartservice_disk-2, re1-ob-cartservice_disk-4, re1-ob-cartservice_disk-5
+      ... and 14 more

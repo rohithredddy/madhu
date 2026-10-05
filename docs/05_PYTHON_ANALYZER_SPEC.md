@@ -280,7 +280,8 @@ Naming and types at the boundary:
   - latency: `latency_r += 6 * std`
   - cpu: `cpu_r += 6 * std` **and** `latency_r += 2 * std`
   - mem: `mem_r` ramps up linearly to `+8 * std` **and** `latency_r` ramps up linearly to
-    `+2 * std`
+    `+2 * std`. `8 * std` is the **peak, reached at the last abnormal row** - not what the analysis
+    window sees. See "What a memory fault is actually worth" below before quoting it.
   - error: `error_r += 6 * std`
 - The faulted service's own latency term is added **before** propagation, so callers inherit it
   through the latency equation.
@@ -349,6 +350,45 @@ Read honestly, there are three regimes, and the paper must report all three:
 The band is predicted by the algebra, not just observed: a trap needs the congestion contribution
 `A` to exceed `(sqrt(sd_own^2 + w^2 sd_child^2)/w - sd_child) * D`, and a residual method keeps
 working while `A < D`.
+
+#### What a memory fault is actually worth, and why some MEM cases are `NO_CLEAR_CAUSE`
+
+The `8 * std` above is the peak at the final abnormal row. Every score in this project is the
+**median** over the analysis window (step 1), and the median of a linear ramp is not its peak, so the
+signal an engine actually sees is a fraction of the stated size. Measured, with the ramp expressed in
+units of the stated `8 * std`:
+
+| rows of the ramp covered by the analysis window | median of the ramp | effective fault size |
+|---|---|---|
+| all 120 (`n_abnormal=120`) | 0.50 | **4.0 std** |
+| first 60 of 120 | 0.25 | 2.0 std |
+| first 120 of 200 (`n_abnormal=200`) | 0.30 | **2.4 std** |
+
+Two consequences, both of which must be lived with rather than tuned away:
+
+1. **A minority of MEM cases come back `NO_CLEAR_CAUSE`,** because `min_cause_score` is 3.0 and the
+   effective size can fall below it. Measured with `PARE`, 30 seeds, `n_abnormal=120`, no delay: the
+   culprit's service score has median 5.12 and minimum 2.36, and 3 of 30 cases are
+   `NO_CLEAR_CAUSE`. At the M1.10 gate's settings (`n_abnormal=200`, `delay_s=30`) it is 12 of 50.
+   This is the method behaving correctly: on a slow ramp caught early the evidence genuinely is thin,
+   and refusing to name a culprit on 2.4 MADs is what `min_cause_score` is for. `min_cause_score`
+   stays at 3.0. Compare the other faults, which are steps rather than ramps and so are unaffected:
+   median culprit score 15.4 for cpu, 7.6 for latency, 7.5 for error, with no refusals in 30 seeds.
+2. **The effective size of a MEM fault depends on `n_abnormal`,** because the ramp is defined to reach
+   its peak at the last abnormal row. So two runs that differ in `n_abnormal` do not inject the same
+   MEM fault, even with every other parameter equal. `n_abnormal` is therefore **held fixed across any
+   settings being compared** - a constraint on E6, recorded in `08_EXPERIMENTS_SPEC.md` section 4. The
+   generator is deliberately not changed to decouple them: every synthetic result so far was produced
+   under this definition, and a new knob would buy comparability that no planned experiment needs,
+   since E6 varies graph size, propagation, amplification, noise, graph quality and delay, but not
+   `n_abnormal`.
+
+A related point about reporting, because it is easy to get backwards: `AC@k` scores the **ranking**,
+and the ranking is still returned when the verdict is `NO_CLEAR_CAUSE` (step 4). So a case can count
+towards `AC@1` while the application would have shown the user no accusation at all. That is the right
+way round for comparability with RCAEval, whose baselines have no verdict concept, but it means the
+`NO_CLEAR_CAUSE` rate has to be reported **next to** `AC@k` rather than folded into it. Both already
+appear in the synthetic check's summary.
 
 #### Why a memory fault must also raise the service's own latency
 

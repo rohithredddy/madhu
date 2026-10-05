@@ -87,7 +87,11 @@ load_case(case, delay_s, normal_minutes=None) -> CaseData
 - `CaseData`: normal df, recent df, alarm_time (= inject_time + delay_s), columns (list of ColumnInfo), graph.
 - First open a few case folders and print their structure, column names and inject time file. Write down what you find in `PROGRESS.md` before coding the parser.
 - Column to (service, metric) mapping: build it explicitly from the real column names. Keep a mapping file `adapters/rcaeval_columns.yaml` if names are irregular.
-- Ground-truth indicator: take it from RCAEval's own fine-grained evaluation code if it exists. Otherwise use this mapping and document it as an assumption: CPU -> cpu metric, MEM -> memory metric, DISK -> disk metric, DELAY -> latency metric, LOSS -> latency/loss metric, code-level faults -> the indicator given in the dataset (log/trace). Write the final mapping in `PROGRESS.md`.
+- Ground-truth indicator: RCAEval's own fine-grained evaluation code **does not contain it**. Checked
+  on 2026-10-04 against the installed package: the shipped `Evaluator` compares `Node(entity, metric)`
+  objects, but the code that builds the answer node for a case is not in the wheel. So the mapping is
+  ours, and it is settled in section 4, "Which indicator counts as correct". The adapter implements it
+  in `INDICATOR_METRICS` and records both a strict and a loose answer per case.
 - Counters: if some metrics are cumulative counters, convert to rates before scoring. Check by looking at whether values only increase.
 
 ## 4. Experiments
@@ -126,6 +130,34 @@ because a real system would not know when the fault was injected:
 
 ### E4 - Call-graph ablation
 - PARE with graph from (a) traces, (b) static architecture file, (c) correlation-inferred, (d) no graph. RE2 (has traces) is the right dataset.
+
+#### Which indicator counts as correct
+
+Two of RE1's five fault types have **no matching metric at all**: there is no `disk` column and no
+`loss` column anywhere in the data. Measured over all 125 Online Boutique cases (M2.2), the broken
+service's most-moved metric is `cpu` in 25 of 25 CPU cases and `mem` in 18 of 25 MEM cases, but DISK
+splits roughly evenly between `cpu` and the two latency percentiles. So "the right indicator" is a
+judgement call for DISK, DELAY and LOSS, and a single number cannot hide that.
+
+The rule, which every table must state:
+
+- **The headline ExpAC@k is strict**: it uses only the fault types whose indicator is unambiguous,
+  which for RE1 means the CPU and MEM cases (50 of 125 for Online Boutique). The table says how many
+  cases it covers.
+- **A secondary table reports the loose definition** over all cases, counting a hit when the top
+  indicator is any metric in that fault type's acceptable set. It is reported **per fault type, with
+  the size of the acceptable set in the table**, and never pooled into one number. Pooling would
+  average a 1-of-51 question (CPU) with a 4-of-51 question (DISK) and the result would mean nothing.
+- For CPU and MEM the acceptable set holds exactly one metric, so **the loose and strict scores are
+  identical on every case the strict number covers**. This is checked, not assumed, in
+  `experiments/tests/test_m24_compare.py`. It matters because it means the difference between the two
+  headline numbers is purely a difference in **which cases are included**, not in how any case is
+  scored - so neither number is the other one with the scoring loosened.
+
+Measured on RE1-OB at delay 0 (M2.4), for our `NSIGMA`: strict ExpAC@1 **0.92** over 50 cases, loose
+ExpAC@1 **0.784** over 125. The strict number is higher, and the reason is visible in the per-fault
+table rather than being a product of the definition: CPU and MEM are also the easiest fault types at
+service level (AC@1 0.96 and 1.00, against 0.48 for LOSS).
 
 #### How ties are scored
 
@@ -166,6 +198,15 @@ earlier figure was an artefact of column naming, not a property of the method.
   - noise level: LOW, MEDIUM, HIGH (the float multipliers 0.5 / 1.0 / 2.0)
   - graph quality: true graph, 20% edges removed, 20% wrong edges added, no graph
   - detection delay: 0, 10, 30, 60 rows
+- **`n_abnormal` is held fixed across every setting in the grid.** A MEM fault ramps to its peak at
+  the last abnormal row, so its effective size in the analysis window depends on `n_abnormal`
+  (`05_PYTHON_ANALYZER_SPEC.md` section 5, "What a memory fault is actually worth"). Varying it would
+  change the fault while appearing to change only the run length. None of the factors above needs it
+  varied, so this costs nothing.
+- **Report the `NO_CLEAR_CAUSE` rate next to AC@k, never folded into it.** `AC@k` scores the ranking,
+  which is returned even when the verdict is `NO_CLEAR_CAUSE`, so a case can count as a hit although
+  the application would have shown the user no accusation. For MEM this is not a rare corner: it is
+  about a quarter of cases at the M1.10 gate's settings.
 - Methods: PARE, PARE_NO_RESIDUAL, PARE_NO_CP, NSIGMA, SHAP_IFOREST, ECDF.
 - Expected story, corrected after building the generator: **propagation strength alone does not
   create the symptom trap** - under linear propagation a caller can never outscore the culprit, for

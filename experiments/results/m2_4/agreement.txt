@@ -1,0 +1,4 @@
+A_theirs reproduces RCAEval's NSigma: top-1 identical on 125/125 (100.0%)
+    full ranking identical on 124/125 of the cases whose candidate sets match
+D_ours matches our NSIGMA engine: top-1 identical on 125/125 (100.0%)
+    full ranking identical on 125/125 of the cases whose candidate sets match

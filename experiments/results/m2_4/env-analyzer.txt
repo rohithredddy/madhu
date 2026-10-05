@@ -1,0 +1,9 @@
+python: 3.10.20 (main, Jun  2 2026, 22:31:55) [MSC v.1944 64 bit (AMD64)]
+platform: Windows-10-10.0.26200-SP0
+machine: AMD64
+pare: 0.1.0
+numpy: 2.2.6
+pandas: 2.3.3
+scikit-learn: 1.7.2
+scipy: 1.15.3
+ruptures: 1.1.10

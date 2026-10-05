@@ -1,0 +1,16 @@
+{
+  "script": "run_rcaeval_baselines.py",
+  "dataset": "RE1",
+  "system": "online-boutique",
+  "folder": "RE1-OB",
+  "dataset_arg_passed_to_rcaeval": "ob",
+  "methods": [
+    "NSIGMA",
+    "BARO"
+  ],
+  "delay_s": [
+    0.0
+  ],
+  "cases": 125,
+  "limit": null
+}

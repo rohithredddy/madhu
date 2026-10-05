@@ -414,3 +414,95 @@ def test_more_amplification_means_a_louder_caller():
 def test_the_case_records_the_amplification_it_was_built_with():
     case = make_case(n_services=5, amplification=0.75, seed=74)
     assert case.params["amplification"] == 0.75
+
+
+# --- the memory ramp, and what it is actually worth -------------------------
+#
+# Settles open question 5. The spec says a MEM fault reaches `8 * std`, but every
+# score in the project is a median over a window, and the median of a ramp is not
+# its peak. These tests pin the relationship so the numbers in
+# `05_PYTHON_ANALYZER_SPEC.md` section 5 cannot drift out of step with the code.
+
+
+def test_the_memory_ramp_peaks_at_the_last_abnormal_row():
+    """Which is the definition the effective-size table is derived from."""
+    case = make_case(n_services=6, n_normal=400, n_abnormal=120, fault="mem", seed=11)
+    column = case.gt_column
+    normal = case.normal[column]
+    spread = normal.std()
+    centre = normal.median()
+
+    rise = (case.abnormal[column] - centre) / spread
+    # The last row is near the stated 8 standard deviations. Loose bounds: the
+    # column is a random walk, so a single row carries real noise.
+    assert 5.5 < rise.iloc[-1] < 11.0, f"last row rose {rise.iloc[-1]:.1f} stds"
+    # And the first rows are barely off, which is what makes a late detector a
+    # realistic problem rather than a free win.
+    assert abs(rise.iloc[0]) < 2.5
+
+
+def test_a_memory_fault_delivers_about_half_its_peak_to_the_window_median():
+    """The number that matters, because the scorer takes a median.
+
+    This is why a minority of MEM cases come back `NO_CLEAR_CAUSE` while cpu,
+    latency and error cases never do: a step fault delivers its full size to the
+    median and a ramp delivers half.
+    """
+    cases = [
+        make_case(n_services=6, n_normal=400, n_abnormal=120, fault="mem", seed=seed)
+        for seed in range(12)
+    ]
+    deviations = [deviation_in_stds(case, case.gt_column) for case in cases]
+    median = float(np.median(deviations))
+    # Half of 8 is 4. Measured across 12 seeds it sits near there, well below the
+    # peak the spec quotes.
+    assert 2.5 < median < 5.5, f"median deviation {median:.2f} stds over 12 seeds"
+
+
+def test_a_longer_abnormal_period_weakens_a_memory_fault_in_a_fixed_window():
+    """The constraint E6 has to respect: `n_abnormal` changes the fault.
+
+    The ramp is defined to reach its peak at the last abnormal row, so stretching
+    the abnormal period makes the early part - the part a fixed analysis window
+    sees - shallower. Two runs differing only in `n_abnormal` are therefore not
+    injecting the same fault, which is why `08_EXPERIMENTS_SPEC.md` section 4 holds
+    it fixed across compared settings.
+    """
+    window_rows = 120
+
+    def deviation_over_first_rows(n_abnormal: int, seed: int) -> float:
+        case = make_case(
+            n_services=6, n_normal=400, n_abnormal=n_abnormal, fault="mem", seed=seed
+        )
+        column = case.gt_column
+        normal = case.normal[column]
+        head = case.abnormal[column].iloc[:window_rows]
+        return float(abs(head.median() - normal.median()) / normal.std())
+
+    short = [deviation_over_first_rows(120, seed) for seed in range(8)]
+    long = [deviation_over_first_rows(400, seed) for seed in range(8)]
+    assert np.median(short) > np.median(long), (
+        "a fixed window should see a weaker fault when the ramp is stretched; "
+        f"got {np.median(short):.2f} vs {np.median(long):.2f}"
+    )
+
+
+def test_step_faults_are_unaffected_by_the_length_of_the_abnormal_period():
+    """The contrast that makes the point above specific to MEM, not general.
+
+    cpu, latency and error are steps, so their size in the window does not depend
+    on `n_abnormal` at all.
+    """
+    for fault in ("cpu", "latency", "error"):
+        short = make_case(
+            n_services=6, n_normal=400, n_abnormal=120, fault=fault, seed=5
+        )
+        long = make_case(
+            n_services=6, n_normal=400, n_abnormal=400, fault=fault, seed=5
+        )
+        assert short.gt_column == long.gt_column
+        near = deviation_in_stds(short, short.gt_column)
+        far = deviation_in_stds(long, long.gt_column)
+        assert near == pytest.approx(far, rel=0.35), (
+            f"{fault} changed with n_abnormal: {near:.2f} vs {far:.2f}"
+        )

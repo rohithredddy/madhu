@@ -17,7 +17,11 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from experiments.adapters.rcaeval import Case
+from experiments.adapters.rcaeval import (
+    INDICATOR_METRICS,
+    UNAMBIGUOUS_FAULTS,
+    Case,
+)
 from experiments.run_m24_compare import (
     LADDER,
     NORMAL_GAP_S,
@@ -249,6 +253,78 @@ def test_the_loose_rank_is_the_best_any_acceptable_indicator_reached():
 
 def test_the_loose_rank_is_none_when_no_acceptable_indicator_was_ranked():
     assert _best_rank(("a_cpu",), {"a_cpu": 1.0}, ("b_mem",)) is None
+
+
+def test_an_unambiguous_fault_has_exactly_one_acceptable_indicator():
+    """The whole settlement of open question 6 rests on this.
+
+    The headline ExpAC@k is strict and covers only CPU and MEM; a secondary table
+    reports the loose score per fault type. That split is only honest if the loose
+    definition changes nothing on the cases the strict one covers - otherwise the
+    two headline numbers would differ partly because the scoring was loosened, and
+    the higher one would be a choice rather than a measurement.
+
+    It holds because an unambiguous fault's acceptable set has one member, so the
+    loose rank is forced to equal the strict one. Asserted against the adapter's
+    real mapping, so adding a metric to CPU or MEM breaks this test rather than
+    quietly invalidating the paper's claim.
+    """
+    for fault in sorted(UNAMBIGUOUS_FAULTS):
+        assert len(INDICATOR_METRICS[fault]) == 1, (
+            f"{fault} is listed as unambiguous but accepts "
+            f"{INDICATOR_METRICS[fault]}; either the fault is not unambiguous or "
+            f"docs/08 section 4 no longer holds"
+        )
+    for fault, metrics in INDICATOR_METRICS.items():
+        if fault not in UNAMBIGUOUS_FAULTS:
+            assert len(metrics) > 1, (
+                f"{fault} accepts one metric but is not listed as unambiguous"
+            )
+
+
+def test_strict_and_loose_ranks_agree_on_an_unambiguous_case():
+    """The same claim, exercised through the scoring path rather than the mapping."""
+    case = make_case(fault_type="CPU", gt_service="cartservice")
+    # The real adapter would give a one-member acceptable set here; `make_case`
+    # deliberately gives two, so this test fails if the scoring path stops
+    # deriving the strict answer from the first acceptable metric.
+    columns = ("cartservice_mem", "frontend_latency")
+    row = _score_ranking(
+        method="T",
+        case=case,
+        delay_s=0.0,
+        runtime_s=0.0,
+        ranked_columns=columns,
+        scores=dict(zip(columns, [9.0, 1.0], strict=True)),
+        n_candidates=2,
+        error=None,
+    )
+    assert case.gt_indicator == "cartservice_mem"
+    assert row.rank_indicator_strict.best == 1
+    assert row.rank_indicator_loose.best == 1
+
+
+@needs_data
+def test_the_written_results_keep_strict_and_loose_equal_where_both_apply():
+    """The claim again, on the 125-case run's actual output.
+
+    The two unit tests above constrain the mapping and the scoring helper. This one
+    checks the file the paper's numbers come from, which is the thing that would
+    actually be wrong.
+    """
+    path = Path(__file__).resolve().parents[1] / "results" / "m2_4" / "cases.csv"
+    if not path.exists():
+        pytest.skip("M2.4 has not been run; see run_m24_compare.py")
+
+    frame = pd.read_csv(path)
+    both = frame[frame["rank_gt_indicator"].notna()]
+    assert len(both) > 0, "no case had an unambiguous indicator"
+    assert (both["rank_gt_indicator"] == both["rank_gt_indicator_loose"]).all()
+    assert (both["tied_gt_indicator"] == both["tied_gt_indicator_loose"]).all()
+
+    # And the loose column is filled in everywhere, which is what lets the
+    # secondary table cover all 125 cases.
+    assert frame["rank_gt_indicator_loose"].notna().all()
 
 
 # --- ground truth never reaches a method ------------------------------------

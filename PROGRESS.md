@@ -12,12 +12,15 @@ anything waiting on you, then the machine setup and the full list of decisions a
   `sock-shop.yaml`, from the apps' public architecture). This is the last piece of M2, and it is the
   one PARE has been waiting for: with no graph there is nothing to subtract, so PARE is currently
   just a re-anchored robust-z method.
-- Blockers: none for M2.5. **Open question 6 still needs an answer before any indicator-level number
-  goes in the paper**: DISK, DELAY and LOSS have no matching metric column. M2.4 now shows what the
-  choice is worth - ExpAC@1 for our NSIGMA is 0.92 under the strict definition and 0.784 under the
-  loose one, so the two readings differ by 14 points and the paper cannot leave it implicit.
-- Open question 3, which would have made the M1.10 synthetic check meaningless, was settled on
-  2026-10-03 (decision 38).
+- Blockers: none. **Every open question is settled** (2026-10-05, decisions 62 to 66): the indicator
+  ground truth for DISK/DELAY/LOSS, the strength of the synthetic memory fault, the result files the
+  repository tracks, and the disk-space policy. What remains under "Things the human must check by
+  hand" are the project's two gates, which are judgement calls for the human, not unanswered
+  questions.
+- Indicator scoring, now fixed: the **headline ExpAC@k is strict** (CPU and MEM only, where the right
+  metric is not a judgement call); the loose definition is a secondary table, per fault type, with the
+  acceptable-set size beside it. Strict and loose score the CPU and MEM cases identically, so the two
+  numbers differ only in which cases they cover. `docs/08` section 4 is the rule.
 
 ## Log
 <!-- Template for each entry:
@@ -57,6 +60,72 @@ anything waiting on you, then the machine setup and the full list of decisions a
   linear dependency model stops working above about 0.7, because the non-linearity is invisible in
   the normal data it is fitted on. That is a limitation to measure and report in E6, not a bug to
   tune away.
+
+### 2026-10-05 - settling open questions 5, 6, 7 and 8. None are left.
+No new milestone: this closes the four questions that were waiting on a decision. Full reasoning in
+decisions 62 to 66; the headlines and the measurements that drove them are here.
+
+- **Question 6, the indicator ground truth for DISK, DELAY and LOSS.** Settled as the recommendation
+  already proposed - strict headline, loose secondary - but with the piece that was missing from it.
+  The worry was that the strict number (0.92) is higher than the loose one (0.784) and so looks
+  cherry-picked. It is not, and this is checkable: CPU and MEM each accept exactly **one** metric, so
+  strict and loose score those 50 cases identically. Verified on all 350 scored rows of the M2.4 run,
+  and pinned by three tests. The gap is therefore purely which cases are included, not how any case is
+  scored.
+  The loose number is now reported **per fault type with the acceptable-set size beside it**, because
+  pooling averages a 1-of-51 question with a 4-of-51 one: CPU 0.96 (1 acceptable metric), MEM 0.88 (1),
+  DELAY 0.88 (3), DISK 0.80 (4), LOSS 0.40 (3). The pooled value stays in `summary.csv` and the printed
+  table now says in words not to quote it.
+  `docs/06` section 5 gained `rank_gt_indicator_loose` and `tied_gt_indicator_loose` - a deliberate
+  contract change with the doc and the only writer updated together, as hard rule 6 requires. The
+  loose columns were removed from `indicator_scoring.csv` so the number exists in one place.
+- **Question 5, the strength of the synthetic memory fault.** The observation was right, the original
+  figure was for half a window, and the cause is simpler than it looked: `8 * std` is the ramp's
+  **peak at the final abnormal row**, while every score in the project is a **median** over a window,
+  and the median of a linear ramp is half its peak. Measured: **4.0 stds** over a 120-row abnormal
+  period, **2.4** at the M1.10 gate's 200 rows. So the discrepancy was in the spec's wording, not in
+  the behaviour, and `docs/05` section 5 now carries both numbers and the table.
+  Nothing changed in the generator and `min_cause_score` stays 3.0. With `PARE`, 30 seeds,
+  `n_abnormal=120`, no delay: culprit score median 5.12, minimum 2.36, and 3 of 30 cases
+  `NO_CLEAR_CAUSE`. For contrast, the step faults never refuse - median culprit score 15.4 cpu,
+  7.6 latency, 7.5 error. Refusing to accuse a service on 2.4 MADs is exactly what the parameter is
+  for; making MEM louder would flatter the method and invalidate every synthetic result so far.
+  The measurement did turn up a second, real problem: because the ramp peaks at the last abnormal row,
+  **the fault's effective size depends on `n_abnormal`**, so two runs differing only in run length do
+  not inject the same fault. Handled as a stated constraint on E6 (`docs/08` section 4 holds
+  `n_abnormal` fixed across compared settings) rather than a new parameter, since E6 varies six
+  factors and `n_abnormal` is not one of them. Four tests pin it, including two showing cpu, latency
+  and error do **not** share the dependence.
+  Also written down, because it is easy to get backwards: `AC@k` scores the ranking, which is returned
+  even under `NO_CLEAR_CAUSE`, so a case can count as a hit although the application would have shown
+  the user no accusation. The refusal rate must be reported next to `AC@k`, never folded into it.
+- **Question 8, the result files the repository tracks.** `.gitignore` now does what `docs/08` section
+  1 always said: the small per-run files are tracked (`summary*.csv` 788 B, `comparison.txt` 2.4 KB,
+  `agreement.txt`, `config*.json`, `env-*.txt`) and the per-case ones are not (`cases.csv` 137 KB,
+  `indicator_scoring.csv`, `*.jsonl` 384 KB). The churn objection does not survive those sizes. One
+  `.gitignore` subtlety was needed and is commented in the file: un-ignoring a run folder re-exposes
+  all of its contents, so they are re-ignored by `experiments/results/*/*` before the small files are
+  allowed back. Verified file by file with `git check-ignore`. This also brings M1.10's
+  `synthetic_check/summary.csv` into the repository, which is the intended effect.
+- **Question 7, disk space.** Closed by measuring rather than deciding. **23.4 GB free** of 237.7 GB;
+  the project occupies about 1 GB in total (`analyzer/.venv` 663 MB, `.venv-rcaeval` 136 MB,
+  `data/RCAEval` 168 MB). RE1 was never a risk. Standing policy: one RCAEval system on disk at a time,
+  delete before downloading the next, and re-check free space before any RE2 or RE3 download, those
+  being the only items that carry logs and traces.
+- How it was tested (commands + result):
+  - `pytest -q` in `analyzer/` -> **371 passed** (4 new, the memory-ramp tests).
+  - `pytest experiments/tests -q` -> **47 passed** (3 new, the strict-versus-loose checks).
+  - `analyzer/.venv/Scripts/python.exe experiments/run_m24_compare.py` re-run: every accuracy number
+    unchanged, `cases.csv` now carrying the two loose columns, `summary_by_fault.csv` carrying the
+    per-fault indicator table. `ruff check .` -> clean.
+  - `git check-ignore` run over ten paths to confirm the tracked and untracked sets are exactly as
+    intended.
+- Files changed: `docs/05_PYTHON_ANALYZER_SPEC.md` (what a memory fault is actually worth),
+  `docs/06_DATA_CONTRACTS.md` (section 5 gains the two loose columns),
+  `docs/08_EXPERIMENTS_SPEC.md` (which indicator counts as correct; the E6 constraints; the
+  ground-truth note in section 3), `.gitignore`, `analyzer/tests/test_synthetic.py`,
+  `experiments/run_m24_compare.py`, `experiments/tests/test_m24_compare.py`, `PROGRESS.md`.
+- Left open / next: M2.5, the static call graphs. Nothing is blocked.
 
 ### 2026-10-05 - M2.4 - reproducing their NSigma and BARO, and accounting for the difference
 - What was done: two scripts, because the two environments cannot be joined.
@@ -1139,14 +1208,40 @@ choose and to declare. What the data shows, and the three options, are written u
    0.13 to 0.46 and left every other engine untouched. Written into `08` section 4, which the paper
    must quote.
 
-5. **A memory fault is weaker than the spec's `8 * std` suggests, and may fall under
-   `min_cause_score`.** The ramp reaches `+8 * std` only at the last abnormal row, so the median over
-   the analysis window is about half of that; measured, the culprit's memory column deviates about
-   **1.9 stds**, not 8. `PareConfig.min_cause_score` is 3.0, so on current numbers a memory case could
-   come back `NO_CLEAR_CAUSE`. Worth revisiting together with question 3, since both are about how
-   strong an injected fault should be. Not blocking M1.3.
+5. ~~**A memory fault is weaker than the spec's `8 * std` suggests.**~~ **SETTLED on 2026-10-05** -
+   decisions 62 and 63. The observation was right and the first measurement was for a half-window;
+   over the whole abnormal period the effective size is **4.0 stds**, and at the M1.10 gate's
+   settings (`n_abnormal=200`, `delay_s=30`) it is **2.4**. Nothing is changed in the generator or in
+   `min_cause_score`: a ramp caught early genuinely is thin evidence, and refusing to accuse on 2.4
+   MADs is what `min_cause_score` is for. What was wrong was the **spec**, which quoted a peak as if
+   it were what the scorer sees; it now states both, with the measured table. A second problem the
+   measurement turned up - the effective size depends on `n_abnormal`, so two runs differing only in
+   run length do not inject the same fault - is handled by a stated constraint on E6 rather than a
+   new knob. Four tests pin all of it.
 
-6. **Which metric counts as the ground-truth indicator for DISK, DELAY and LOSS faults?**
+   <details>
+   <summary>the question as originally raised</summary>
+   The ramp reaches `+8 * std` only at the last abnormal row, so the median over the analysis window
+   is about half of that; measured, the culprit's memory column deviates about **1.9 stds**, not 8.
+   `PareConfig.min_cause_score` is 3.0, so on current numbers a memory case could come back
+   `NO_CLEAR_CAUSE`. Worth revisiting together with question 3, since both are about how strong an
+   injected fault should be. Not blocking M1.3.
+   </details>
+
+6. ~~**Which metric counts as the ground-truth indicator for DISK, DELAY and LOSS faults?**~~
+   **SETTLED on 2026-10-05** - decision 64, written into `08` section 4 ("Which indicator counts as
+   correct") and `06` section 5. Option (b) for the headline, (a) as a secondary table, **reported per
+   fault type with the size of the acceptable set, never pooled.** The one thing that was missing when
+   the recommendation was first written has now been checked: for CPU and MEM the acceptable set holds
+   exactly one metric, so **the loose and strict scores are identical on every case the strict number
+   covers** (verified on all 350 scored rows, and pinned by three tests). That removes the
+   cherry-picking worry raised below - the 0.92 against 0.784 gap is entirely a difference in which
+   cases are included, not in how any case is scored. Per fault type the secondary table reads: CPU
+   0.96 (1 acceptable), MEM 0.88 (1), DELAY 0.88 (3), DISK 0.80 (4), LOSS 0.40 (3).
+
+   <details>
+   <summary>the question as originally raised, with the measurements that settled it</summary>
+
    Raised by M2.2. `08` section 3 says to take the fine-grained ground truth from RCAEval's own
    evaluation code if it exists, and otherwise to pick a mapping and document it as an assumption.
    **It does not exist in the installed package**: the shipped `Evaluator` compares `Node(entity,
@@ -1190,31 +1285,36 @@ choose and to declare. What the data shows, and the three options, are written u
    cherry-picking the higher number, and the honest framing is that (b) measures a cleaner question
    on fewer cases.
 
-   Not blocking: the adapter loads every case and records the fault type, and
-   `run_m24_compare.py` already reports both numbers side by side. Only the choice of which one the
-   paper calls its headline depends on this.
+   **Why that last worry turned out to be unfounded.** The acceptable set for CPU is `{cpu}` and for
+   MEM is `{mem}` - one member each - so on those 50 cases the loose rule and the strict rule score
+   every case identically. Checked on all 350 scored rows of the M2.4 run: the strict and loose ranks
+   agree everywhere both are defined. So (b) is not (a) with the scoring tightened; the two differ
+   only in which cases they cover. The remaining asymmetry is just that CPU and MEM are also the
+   easiest fault types at service level (AC@1 0.96 and 1.00 against 0.48 for LOSS), which the
+   per-fault table shows rather than hides.
+   </details>
 
-8. **`.gitignore` does not do what `docs/08` section 1 says about results.** The spec says
-   `results/` is "git-ignored except small summary CSVs"; the actual rule is
-   `experiments/results/*` with only `.gitkeep` allowed back, so **nothing** is tracked - not
-   M1.10's `synthetic_check/summary.csv` and not M2.4's `summary.csv` (788 bytes) or
-   `comparison.txt` (2.4 KB). Noticed in M2.4, not caused by it.
-   It matters a little: PROGRESS.md and the paper quote numbers from those files, and a reader with
-   a fresh clone cannot see them without downloading 175 MB and running two scripts. It is also
-   genuinely arguable the other way - committed result files churn on every run.
-   Options: (a) add negative patterns for `summary*.csv` and `comparison.txt` so the small summaries
-   are tracked, matching the spec; (b) change `docs/08` to say results are never committed, and rely
-   on the scripts being reproducible. Not blocking anything; needs one line either way, and it
-   should be a deliberate choice rather than drift.
+7. ~~**Disk space.**~~ **SETTLED on 2026-10-05** - decision 66, as a standing policy rather than a
+   one-off answer. Re-measured today: **23.4 GB free** of 237.7 GB. What the project occupies now:
+   `analyzer/.venv` 663 MB, `experiments/.venv-rcaeval` 136 MB, `data/RCAEval` 168 MB - about 1 GB in
+   total, so RE1-OB was never the problem. The policy: **one RCAEval system on disk at a time**, which
+   `08` section 2 already advises for memory, and delete a system's folder before downloading the
+   next. `download_rcaeval.py` skips a dataset that is already present, so re-fetching after a delete
+   is one command. Re-check free space before any RE2 or RE3 download, since those carry logs and
+   traces and are the only items that could plausibly fill the disk. No longer tracked as a question.
 
-7. **Disk space** (less urgent than first reported). Now 24.4 GB free, not the 11.7 GB measured
-   earlier that day. Still worth planning: `analyzer/.venv` already takes 644 MB, and the RCAEval
-   RE2/RE3 downloads with their logs and traces plus torch are the big items still to come. Keeping
-   only one RCAEval system on disk at a time (which `08_EXPERIMENTS_SPEC.md` section 2 already
-   suggests for memory reasons) should be enough.
+8. ~~**`.gitignore` does not do what `docs/08` section 1 says about results.**~~ **SETTLED on
+   2026-10-05** - decision 65, option (a). `.gitignore` now tracks the small per-run files
+   (`summary*.csv`, `comparison.txt`, `agreement.txt`, `config*.json`, `env-*.txt`) and still excludes
+   the per-case ones (`cases.csv`, `indicator_scoring.csv`, `*.jsonl`), which are hundreds of
+   kilobytes and regenerate. Reason: PROGRESS.md and the paper quote the summaries, so a reader with a
+   fresh clone should be able to check them without downloading the benchmark; the churn argument does
+   not survive the file sizes, which are 1 to 3 KB. This retroactively brings M1.10's
+   `synthetic_check/summary.csv` into the repository as well, which is the intended effect.
 
 The 16 points raised in the first spec review were all answered on 2026-10-03 and are recorded
-under "Decisions made" below.
+under "Decisions made" below. **Every open question is now settled**; the gates under "Things the
+human must check by hand" are judgement calls for the human rather than questions for the project.
 
 ## Things the human must check by hand
 - Static call graphs in experiments/graphs/*.yaml (M2.5)
@@ -1800,6 +1900,59 @@ written into the spec files. One line of reason each.
     Reason: open question 6 is not settled, so neither definition should be written into the
     contract yet. When it is settled, `docs/06` and the writers change once, deliberately, rather
     than the contract having grown an extra column by accident (hard rule 6).
+
+### Settling open questions 5, 6, 7 and 8
+
+62. **The synthetic MEM fault keeps its current definition, and `min_cause_score` stays 3.0.**
+    What changes is `05` section 5, which now states the effective size as well as the peak, with the
+    measured table.
+    Reason: the spec quoted `8 * std`, which is the ramp's peak at the final abnormal row, while every
+    score in the project is a **median** over a window - and the median of a linear ramp is half its
+    peak. Measured: 4.0 stds over a 120-row abnormal period, 2.4 at the gate's 200. So the
+    discrepancy was in the description, not the behaviour. Making the fault bigger would make MEM
+    artificially easy and would break the reproducibility of every synthetic result so far; lowering
+    `min_cause_score` would make the method accuse services on thinner evidence, which is the
+    opposite of what that parameter is for. `NO_CLEAR_CAUSE` on a ramp caught early is the correct
+    answer, and it is reported as its own column rather than silently counted as a wrong one.
+
+63. **`n_abnormal` is held fixed across any settings being compared.** Recorded as a constraint on E6
+    in `08` section 4, not as a new parameter.
+    Reason: because the ramp peaks at the last abnormal row, the fault's effective size in a fixed
+    analysis window shrinks as `n_abnormal` grows - so two runs differing only in run length do not
+    inject the same MEM fault. A `ramp_rows` parameter would decouple them, but E6 varies graph size,
+    propagation, amplification, noise, graph quality and delay and **not** `n_abnormal`, so the knob
+    would buy comparability nothing needs while adding a way to get results wrong. Two tests pin the
+    dependence, and two more pin that step faults (cpu, latency, error) do not share it.
+
+64. **Headline ExpAC@k is strict; the loose number is secondary, per fault type, never pooled.**
+    `08` section 4 "Which indicator counts as correct"; `06` section 5 gains
+    `rank_gt_indicator_loose` and `tied_gt_indicator_loose`.
+    Reason: contribution C1 is about whether an explanation names the right *metric*, so the headline
+    has to rest on cases where "right" is not a judgement call - CPU and MEM, 50 of 125 for RE1-OB.
+    Pooling the loose score would average a 1-of-51 question (CPU accepts one metric) with a
+    4-of-51 one (DISK accepts four) into a number with no meaning, which is why the secondary table
+    carries the acceptable-set size in its own column. The decisive check, missing when this was first
+    recommended: for CPU and MEM the acceptable set has one member, so strict and loose score those
+    cases identically - verified on all 350 rows of the M2.4 run and pinned by three tests - which
+    means the gap between the two headline numbers is purely case selection and the strict number is
+    not the loose one with the rules bent.
+
+65. **The small per-run result files are committed; the per-case ones are not.**
+    Reason: `08` section 1 already said "git-ignored except small summary CSVs" and `.gitignore` did
+    not implement it, so numbers quoted in PROGRESS.md and destined for the paper were unverifiable
+    from a fresh clone. The churn objection does not survive the sizes: `summary.csv` is 788 bytes and
+    `comparison.txt` 2.4 KB, against 137 KB for `cases.csv` and 384 KB for the rankings JSONL, which
+    stay out and regenerate. Note the `.gitignore` subtlety this needed: un-ignoring a run folder
+    re-exposes everything inside it, so the contents are re-ignored by `experiments/results/*/*`
+    before the small files are allowed back.
+
+66. **One RCAEval system on disk at a time, re-check free space before RE2 or RE3.**
+    Reason: the measurement closed the question rather than a judgement did. The whole project
+    occupies about 1 GB (`analyzer/.venv` 663 MB, `.venv-rcaeval` 136 MB, `data/RCAEval` 168 MB)
+    against 23.4 GB free, so RE1 was never a risk. Only RE2 and RE3, which carry logs and traces, can
+    plausibly fill the disk, and `08` section 2 already advises taking one system at a time for memory
+    reasons - the same policy covers both. `download_rcaeval.py` skips what is already present, so
+    deleting a system and re-fetching it later is one command.
 
 ### Order of work
 

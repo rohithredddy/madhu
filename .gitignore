@@ -18,6 +18,20 @@ backend/src/main/resources/static/
 data/
 experiments/results/*
 !experiments/results/.gitkeep
+# ...except the small summaries, which docs/08 section 1 asks to keep: PROGRESS.md
+# and the paper quote these numbers, so a fresh clone should be able to see them
+# without downloading the benchmark and re-running anything. Per-case files
+# (cases.csv, *.jsonl) stay out - they are hundreds of kilobytes and regenerate.
+!experiments/results/*/
+# Un-ignoring the run folder exposes everything in it again, because the rule
+# above matched the folder and not its contents. So re-ignore the contents, then
+# allow back only the small files.
+experiments/results/*/*
+!experiments/results/*/summary*.csv
+!experiments/results/*/comparison.txt
+!experiments/results/*/agreement.txt
+!experiments/results/*/config*.json
+!experiments/results/*/env-*.txt
 # IDE / OS
 .idea/
 *.iml

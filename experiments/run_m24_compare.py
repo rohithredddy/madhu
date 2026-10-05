@@ -770,7 +770,20 @@ def _format_summary(summary: pd.DataFrame) -> str:
             "mean_ms",
         ]
     ]
-    return shown.to_string(index=False)
+    return "\n".join(
+        [
+            shown.to_string(index=False),
+            "",
+            "exp_ac1_strict: the headline, over the 50 CPU and MEM cases whose "
+            "indicator is unambiguous.",
+            "exp_ac1_loose*: pooled over all 125 cases. * Do not quote this: it "
+            "averages a 1-of-51",
+            "   question (CPU) with a 4-of-51 one (DISK). Quote summary_by_fault.csv, "
+            "which splits it",
+            "   per fault type with the size of the acceptable set. See docs/08 "
+            "section 4.",
+        ]
+    )
 
 
 def _report_agreement(
@@ -859,10 +872,12 @@ def _write_outputs(rows: Sequence[Scored], summary: pd.DataFrame, args) -> None:
                 "seed": args.seed,
                 "rank_gt_service": _best(row.rank_service_distinct),
                 "rank_gt_indicator": _best(row.rank_indicator_strict),
+                "rank_gt_indicator_loose": _best(row.rank_indicator_loose),
                 "top1_service": row.top1_service,
                 "top1_indicator": row.top1_indicator,
                 "tied_gt_service": _tied(row.rank_service_distinct),
                 "tied_gt_indicator": _tied(row.rank_indicator_strict),
+                "tied_gt_indicator_loose": _tied(row.rank_indicator_loose),
                 # No call graph exists for RE1 until M2.5, so there is nothing to
                 # decide "is this an ancestor of the cause" with. Left empty, as
                 # `docs/06` section 5 says to when there is no graph.
@@ -871,6 +886,11 @@ def _write_outputs(rows: Sequence[Scored], summary: pd.DataFrame, args) -> None:
                 "runtime_s": round(row.runtime_s, 4),
             }
         )
+        # What is specific to M2.4 and has no place in the contract: their
+        # service-level convention, the candidate-set size, and the NaN count.
+        # The loose indicator rank used to live here; now that `docs/08` section 4
+        # settles how it is scored, it is part of `cases.csv` and is deliberately
+        # not repeated here - two copies of a number drift.
         extra.append(
             {
                 "run_id": RUN_ID,
@@ -878,11 +898,10 @@ def _write_outputs(rows: Sequence[Scored], summary: pd.DataFrame, args) -> None:
                 "fault_type": row.case.fault_type,
                 "method": row.method,
                 "indicator_unambiguous": row.case.indicator_is_unambiguous,
-                "rank_gt_indicator_loose": _best(row.rank_indicator_loose),
-                "tied_gt_indicator_loose": _tied(row.rank_indicator_loose),
                 "acceptable_indicators": ";".join(row.case.acceptable_indicators),
                 "rank_gt_service_raw": _best(row.rank_service_raw),
                 "n_candidates": row.n_candidates,
+                "n_non_finite_scores": row.n_non_finite,
                 "error": row.error or "",
             }
         )
@@ -921,7 +940,15 @@ def _write_outputs(rows: Sequence[Scored], summary: pd.DataFrame, args) -> None:
 
 
 def _by_fault(rows: Sequence[Scored]) -> pd.DataFrame:
-    """AC@1 per method and fault type, which is where the methods differ most."""
+    """Per method and fault type: service accuracy, and the loose indicator number.
+
+    This is the secondary table `docs/08` section 4 requires. The loose indicator
+    score is reported here and **only** here, per fault type and next to the size
+    of the acceptable set, because pooling it would average a 1-of-51 question
+    (CPU, one acceptable metric) with a 4-of-51 question (DISK, four) into a number
+    that means nothing. `summary.csv` carries the pooled value for completeness;
+    this is the table to quote.
+    """
     out: list[dict[str, object]] = []
     for method in dict.fromkeys(row.method for row in rows):
         for fault in sorted({row.case.fault_type for row in rows}):
@@ -930,6 +957,12 @@ def _by_fault(rows: Sequence[Scored]) -> pd.DataFrame:
             ]
             if not group:
                 continue
+            loose = [row.rank_indicator_loose for row in group]
+            strict = [
+                row.rank_indicator_strict
+                for row in group
+                if row.case.indicator_is_unambiguous
+            ]
             out.append(
                 {
                     "method": method,
@@ -940,6 +973,17 @@ def _by_fault(rows: Sequence[Scored]) -> pd.DataFrame:
                     ),
                     "avg5": round(
                         eval_metrics.avg_at_5([r.rank_service_distinct for r in group]), 4
+                    ),
+                    # How many metrics count as correct for this fault type. Without
+                    # it the loose column below is not interpretable.
+                    "acceptable_indicators": len(group[0].case.acceptable_indicators),
+                    "indicator_unambiguous": group[0].case.indicator_is_unambiguous,
+                    "exp_ac1_loose": round(eval_metrics.exp_ac_at_k(loose, 1), 4),
+                    "exp_ac3_loose": round(eval_metrics.exp_ac_at_k(loose, 3), 4),
+                    # Empty for DISK, DELAY and LOSS, which is the point: there is
+                    # no unambiguous answer to score against for those.
+                    "exp_ac1_strict": (
+                        round(eval_metrics.exp_ac_at_k(strict, 1), 4) if strict else ""
                     ),
                 }
             )
