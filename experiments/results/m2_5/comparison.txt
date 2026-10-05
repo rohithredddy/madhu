@@ -1,0 +1,25 @@
+--- PARE on RE1 online-boutique, delay 0.0 s ---
+   variant fault_type  cases  failed   ac1   ac3   avg5  symptom_rate  wrong_top1  no_clear_cause  mean_top1_inherited  cases_with_a_symptom  mean_ms
+with_graph        ALL    125       0 0.240 0.424 0.4096         0.040          95              41               0.0348                    20    184.7
+with_graph        CPU     25       0 0.160 0.320 0.2800         0.080          21               5               0.0119                     8    192.1
+with_graph      DELAY     25       0 0.320 0.440 0.4480         0.000          17              12               0.0223                     6    178.8
+with_graph       DISK     25       0 0.240 0.480 0.4320         0.040          19               8               0.0417                     1    180.8
+with_graph       LOSS     25       0 0.040 0.280 0.3120         0.080          24              10               0.0664                     2    178.3
+with_graph        MEM     25       0 0.440 0.600 0.5760         0.000          14               6               0.0319                     3    193.3
+  no_graph        ALL    125       0 0.224 0.384 0.4064         0.088          97              28               0.0000                     0    109.7
+  no_graph        CPU     25       0 0.120 0.200 0.2160         0.200          22               4               0.0000                     0    115.7
+  no_graph      DELAY     25       0 0.280 0.320 0.4080         0.080          18               6               0.0000                     0    106.6
+  no_graph       DISK     25       0 0.200 0.440 0.4480         0.080          20               7               0.0000                     0    105.1
+  no_graph       LOSS     25       0 0.040 0.360 0.3840         0.080          24               8               0.0000                     0    104.7
+  no_graph        MEM     25       0 0.480 0.600 0.5760         0.000          13               3               0.0000                     0    116.2
+
+--- the graph check ---
+graph for online-boutique: 11 services in 15 seen in the data
+  isolated on purpose, see the file: PassthroughCluster, frontend-check, frontend-external, main
+  usable: every service the graph names exists in the data
+
+--- is the graph reaching the engine? ---
+service ranking differs on 124/125 cases
+cases where some service has an inherited fraction above 0: 112/125 with the graph, 0/125 without it (without must be 0)
+cases with at least one SYMPTOM role: 20/125
+  the graph is reaching the engine and changing its answer

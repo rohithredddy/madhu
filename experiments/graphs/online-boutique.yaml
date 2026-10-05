@@ -1,0 +1,108 @@
+# Call graph for Google Cloud's Online Boutique, the system behind RCAEval RE1-OB.
+#
+# Edge direction is caller -> callee, as docs/06 section 2 requires. PARE uses it
+# to ask "how much of this service's trouble is explained by the services it
+# calls", so a wrong direction would invert the method, and a missing edge makes a
+# symptom look self-originated.
+#
+# THIS FILE IS ON THE "THINGS THE HUMAN MUST CHECK BY HAND" LIST IN PROGRESS.md.
+# Everything needed to check it is below: where each edge came from, which names
+# were changed to match the benchmark data, and what was deliberately left out.
+
+system: online-boutique
+source: STATIC_ARCHITECTURE
+
+origin:
+  repository: https://github.com/GoogleCloudPlatform/microservices-demo
+  version: v0.7.0
+  file: release/kubernetes-manifests.yaml
+  retrieved: 2026-10-05
+  how: >
+    Not read off the architecture diagram. Every Deployment in the manifest
+    declares the services it calls as *_ADDR environment variables - frontend
+    carries PRODUCT_CATALOG_SERVICE_ADDR=productcatalogservice:3550, and so on -
+    so the dependencies are machine-readable and were extracted by parsing them.
+    The edge list below is exactly that extraction, after the renames and
+    exclusions recorded further down.
+  why_this_version: >
+    v0.7.0 was released 2023-05-19 and the RE1-OB data was collected on
+    2023-05-28 (the inject_time of every case falls in that week), so this is the
+    version that was actually running when the benchmark was recorded. Checked
+    rather than assumed: v0.8.0 (2023-06-15) extracts an identical edge list, and
+    the current v0.10.7 differs only by adding
+    `frontend -> shoppingassistantservice`, a service that does not appear in the
+    data at all. So the topology below is not sensitive to the version choice.
+
+# The manifest's names are not always the data's names. Each rename is a claim
+# about identity, so each carries its evidence.
+renamed:
+  redis-cart: redis
+  # The manifest's only datastore is the Deployment `redis-cart`, and the data's
+  # only datastore-shaped service is `redis`, which carries just cpu and mem (no
+  # latency, error or load, because it is not an Istio-meshed HTTP service). The
+  # benchmark shortened the name. Nothing else in either list could be confused
+  # with it.
+
+# Present in the manifest, deliberately absent from the graph.
+excluded:
+  loadgenerator: >
+    The load driver. It appears in no column of any RE1-OB case, so it cannot be
+    ranked as a root cause and the edge `loadgenerator -> frontend` would point at
+    a node that does not exist. Dropping it makes `frontend` the root of the
+    graph, which is the right shape for this data: frontend is the service the
+    traffic actually arrives at.
+
+# Present in the data, deliberately given no edges. Listed because a reader will
+# otherwise wonder, and because the consequence is real.
+no_edges:
+  main: >
+    Carries only cpu and mem. Nothing in the manifest corresponds to it, so any
+    edge would be invented. Left isolated.
+  frontend-external: >
+    An Istio telemetry entry (error, load, workload only), not a deployed service.
+    An edge `frontend-external -> frontend` is tempting and would probably be
+    right, but the manifest does not declare it and this project does not invent
+    edges. The cost is stated in PROGRESS.md and was measured: with no children, a
+    service's self-score equals its marginal score, so a symptom here can look
+    self-originated.
+  PassthroughCluster: >
+    Istio's catch-all for traffic leaving the mesh. Not a service. No edges.
+  InboundPassthroughClusterIpv4: >
+    The inbound counterpart of PassthroughCluster, and it appears in only two
+    columns of one case. Not a service. No edges.
+  frontend-check: >
+    Appears in a single column of a single case (a mem reading). A collection
+    artefact rather than a service. No edges.
+
+# 15 edges over 11 services. Every edge is a *_ADDR declaration in the manifest.
+edges:
+  - from: frontend
+    to: adservice
+  - from: frontend
+    to: cartservice
+  - from: frontend
+    to: checkoutservice
+  - from: frontend
+    to: currencyservice
+  - from: frontend
+    to: productcatalogservice
+  - from: frontend
+    to: recommendationservice
+  - from: frontend
+    to: shippingservice
+  - from: checkoutservice
+    to: cartservice
+  - from: checkoutservice
+    to: currencyservice
+  - from: checkoutservice
+    to: emailservice
+  - from: checkoutservice
+    to: paymentservice
+  - from: checkoutservice
+    to: productcatalogservice
+  - from: checkoutservice
+    to: shippingservice
+  - from: recommendationservice
+    to: productcatalogservice
+  - from: cartservice
+    to: redis

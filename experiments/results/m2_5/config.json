@@ -1,0 +1,13 @@
+{
+  "script": "check_graph.py",
+  "run_id": "m2_5",
+  "dataset": "RE1",
+  "system": "online-boutique",
+  "engine": "PARE",
+  "delay_s": 0.0,
+  "seed": 42,
+  "limit": null,
+  "graph_file": "online-boutique.yaml",
+  "graph_version": "v0.7.0",
+  "graph_edges": 15
+}

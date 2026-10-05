@@ -7,16 +7,20 @@ Order of this file: what is happening now, then the log of what was done (newest
 anything waiting on you, then the machine setup and the full list of decisions as reference.
 
 ## Current status
-- Current milestone: M2 (RCAEval data and baseline reproduction)
-- Next task: M2.5 (static call graphs `experiments/graphs/online-boutique.yaml` and
-  `sock-shop.yaml`, from the apps' public architecture). This is the last piece of M2, and it is the
-  one PARE has been waiting for: with no graph there is nothing to subtract, so PARE is currently
-  just a re-anchored robust-z method.
-- Blockers: none. **Every open question is settled** (2026-10-05, decisions 62 to 66): the indicator
-  ground truth for DISK/DELAY/LOSS, the strength of the synthetic memory fault, the result files the
-  repository tracks, and the disk-space policy. What remains under "Things the human must check by
-  hand" are the project's two gates, which are judgement calls for the human, not unanswered
-  questions.
+- Current milestone: **M2 is complete.** Next is M3 (E1 explanation grounding).
+- Next task: M3.1 (`run_c1_grounding.py`), **but open question 9 blocks it** and needs your answer
+  first, because every E1 and E2 number depends on it.
+- **Read the M2.5 log entry before anything else.** The call graph is built and verified, and the
+  first measurement of PARE on real data came with it: **AC@1 0.240 against NSIGMA's 0.848** on the
+  same 125 cases. One cause is diagnosed and is open question 9 (a preprocessing rule that gives a
+  flat column an effectively infinite scale; fixing it lifts PARE to 0.400). The rest is unexplained
+  and is the central research risk. This is the M3.2 gate arriving two tasks early, which is what it
+  was put there for.
+- The news is not all bad: `symptom_rate` falls from 0.088 to 0.040 when the graph is used, which is
+  the direction the paper predicts, and the graph traversal step is measurably helping (+0.15 AC@1).
+- Open questions 1 and 3 to 8 are all settled (decisions 53, 38, 47, 62 to 66). Question 9 is new and
+  blocking. The two items under "Things the human must check by hand" are judgement calls for you; the
+  call-graph one is ready for review now.
 - Indicator scoring, now fixed: the **headline ExpAC@k is strict** (CPU and MEM only, where the right
   metric is not a judgement call); the loose definition is a secondary table, per fault type, with the
   acceptable-set size beside it. Strict and loose score the CPU and MEM cases identically, so the two
@@ -60,6 +64,78 @@ anything waiting on you, then the machine setup and the full list of decisions a
   linear dependency model stops working above about 0.7, because the non-linearity is invisible in
   the normal data it is fitted on. That is a limitation to measure and report in E6, not a bug to
   tune away.
+
+### 2026-10-05 - M2.5 - the static call graphs. M2 is done. And a bad surprise about PARE.
+- What was done: `experiments/graphs/online-boutique.yaml` and `sock-shop.yaml`, a loader and
+  validator in `experiments/adapters/graphs.py`, and `experiments/check_graph.py` which checks a graph
+  against the data and measures what it changes. 15 edges each.
+- **No edge was taken from an architecture diagram.** Online Boutique declares its dependencies as
+  `*_ADDR` environment variables in its Kubernetes manifest, so the graph is a parse of that file, not
+  a reading of a picture. Pinned to **v0.7.0**, released 2023-05-19, because every RE1-OB case was
+  injected in the week of 2023-05-28 - that is the version that was running. Checked rather than
+  assumed: v0.8.0 extracts an identical edge list, and today's v0.10.7 differs only by adding
+  `frontend -> shoppingassistantservice`, a service that appears in no column of the data. So the
+  topology does not depend on the version choice.
+  Sock Shop has no such declaration - services hard-code each other's DNS names - so each of its 15
+  edges was read out of a specific source file, and the file records which. Two are easy to miss and
+  are written up in full: `orders -> user` and `orders -> carts` happen because `OrdersController`
+  fetches the customer, address, card and items **URLs it receives in the request body**, and
+  `front-end/api/orders/index.js` fills those from its own `user` and `carts` endpoints. No hostname
+  appears in the orders source, but the calls are real.
+- **The rename that would have silently broken everything.** RE1-OB calls the `redis-cart` Deployment
+  `redis`. A graph keeping the manifest's spelling loads without complaint, matches nothing, and
+  leaves PARE running as a plain robust-z method while appearing to use a graph. That is why
+  `validate_against_cases` exists and why `check_graph.py` refuses to measure a graph that does not
+  match the data; a test pins it.
+  The validator earned its keep immediately: its first run failed on `carts`, `catalogue`, `orders` and
+  `front-end`, which are the Sock Shop columns M2.2 found contaminating one RE1-OB case. The adapter
+  already drops them, so the check was asking the wrong question - it now filters by the same
+  allowlist the adapter uses, so it compares the graph against what the engine really sees.
+- How it was tested (commands + result):
+  - `pytest experiments/tests -q` -> **62 passed** (15 new). `ruff check .` -> clean.
+  - `analyzer/.venv/Scripts/python.exe experiments/check_graph.py` -> results in `results/m2_5/`.
+  - **The graph is reaching the engine**, which is the question accuracy cannot answer: the service
+    ranking differs from the no-graph run on **124 of 125** cases, some service has a non-zero
+    inherited fraction on **112 of 125** with the graph and **0 of 125** without it (which is forced -
+    without residuals the fraction is 0 by construction), and 20 cases produce at least one `SYMPTOM`
+    role, a verdict unreachable without a graph.
+  - The first `symptom_rate` the project has been able to compute at all, since the metric needs a
+    graph to ask "is the service we blamed an ancestor of the real cause": **0.088 without the graph,
+    0.040 with it**. The direction the paper predicts, on real data.
+- **The bad surprise, and it is the important part of this entry. PARE on RE1-OB is far worse than
+  NSIGMA.** AC@1 0.240 against NSIGMA's 0.848 from M2.4, on the same 125 cases at the same delay, with
+  41 of 125 coming back `NO_CLEAR_CAUSE`. This is not the graph's fault - the graph is verified above -
+  and it is not something to discover during M3.
+  Diagnosed as far as M2.5 can without changing the method:
+  1. **A preprocessing rule in `docs/05` step 0 is wrong for real data.** It drops a column when
+     "MAD == 0 **and** std == 0", so a column that is flat for most of the normal period but not
+     entirely flat survives with MAD == 0. Its robust scale is then the epsilon guard, about 1e-6, and
+     a modest move scores in the millions: one case ranks `paymentservice_load` first with a score of
+     4,000,000. Measured: **108 such columns across 40 cases** (~2.7 per case; mem 61, error 24,
+     latency 15, load 8), and **the rank-1 column has MAD == 0 in 34 of 125 cases**. Dropping those
+     columns before the engine lifts AC@1 from **0.240 to 0.400** and Avg@5 from 0.410 to 0.544. The
+     synthetic data cannot produce this, which is why M1 never saw it: every synthetic column has
+     continuous noise.
+  2. **The traversal step is not the problem - it is helping.** Suspected because it promotes the
+     service a graph walk ends at even when another scores higher, and one case does rank a service
+     with a score of 1.3 above one at 1194. But measured both ways it is clearly positive: with the
+     flat columns dropped, AC@1 is 0.400 with traversal and 0.248 without.
+  3. **Something in the residual step itself is still wrong.** Even at 0.400 PARE is less than half as
+     accurate as NSIGMA. Ridge fitted on normal data and asked to extrapolate through an incident is
+     the obvious suspect, and `docs/05` section 3 already documents two measured limits of exactly
+     that kind. This is the real question and it belongs to M3.
+  Nothing in `pare` was changed for this task: the fix in (1) is a change to the method's specified
+  behaviour, it affects every experiment, and it is the human's call. Recorded as open question 9.
+- Worth saying plainly: **this is the M3.2 gate doing its job early.** `07` sets up M3.2 as a
+  stop-and-report point precisely to catch "PARE does not work on real data" before an application is
+  built on it, and the first real measurement has arrived two tasks ahead of schedule. The research
+  plan's own safety net (section 9, the minimum viable paper) covers this case, and contribution C1 -
+  measuring whether explanations point at causes - does not depend on PARE winning.
+- Files changed: new `experiments/graphs/online-boutique.yaml`, `experiments/graphs/sock-shop.yaml`,
+  `experiments/adapters/graphs.py`, `experiments/check_graph.py`,
+  `experiments/tests/test_graphs.py`, `experiments/results/m2_5/*`; `docs/07_TASKS.md`, `PROGRESS.md`.
+- Left open / next: open question 9 needs an answer before M3.1, because every E1 and E2 number
+  depends on it. M2 is complete.
 
 ### 2026-10-05 - settling open questions 5, 6, 7 and 8. None are left.
 No new milestone: this closes the four questions that were waiting on a decision. Full reasoning in
@@ -1174,6 +1250,41 @@ choose and to declare. What the data shows, and the three options, are written u
   M0.3 (fill in the Environment block) in one commit, then M1.1. No code written yet.
 ## Open questions (for the human)
 
+9. **A column with no robust scale is scored by dividing by the epsilon guard, and it wrecks PARE on
+   real data.** Raised by M2.5. `05` section 0 drops a column when "MAD == 0 **and** std == 0". A
+   column that is flat over most of the normal period but not entirely flat therefore survives with
+   MAD == 0, its scale becomes the epsilon (about 1e-6 x (|median| + 1)), and any move at all scores
+   in the millions - one case ranks `paymentservice_load` first at 4,000,000.
+
+   Measured on RE1-OB: **108 such columns across 40 cases** (mem 61, error 24, latency 15, load 8),
+   and **the rank-1 column has MAD == 0 in 34 of 125 cases**. Removing them before the engine lifts
+   PARE's AC@1 from **0.240 to 0.400** and Avg@5 from 0.410 to 0.544. Synthetic data cannot produce
+   this, which is why M1 never saw it.
+
+   This is not a bug against the spec - the code does exactly what `05` says - so it is a decision
+   about the method, and it changes every number E1 to E4 will produce. Options:
+
+   a. **Fall back to the standard deviation when MAD is 0.** Keeps the column and scores it on the
+      only scale it has. Preserves information, and matters because a MEM fault's ground-truth
+      indicator could itself be flat in normal - dropping it would make that case unsolvable by
+      construction. Costs the method its purely-robust character for those columns, which has to be
+      said in the paper.
+   b. **Drop the column, widening the existing rule to "MAD == 0" alone.** Simplest, and it is what
+      was measured above (0.240 -> 0.400). Risks discarding a column that is the real answer; worth
+      measuring how often the ground-truth indicator is one of them before choosing this.
+   c. **Scale the epsilon to the data** rather than to the median, for example a small fraction of the
+      column's standard deviation. A smaller change than (a) with much the same effect, but it makes
+      the epsilon meaningful rather than nominal, which is arguably what it should always have been.
+
+   Recommendation: **(a)**, with the fallback recorded in `warnings` so a user of the application can
+   see it happened, and with (b) reported as an ablation since it is one line and the comparison is
+   cheap. Reason: (a) is the standard remedy, it cannot make a case unsolvable the way (b) can, and it
+   leaves the epsilon doing the job it was written for - preventing division by zero - rather than
+   silently setting the scale.
+
+   **Blocking M3.1.** Every E1 and E2 number depends on it, so it should be settled before the first
+   experiment runs rather than after.
+
 1. ~~**RCAEval pulls PyTorch.**~~ **SETTLED on 2026-10-04** - decision 53. It does not have to.
    `RCAEval[default]` pulls torch, but the bare package plus the dependencies the wanted baselines
    actually import does not, and RCAEval skips any method whose dependencies are missing. Every
@@ -1317,7 +1428,24 @@ under "Decisions made" below. **Every open question is now settled**; the gates 
 human must check by hand" are judgement calls for the human rather than questions for the project.
 
 ## Things the human must check by hand
-- Static call graphs in experiments/graphs/*.yaml (M2.5)
+- **Static call graphs in `experiments/graphs/*.yaml` (M2.5) - ready for you now.** Both files are
+  written to be checked: each records the repository, version and date it came from, and for Sock Shop
+  the specific source file behind every single edge. What to look at:
+  - `online-boutique.yaml`: 15 edges, every one a `*_ADDR` environment variable in the app's own
+    Kubernetes manifest at v0.7.0 (the version running when the data was collected). Two judgement
+    calls to approve or reject: `redis-cart` is renamed to `redis` to match the data, and
+    `loadgenerator` is excluded because it appears in no column. Automatically verified against all
+    125 cases, so the names are known to match.
+  - `sock-shop.yaml`: 15 edges over all 14 services. **Not yet verified against data**, because RE1-SS
+    is not downloaded. Sock Shop declares no dependencies in its manifests, so every edge was read out
+    of a service's source; the two worth a second look are `orders -> user` and `orders -> carts`,
+    which happen through URLs that front-end passes in a request body rather than hostnames in the
+    orders source.
+  - Both files leave the Istio telemetry entries (`frontend-external`, `PassthroughCluster` and
+    friends) and `main` with no edges, on the principle that an invented edge is worse than a missing
+    one. `frontend-external -> frontend` is probably a real edge. Measured consequence: those services
+    never actually won a ranking in the 125-case run, so the cost appears to be nil - but it is a
+    judgement call you may want to overrule.
 - Ground-truth indicator mapping for RCAEval - **investigated in M2.2, now open question 6**. CPU
   and MEM are settled by the data; DISK, DELAY and LOSS need a human decision
 - Whether the M1.10 synthetic check supports the cause-versus-symptom story (gate before M2)
@@ -1953,6 +2081,42 @@ written into the spec files. One line of reason each.
     plausibly fill the disk, and `08` section 2 already advises taking one system at a time for memory
     reasons - the same policy covers both. `download_rcaeval.py` skips what is already present, so
     deleting a system and re-fetching it later is one command.
+
+### M2.5 choices
+
+67. **Edges come from machine-readable declarations, never from an architecture diagram.**
+    Online Boutique from the `*_ADDR` environment variables in its Kubernetes manifest; Sock Shop from
+    the source file that holds each hard-coded hostname.
+    Reason: a diagram is a PNG and reading one is guessing, which hard rule 9 forbids for library APIs
+    and which is no more acceptable for the input the whole method depends on. The manifest is also
+    version-pinnable, which a diagram is not.
+
+68. **Online Boutique is pinned to v0.7.0, the version running when the data was collected.**
+    Reason: every RE1-OB case was injected in the week of 2023-05-28, and v0.7.0 was released
+    2023-05-19. The choice turns out not to matter, which was checked rather than assumed: v0.8.0
+    yields an identical edge list, and v0.10.7 differs only by a service that appears in no column of
+    the data. Recording the reasoning anyway, so nobody has to redo the check.
+
+69. **Istio telemetry entries and `main` are left with no edges.**
+    `frontend-external`, `PassthroughCluster`, `InboundPassthroughClusterIpv4`, `frontend-check`.
+    Reason: no manifest declares them, so any edge would be invented, and `frontend-external ->
+    frontend` - the tempting one - would be a guess however likely. The cost is real and is stated in
+    the file: with no children a service's self-score equals its marginal score, so a symptom there can
+    look self-originated. Measured over 125 cases, none of them ever won a ranking, so the cost appears
+    to be nil in practice. Flagged for the human to overrule if they disagree.
+
+70. **A graph is validated against the services the engine sees, not against the CSV headers.**
+    Reason: the first version of the check failed on `carts`, `catalogue`, `orders` and `front-end` -
+    the Sock Shop columns contaminating one RE1-OB case - which the adapter already drops. A graph that
+    does not mention columns no engine receives is not incomplete, so the check filters by the same
+    allowlist the adapter uses. Validating against raw headers would have meant either a permanently
+    failing check or a graph padded with entries for data artefacts.
+
+71. **`check_graph.py` refuses to measure a graph that does not match the data.**
+    Reason: the failure this guards against is silent. A name mismatch makes `children()` return
+    nothing for every service, so PARE degrades into a robust-z method and still produces plausible
+    numbers. Refusing to proceed turns the worst kind of bug - one that only shows up as slightly
+    disappointing accuracy months later - into an error message.
 
 ### Order of work
 

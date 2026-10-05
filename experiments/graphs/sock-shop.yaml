@@ -1,0 +1,115 @@
+# Call graph for Weaveworks' Sock Shop, the system behind RCAEval RE1-SS and
+# RE2-SS. Edge direction is caller -> callee, as docs/06 section 2 requires.
+#
+# THIS FILE IS ON THE "THINGS THE HUMAN MUST CHECK BY HAND" LIST IN PROGRESS.md,
+# and it needs the check more than the Online Boutique one does, for two reasons
+# stated plainly here:
+#
+#   1. RE1-SS has NOT been downloaded, so unlike the Online Boutique graph this
+#      one has not been checked against the service names the data actually uses.
+#      Run the validation in `experiments/adapters/graphs.py` once RE1-SS exists.
+#      The only Sock Shop names seen so far come from the one contaminated RE1-OB
+#      case that M2.2 found - `carts`, `catalogue`, `orders`, `front-end` - and all
+#      four match the names below, which is weak but encouraging evidence.
+#   2. Sock Shop does not declare its dependencies in its Kubernetes manifests the
+#      way Online Boutique does. Each service hard-codes its callees' DNS names in
+#      its own source, so every edge below was read out of a specific source file
+#      and carries that file as its evidence. No edge comes from the architecture
+#      diagram, which is a PNG.
+
+system: sock-shop
+source: STATIC_ARCHITECTURE
+
+origin:
+  repository: https://github.com/microservices-demo
+  version: master
+  retrieved: 2026-10-05
+  how: >
+    The service list is the 14 Deployments in
+    microservices-demo/deploy/kubernetes/complete-demo.yaml. The edges are not in
+    that file: Sock Shop services find each other by hard-coded DNS name, so each
+    edge was taken from the source file that contains the name, recorded per edge
+    below. `master` rather than a tag because the project is archived and its
+    manifests have not changed in years; there is no release tag to pin.
+  not_pinned_to_a_date: >
+    Unlike the Online Boutique graph, this is not matched to the data's collection
+    date, because there is no data yet to match. Revisit when RE1-SS is downloaded.
+
+# All 14 Deployments are covered by the edges below, so nothing is isolated. Any
+# Istio telemetry entries RE1-SS turns out to carry (the RE1-OB equivalents are
+# `PassthroughCluster` and friends) will have no edges, for the same reason as
+# there: inventing them would be worse than leaving them out.
+no_edges: {}
+
+# 15 edges over 14 services.
+edges:
+  # front-end's backends are all declared in one file, which is as close to a
+  # manifest as Sock Shop gets.
+  - from: front-end
+    to: catalogue
+    evidence: front-end/api/endpoints.js catalogueUrl
+  - from: front-end
+    to: carts
+    evidence: front-end/api/endpoints.js cartsUrl
+  - from: front-end
+    to: orders
+    evidence: front-end/api/endpoints.js ordersUrl
+  - from: front-end
+    to: user
+    evidence: >
+      front-end/api/endpoints.js customersUrl, addressUrl, cardsUrl, loginUrl and
+      registerUrl all point at the `user` host
+  - from: front-end
+    to: session-db
+    evidence: >
+      front-end/config.js sets session_redis.store to RedisStore({host:
+      "session-db"}), and complete-demo.yaml switches it on with SESSION_REDIS=true
+
+  # orders calls payment and shipping by hard-coded hostname...
+  - from: orders
+    to: payment
+    evidence: orders OrdersConfigurationProperties.java getPaymentUri, Hostname("payment")
+  - from: orders
+    to: shipping
+    evidence: orders OrdersConfigurationProperties.java getShippingUri, Hostname("shipping")
+  # ...and calls user and carts by URL rather than hostname, which is easy to miss.
+  # OrdersController.newOrder fetches item.address, item.customer, item.card and
+  # item.items, which are URLs it receives in the request body. front-end fills
+  # them in: the first three from its customersUrl (host `user`) and the fourth
+  # from its cartsUrl (host `carts`). So these are real runtime calls from orders,
+  # not from front-end, even though no hostname appears in the orders source.
+  - from: orders
+    to: user
+    evidence: >
+      orders OrdersController.newOrder gets item.customer / item.address /
+      item.card; front-end/api/orders/index.js builds those links from
+      endpoints.customersUrl
+  - from: orders
+    to: carts
+    evidence: >
+      orders OrdersController.newOrder gets item.items;
+      front-end/api/orders/index.js sets it to endpoints.cartsUrl + "/<id>/items"
+
+  # Datastores.
+  - from: orders
+    to: orders-db
+    evidence: orders application.properties spring.data.mongodb.uri mongodb://orders-db:27017
+  - from: carts
+    to: carts-db
+    evidence: carts application.properties spring.data.mongodb.uri mongodb://carts-db:27017
+  - from: catalogue
+    to: catalogue-db
+    evidence: catalogue main.go DSN flag default, tcp(catalogue-db:3306)
+  - from: user
+    to: user-db
+    evidence: complete-demo.yaml user Deployment env, value "user-db:27017"
+
+  # The queue. shipping publishes, queue-master consumes. Both name the broker
+  # directly, so both get an edge to it; there is no edge between the two, because
+  # neither calls the other.
+  - from: shipping
+    to: rabbitmq
+    evidence: shipping application.properties spring.rabbitmq.host=rabbitmq
+  - from: queue-master
+    to: rabbitmq
+    evidence: queue-master application.properties spring.rabbitmq.host=rabbitmq
