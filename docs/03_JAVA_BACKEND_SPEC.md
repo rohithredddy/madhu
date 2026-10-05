@@ -183,6 +183,14 @@ State per replay session. For each new row:
    fewer than that many rows have been played: state `LEARNING`.
 2. When the baseline is complete: compute per-column median and MAD (`RobustStats`), and the threshold with `ConformalThreshold`: split baseline in two halves; first half -> median/MAD; second half -> row scores; threshold = the `ceil((n+1)(1 - alpha)) / n` empirical quantile of those scores (alpha = target false alarm rate). Then state `WATCHING`.
 3. Row score = max over columns of `|x - median| / (1.4826 * MAD + eps)`, NaN skipped.
+   **Same zero-MAD rule as the Python engine** (`05_PYTHON_ANALYZER_SPEC.md` section 3, step 1): when a
+   column's MAD over the baseline is 0 but the column is not constant, use its standard deviation as
+   the scale instead. Without it a column that is flat over most of the baseline gets a scale of about
+   1e-6, and one ordinary wobble produces a row score in the millions - which here means either a
+   false alarm on the first such wobble or, if it happens during threshold calibration, a threshold so
+   high the detector never fires again. Real metrics do this often: measured on RCAEval RE1-OB, 2.7
+   columns per case. `RobustStats` is the one place this belongs, so both the detector and anything
+   else that scores a row inherit it.
 4. If score > threshold for `alarm-consecutive-rows` rows: state `ALARM`, record alarm time and top 5 columns.
 5. After `wait-after-alarm-rows` more rows: run AnalysisService with `mode=REPLAY` (only played rows). State `EXPLAINED`.
 

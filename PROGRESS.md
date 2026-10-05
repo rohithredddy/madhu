@@ -8,19 +8,26 @@ anything waiting on you, then the machine setup and the full list of decisions a
 
 ## Current status
 - Current milestone: **M2 is complete.** Next is M3 (E1 explanation grounding).
-- Next task: M3.1 (`run_c1_grounding.py`), **but open question 9 blocks it** and needs your answer
-  first, because every E1 and E2 number depends on it.
-- **Read the M2.5 log entry before anything else.** The call graph is built and verified, and the
-  first measurement of PARE on real data came with it: **AC@1 0.240 against NSIGMA's 0.848** on the
-  same 125 cases. One cause is diagnosed and is open question 9 (a preprocessing rule that gives a
-  flat column an effectively infinite scale; fixing it lifts PARE to 0.400). The rest is unexplained
-  and is the central research risk. This is the M3.2 gate arriving two tasks early, which is what it
-  was put there for.
-- The news is not all bad: `symptom_rate` falls from 0.088 to 0.040 when the graph is used, which is
-  the direction the paper predicts, and the graph traversal step is measurably helping (+0.15 AC@1).
-- Open questions 1 and 3 to 8 are all settled (decisions 53, 38, 47, 62 to 66). Question 9 is new and
-  blocking. The two items under "Things the human must check by hand" are judgement calls for you; the
-  call-graph one is ready for review now.
+- Next task: M3.1 (`run_c1_grounding.py`). **Nothing is blocked and there are no open questions left.**
+- **Where PARE actually stands on real data, which is the thing to know.** On RE1-OB at delay 0, with
+  the real call graph: AC@1 **0.384**, Avg@5 0.528, against NSIGMA's **0.848**. PARE is less than half
+  as accurate as the simplest baseline at naming the right service. The scaling defect found in M2.5 is
+  fixed (question 9, which lifted it from 0.240), so what remains is a research problem in the residual
+  step, not a bug. **This is the M3.2 gate arriving two tasks early**, which is exactly what it was put
+  there for.
+- **But the paper's central claim does land.** `symptom_rate` - the share of wrong answers that blamed
+  a service calling the real culprit - is **0.136 without the call graph and 0.048 with it**, same
+  engine, same cases. Nearly threefold. AC@1 is identical either way, so the graph is not making PARE
+  right more often; it is making its mistakes far less likely to accuse a victim. That is RQ2, and
+  `00_RESEARCH_PLAN.md` section 15 predicted this exact shape - claims should rest on grounding and
+  symptom rate, not on coarse ranking.
+- **Where to start M3's investigation.** PARE's AC@1 by fault type is MEM 0.600, DELAY 0.520, DISK
+  0.440, LOSS 0.240, **CPU 0.120** - and CPU is where NSIGMA is strongest (0.96). A CPU fault is the
+  easiest case there is, so PARE being worst precisely there points at the residual step misbehaving
+  when the culprit's signal sits in a metric its callees do not propagate.
+- All nine open questions are settled (decisions 38, 47, 53, 62 to 66, 72). The two items under
+  "Things the human must check by hand" are judgement calls for you, and the call-graph one is ready
+  for review now.
 - Indicator scoring, now fixed: the **headline ExpAC@k is strict** (CPU and MEM only, where the right
   metric is not a judgement call); the loose definition is a secondary table, per fault type, with the
   acceptable-set size beside it. Strict and loose score the CPU and MEM cases identically, so the two
@@ -64,6 +71,71 @@ anything waiting on you, then the machine setup and the full list of decisions a
   linear dependency model stops working above about 0.7, because the non-linearity is invisible in
   the normal data it is fitted on. That is a limitation to measure and report in E6, not a bug to
   tune away.
+
+### 2026-10-05 - settling open question 9. PARE 0.240 -> 0.384, and the symptom claim lands.
+The last open question, raised by M2.5 the same day. There are now none.
+
+- **The decision: when a column's MAD is 0 but the column is not constant, score it on its standard
+  deviation.** One change, in `pare.scores.robust_baseline`, which is the only place the epsilon rule
+  lives. Decision 72. The epsilon was written to stop a division by zero and had been quietly setting
+  the scale instead; this is a repair of intent, not a special case.
+- **Chosen on principle, not on the score, because the scores did not separate the options.** All four
+  were measured on all 125 cases across four engines:
+
+  | option | PARE AC@1 | PARE Avg@5 | PARE_NO_RESIDUAL AC@1 |
+  |---|---|---|---|
+  | as the spec said | 0.240 | 0.410 | 0.224 |
+  | **(a) standard deviation when MAD is 0** | **0.384** | **0.528** | 0.384 |
+  | (b) drop the column | 0.400 | 0.544 | 0.400 |
+  | (c) epsilon from the standard deviation | 0.280 | 0.427 | 0.264 |
+
+  (c) is the weakest and was dropped. (a) and (b) differ by **two cases in 125**, which decides
+  nothing, so the choice turned on what each does when it is wrong. (b) removes the column before
+  ranking, so it can silently discard the right answer; (a) at worst scores it less robustly, which is
+  visible and bounded. A metric flat while nothing is wrong and then climbing is exactly a memory
+  leak - this project's own motivating example - and `mem` is the most common flat column in the data
+  (195 occurrences). Measured for completeness: the ground-truth indicator is **never** a flat column
+  anywhere in RE1-OB, so (b) would cost nothing *on this dataset*; that is luck, not a guarantee, and
+  the application accepts user-uploaded CSVs.
+  `ECDF` and `PCA_RECON` are unaffected by (a) and (c), since neither uses a robust scale. They gain
+  about 1.5 points under (b) purely from having fewer columns to rank.
+- **What it bought, and what it did not.** PARE's AC@1 on RE1-OB goes 0.240 -> **0.384**, Avg@5
+  0.410 -> **0.528**, `NO_CLEAR_CAUSE` 41 -> 39. PARE is still well short of NSIGMA's 0.848, so the
+  third item in the M2.5 diagnosis stands: something in the residual step is wrong, and that is M3's
+  question. This fixed the part that was a scaling defect, not the part that is a research problem.
+- **The symptom claim now lands clearly, which is the better news.** `symptom_rate`, the share of
+  wrong top-1 answers that blamed a service calling the real culprit, on the same cases and the same
+  engine, differing only in whether the call graph was supplied: **0.136 without the graph, 0.048 with
+  it.** Close to a threefold reduction. This is RQ2, measured on real data, and it is the paper's
+  central claim rather than a side effect. Note that AC@1 is *identical* (0.384) with and without the
+  graph - the graph is not making PARE pick the right service more often, it is making its mistakes
+  much less likely to be a victim. `00_RESEARCH_PLAN.md` section 15 anticipated exactly this shape of
+  result and said the claims should rest on grounding and symptom rate rather than on coarse ranking.
+- **A pointer for M3, from the per-fault breakdown.** PARE's AC@1 by fault type is now MEM 0.600,
+  DELAY 0.520, DISK 0.440, LOSS 0.240, **CPU 0.120** - and CPU is the fault type NSIGMA handles best
+  (0.96). A CPU fault is the easiest case there is: the broken service's `cpu` rises and its callers'
+  latency follows. PARE being worst exactly there is a strong hint that the residual step is actively
+  harmful when the culprit's own signal is in a metric its callees do not propagate. Worth starting
+  M3's investigation from.
+- How it was tested (commands + result):
+  - `pytest -q` in `analyzer/` -> **377 passed** (6 new). `pytest experiments/tests -q` -> 62 passed.
+    `ruff check .` -> clean.
+  - **Nothing that should have moved, moved.** All 371 pre-existing analyzer tests pass untouched, and
+    a test asserts that any column with a non-zero MAD keeps exactly the scale it had, so no result
+    produced before today changes. The synthetic generator cannot produce a flat column - every
+    synthetic metric carries continuous noise - which is both why M1 never saw the defect and why M1's
+    numbers are unaffected.
+  - `run_m24_compare.py` re-run: **every M2.4 number is byte-identical**, as it must be, since NSIGMA
+    and both RCAEval baselines use mean and standard deviation and never touch a robust scale. A useful
+    check that the fix did not quietly move the baseline the comparison rests on.
+  - `check_graph.py` re-run; `results/m2_5/` now holds the post-fix numbers. The pre-fix ones are in
+    the M2.5 log entry below and in the summary committed with that task.
+- Files changed: `analyzer/pare/scores.py` (the rule, and `RobustBaseline.used_std`),
+  `analyzer/pare/engine.py` (reports the affected columns in `warnings`),
+  `analyzer/tests/test_scores.py`, `docs/05_PYTHON_ANALYZER_SPEC.md` (section 3 steps 1 and 3),
+  `docs/03_JAVA_BACKEND_SPEC.md` (section 4.7, so the Java detector inherits the same rule),
+  `experiments/results/m2_5/*`, `PROGRESS.md`.
+- Left open / next: M3.1. No open questions remain.
 
 ### 2026-10-05 - M2.5 - the static call graphs. M2 is done. And a bad surprise about PARE.
 - What was done: `experiments/graphs/online-boutique.yaml` and `sock-shop.yaml`, a loader and
@@ -1250,8 +1322,20 @@ choose and to declare. What the data shows, and the three options, are written u
   M0.3 (fill in the Environment block) in one commit, then M1.1. No code written yet.
 ## Open questions (for the human)
 
-9. **A column with no robust scale is scored by dividing by the epsilon guard, and it wrecks PARE on
-   real data.** Raised by M2.5. `05` section 0 drops a column when "MAD == 0 **and** std == 0". A
+9. ~~**A column with no robust scale is scored by dividing by the epsilon guard, and it wrecks PARE on
+   real data.**~~ **SETTLED on 2026-10-05** - decision 72, option (a). When the MAD is 0 but the column
+   is not constant, the scale is now the standard deviation; the epsilon is back to doing only the job
+   it was written for. PARE's AC@1 on RE1-OB rises **0.240 -> 0.384** and Avg@5 **0.410 -> 0.528**.
+   Option (b), dropping the column, scored marginally higher (0.400) and was rejected on principle: a
+   metric that is flat while nothing is wrong and then climbs is exactly what a memory leak looks
+   like, and two cases in 125 is not a reason to make the method blind to its own motivating example.
+   Written into `05` section 3 steps 1 and 3, and into `03` section 4.7 for the Java detector, which
+   has the same formula and would have had the same defect.
+
+   <details>
+   <summary>the question as originally raised, and the measurements that settled it</summary>
+
+   Raised by M2.5. `05` section 0 drops a column when "MAD == 0 **and** std == 0". A
    column that is flat over most of the normal period but not entirely flat therefore survives with
    MAD == 0, its scale becomes the epsilon (about 1e-6 x (|median| + 1)), and any move at all scores
    in the millions - one case ranks `paymentservice_load` first at 4,000,000.
@@ -1284,6 +1368,24 @@ choose and to declare. What the data shows, and the three options, are written u
 
    **Blocking M3.1.** Every E1 and E2 number depends on it, so it should be settled before the first
    experiment runs rather than after.
+
+   **How the options actually measured**, 125 cases, PARE and three other engines (the full table is
+   in the 2026-10-05 question-9 log entry):
+
+   | option | PARE AC@1 | PARE Avg@5 |
+   |---|---|---|
+   | as the spec said | 0.240 | 0.410 |
+   | (a) standard deviation when MAD is 0 | **0.384** | **0.528** |
+   | (b) drop the column | 0.400 | 0.544 |
+   | (c) epsilon from the standard deviation | 0.280 | 0.427 |
+
+   (c) is clearly the weakest and was dropped. (a) and (b) differ by two cases in 125, which is not a
+   basis for a methodological choice, so the decision was made on what each one does when it is wrong:
+   (b) discards a column before ranking, so it can silently throw away the right answer, while (a) at
+   worst scores it less robustly. The ground-truth indicator is never a flat column anywhere in RE1-OB,
+   so (b) happens to cost nothing *here* - but that is a property of this dataset, not a safety
+   guarantee, and the application lets users upload their own data.
+   </details>
 
 1. ~~**RCAEval pulls PyTorch.**~~ **SETTLED on 2026-10-04** - decision 53. It does not have to.
    `RCAEval[default]` pulls torch, but the bare package plus the dependencies the wanted baselines
@@ -2117,6 +2219,33 @@ written into the spec files. One line of reason each.
     nothing for every service, so PARE degrades into a robust-z method and still produces plausible
     numbers. Refusing to proceed turns the worst kind of bug - one that only shows up as slightly
     disappointing accuracy months later - into an error message.
+
+### Settling open question 9
+
+72. **A column whose MAD is 0 but which is not constant is scored on its standard deviation.**
+    In `pare.scores.robust_baseline`, the one place the epsilon rule lives. Written into `05` section 3
+    steps 1 and 3, and into `03` section 4.7 so the Java detector inherits it.
+    Reason, in order of weight:
+    - The old behaviour was **meaningless, not merely suboptimal**. With MAD 0 the scale became the
+      epsilon, about 1e-6, so the "robust z" was a raw deviation divided by a millionth. A score of
+      4,000,000 is not a z-score. That alone justifies the change regardless of accuracy, and it is why
+      this is a repair rather than tuning.
+    - **The alternatives did not separate on accuracy**, so the choice had to rest on something else:
+      (a) 0.384, (b) 0.400, (c) 0.280, against 0.240 as specified. Two cases in 125 between the two
+      serious options.
+    - **(b) can silently discard the right answer.** It drops the column before ranking. A metric that
+      is flat while nothing is wrong and then climbs is exactly a memory leak, which is this project's
+      own motivating example, and `mem` is the most common flat column in RE1-OB. (a)'s failure mode is
+      a less-robust score on a minority of columns, which is visible, bounded and reported in
+      `warnings`. Preferring the bounded failure over the silent one is the whole reason this project
+      has a verdict rule and a leakage test.
+    - **(a) leaves every other number exactly as it was.** Any column with a non-zero MAD keeps the
+      scale it had, bit for bit, so no result produced before today moves. A test asserts it. (c) would
+      have perturbed every score slightly for a smaller gain.
+    - The cost, which the paper must state: those columns are no longer scored robustly. The standard
+      deviation is the only spread estimate such a column has.
+    No knob was added for (b). Decision 63 argued against knobs that no planned experiment needs, and
+    nothing in `08` asks for this ablation; the measurement above is on record if it is ever wanted.
 
 ### Order of work
 

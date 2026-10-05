@@ -277,3 +277,98 @@ def test_the_two_scorers_disagree_on_a_lopsided_column():
 
     assert window_score(normal, window) > 0
     assert ecdf_tail_score(normal, window) == pytest.approx(math.log(2001.0))
+
+
+# --- a column with no robust spread -----------------------------------------
+#
+# Settles open question 9 (decision 72). A MAD of zero means more than half the
+# normal values are identical, which is not the same as the column being constant.
+# Before this, such a column kept a scale of only the epsilon, so its "robust z"
+# was the raw deviation divided by about a millionth and any movement scored in
+# the millions. These tests pin the repair and, just as importantly, pin that
+# nothing else moved.
+
+
+def test_a_flat_but_not_constant_column_is_scored_on_its_standard_deviation():
+    """The repair. Half the rows identical, the other half not."""
+    normal = np.array([5.0] * 60 + [5.0, 6.0, 7.0, 4.0, 3.0] * 4)
+    baseline = robust_baseline(normal.reshape(-1, 1))
+
+    assert mad(normal.reshape(-1, 1))[0] == 0.0, "the premise: no robust spread"
+    assert baseline.used_std is not None
+    assert bool(baseline.used_std[0]) is True
+    assert baseline.n_used_std == 1
+    # The scale is the standard deviation, not a millionth of anything. The
+    # epsilon is still added on top, exactly as it is for every other column, so
+    # the "scale is never zero" guarantee holds without a second rule.
+    expected = float(np.std(normal)) + EPS_FACTOR * (abs(float(np.median(normal))) + 1.0)
+    assert baseline.scale[0] == pytest.approx(expected)
+
+
+def test_the_repair_keeps_the_score_of_such_a_column_sane():
+    """The symptom that started this: a score in the millions.
+
+    Measured on RE1-OB, one case ranked a column at 4,000,000 because of it.
+    """
+    normal = np.array([5.0] * 60 + [5.0, 6.0, 7.0, 4.0, 3.0] * 4)
+    window = np.full(20, 9.0)
+
+    score = window_score(normal.reshape(-1, 1), window.reshape(-1, 1))[0]
+    # Roughly "a few standard deviations", which is what a z-score should mean.
+    assert 1.0 < score < 10.0, score
+
+
+def test_a_truly_constant_column_is_left_exactly_as_it_was():
+    """There is nothing to fall back to, and step 0 has already dropped it.
+
+    Pinned because the guarantee "scale is never zero" has to survive the change.
+    """
+    normal = np.full((40, 1), 7.0)
+    baseline = robust_baseline(normal)
+
+    assert baseline.n_used_std == 0
+    assert baseline.scale[0] > 0.0
+    assert baseline.scale[0] == pytest.approx(EPS_FACTOR * (7.0 + 1.0))
+
+
+def test_an_all_nan_column_is_unchanged_by_the_repair():
+    normal = np.full((30, 1), np.nan)
+    baseline = robust_baseline(normal)
+
+    assert baseline.n_used_std == 0
+    assert baseline.median[0] == 0.0
+    assert baseline.scale[0] > 0.0
+
+
+def test_an_ordinary_column_is_untouched_to_the_last_bit():
+    """The reason this change is safe to make after M1 was measured.
+
+    Every column with a non-zero MAD keeps exactly the scale it had, so no result
+    produced before this moves. Asserted against the formula rather than a
+    recorded number, so it cannot drift.
+    """
+    rng = np.random.default_rng(11)
+    normal = rng.normal(100.0, 5.0, size=(400, 6))
+    baseline = robust_baseline(normal)
+
+    assert baseline.n_used_std == 0
+    expected = MAD_TO_SIGMA * mad(normal) + EPS_FACTOR * (
+        np.abs(np.median(normal, axis=0)) + 1.0
+    )
+    assert baseline.scale == pytest.approx(expected)
+
+
+def test_mixed_columns_fall_back_one_by_one():
+    """Only the degenerate column changes; its neighbours do not."""
+    rng = np.random.default_rng(12)
+    ordinary = rng.normal(0.0, 2.0, size=200)
+    flat = np.array([1.0] * 150 + list(rng.normal(1.0, 0.5, size=50)))
+    constant = np.full(200, 3.0)
+    normal = np.column_stack([ordinary, flat, constant])
+
+    baseline = robust_baseline(normal)
+    assert list(baseline.used_std) == [False, True, False]
+    assert baseline.scale[0] == pytest.approx(
+        MAD_TO_SIGMA * mad(ordinary.reshape(-1, 1))[0]
+        + EPS_FACTOR * (abs(float(np.median(ordinary))) + 1.0)
+    )

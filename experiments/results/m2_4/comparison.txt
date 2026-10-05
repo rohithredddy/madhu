@@ -2,11 +2,11 @@
         method  cases   ac1  ac3_distinct  avg5_distinct  ac3_raw  exp_ac1_strict  exp_ac1_loose  mean_candidates  cases_with_nan_score  mean_ms
   RCAEVAL_BARO    125 0.720         0.912         0.8784    0.912            0.66          0.656           51.056                     0  32.6768
 RCAEVAL_NSIGMA    125 0.728         0.904         0.8816    0.896            0.74          0.680           51.056                     0  23.2680
-      A_theirs    125 0.728         0.904         0.8816    0.896            0.74          0.680           51.056                     4  14.7954
-     B_formula    125 0.832         0.920         0.9200    0.920            0.92          0.800           51.056                     0   6.6029
-      C_window    125 0.848         0.944         0.9360    0.936            0.92          0.784           50.232                     0   5.9840
-        D_ours    125 0.848         0.944         0.9344    0.936            0.92          0.784           51.280                     0   4.9000
-        NSIGMA    125 0.848         0.944         0.9344      NaN            0.92          0.784           51.280                     0  19.6106
+      A_theirs    125 0.728         0.904         0.8816    0.896            0.74          0.680           51.056                     4  17.0666
+     B_formula    125 0.832         0.920         0.9200    0.920            0.92          0.800           51.056                     0   7.7331
+      C_window    125 0.848         0.944         0.9360    0.936            0.92          0.784           50.232                     0   6.9012
+        D_ours    125 0.848         0.944         0.9344    0.936            0.92          0.784           51.280                     0   5.6068
+        NSIGMA    125 0.848         0.944         0.9344      NaN            0.92          0.784           51.280                     0  21.9658
 
 exp_ac1_strict: the headline, over the 50 CPU and MEM cases whose indicator is unambiguous.
 exp_ac1_loose*: pooled over all 125 cases. * Do not quote this: it averages a 1-of-51

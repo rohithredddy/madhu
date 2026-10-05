@@ -76,6 +76,18 @@ change-point step, `top_k` is only the length of the returned indicator list.
 
 ### Step 1. Marginal scores (how unusual is each column, ignoring the graph)
 - For each column c: `med_c = median(normal_c)`, `mad_c = 1.4826 * MAD(normal_c) + eps` (eps = 1e-6 x (|med_c| + 1)).
+- **If `MAD(normal_c) == 0` but the column is not constant, use `std(normal_c)` in place of
+  `1.4826 * MAD(normal_c)`.** A MAD of zero says more than half the normal values are identical; the
+  column can still move, it is just flat in its middle half. Without this the scale is only the
+  epsilon, about 1e-6, so the deviation is divided by a millionth and any movement at all scores in
+  the millions - measured on RE1-OB, 2.7 such columns per case, first place in 34 of 125 cases, one of
+  them at 4,000,000, and PARE's AC@1 held down from 0.384 to 0.240. The epsilon exists to stop a
+  division by zero, not to set the scale.
+  The engine records the affected columns in `warnings`, because those columns are no longer scored
+  robustly and a reader should know which they are. A **constant** column is untouched: its standard
+  deviation is zero as well, so there is nothing to fall back to, and step 0 has already dropped it.
+  Full reasoning, and the measurement of the alternative (dropping such columns instead, which scored
+  0.400 but can silently discard the right answer) in decision 72 in `PROGRESS.md`.
 - Per-row robust z: `z_c(t) = (x_c(t) - med_c) / mad_c`.
 - Window score: `marginal_c = |median(abnormal_c) - med_c| / mad_c`, where `abnormal` is the analysis window (Step 2 decides where it starts). Using the median of the window, not the max, makes it robust to single spikes.
 
@@ -115,7 +127,10 @@ For each service s and each of its columns c:
 - If s has no children, or no usable features: residual = `x_c - med_c` (self-score equals marginal score).
 - Otherwise fit `Ridge(alpha=ridge_alpha)` (default 1.0) on standardized features using `normal` rows only. Optional: `LGBMRegressor(n_estimators=100, max_depth=3)` when `dependency_model="lgbm"`.
 - Residuals on normal rows give `res_med_c`, `res_mad_c`.
-- Self-score: `self_c = |median(residual over abnormal window) - res_med_c| / (1.4826 * res_mad_c + eps)`.
+- Self-score: `self_c = |median(residual over abnormal window) - res_med_c| / (1.4826 * res_mad_c + eps)`,
+  with the same zero-MAD rule as step 1: if the residuals have no robust spread, their standard
+  deviation is used. A well-fitted model on a quiet column produces exactly that situation, so the rule
+  matters here as much as it does on raw metrics.
 - Inherited fraction. Compute it on one scale, in the metric's raw units, so the two parts are
   comparable and the number really is a fraction. (An earlier version of this spec divided a
   residual-MAD score by a raw-MAD score, which is not a ratio of like quantities and could leave

@@ -325,6 +325,20 @@ def analyze(request: AnalyzeRequest) -> AnalyzeResult:
         return _empty_result(request, spec, warnings, started)
 
     baseline = robust_baseline(clean.normal)
+    if baseline.n_used_std:
+        # Not a failure, but the reader deserves to know: these columns are scored
+        # on their standard deviation because they have no robust spread at all.
+        # See docs/05 section 3 step 1.
+        flat = [
+            column.name
+            for column, fell_back in zip(clean.columns, baseline.used_std, strict=True)
+            if fell_back
+        ]
+        warnings.append(
+            f"{len(flat)} column(s) are flat for most of the normal period, so they "
+            f"are scored on their standard deviation rather than robustly: "
+            f"{', '.join(sorted(flat))}"
+        )
 
     change_point = None
     if spec.use_change_point:

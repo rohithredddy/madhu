@@ -59,12 +59,27 @@ class RobustBaseline:
     scale: FloatArray
     """Robust stand-in for the standard deviation of each column. Never zero."""
 
+    used_std: FloatArray | None = None
+    """Which columns had no robust spread at all, so their scale is the ordinary
+    standard deviation instead of the MAD. See :func:`robust_baseline`. ``None``
+    means "none of them", which is what a hand-built baseline in a test will mean."""
+
     def __post_init__(self) -> None:
         if self.median.shape != self.scale.shape:
             raise ValueError(
                 f"median and scale must have the same shape, got {self.median.shape} "
                 f"and {self.scale.shape}"
             )
+        if self.used_std is not None and self.used_std.shape != self.scale.shape:
+            raise ValueError(
+                f"used_std must have the same shape as scale, got "
+                f"{self.used_std.shape} and {self.scale.shape}"
+            )
+
+    @property
+    def n_used_std(self) -> int:
+        """How many columns fell back to the standard deviation."""
+        return 0 if self.used_std is None else int(np.count_nonzero(self.used_std))
 
 
 @contextmanager
@@ -104,6 +119,32 @@ def robust_baseline(normal: ArrayLike) -> RobustBaseline:
 
     This is the only place the epsilon rule lives, so every score in the project
     treats a flat column the same way.
+
+    **When the MAD is zero but the column is not constant**, the scale is the
+    ordinary standard deviation instead. This matters more than it sounds, and it
+    is the settlement of open question 9 (decision 72).
+
+    A MAD of zero says more than half the normal values are identical. The column
+    can still move - it is simply flat in its middle half. Before this, such a
+    column kept a scale of just the epsilon, about 1e-6, so the "robust z" became
+    the raw deviation divided by a millionth and any movement at all scored in the
+    millions. On RCAEval RE1-OB that happened to 2.7 columns per case, it decided
+    first place in 34 of 125 cases, and one case ranked a column at 4,000,000.
+    Measured, repairing it lifts PARE's AC@1 from 0.240 to 0.384.
+
+    The epsilon's job was always to stop a division by zero, never to set the
+    scale, so this restores the intent rather than adding a special case. The
+    standard deviation is the only spread estimate such a column has; the cost is
+    that those columns are no longer scored robustly, which `docs/05` section 3
+    step 1 states and which :attr:`RobustBaseline.used_std` reports so a caller can
+    warn about it.
+
+    The alternative - dropping the column - scored marginally better on RE1-OB
+    (AC@1 0.400) but was rejected: it can silently discard the right answer. A
+    metric that is flat while nothing is wrong and then climbs is exactly what a
+    memory leak looks like, and `mem` is the most common flat column in this data.
+    A difference of two cases in 125 is not a reason to make the method blind to
+    its own motivating example.
     """
     data = _as_float_array(normal)
     if data.shape[0] == 0:
@@ -118,8 +159,21 @@ def robust_baseline(normal: ArrayLike) -> RobustBaseline:
     centre = np.nan_to_num(centre, nan=0.0)
     spread = np.nan_to_num(spread, nan=0.0)
 
+    scale = MAD_TO_SIGMA * spread
+    # Columns with no robust spread. A truly constant column is left alone: its
+    # standard deviation is zero too, so there is nothing to fall back to, and
+    # step 0 has already dropped it.
+    no_robust_spread = scale == 0.0
+    used_std = np.zeros(scale.shape, dtype=bool)
+    if no_robust_spread.any():
+        with _quiet_all_nan():
+            deviation = np.asarray(np.nanstd(data, axis=0), dtype=np.float64)
+        deviation = np.nan_to_num(deviation, nan=0.0)
+        used_std = no_robust_spread & (deviation > 0.0)
+        scale = np.where(used_std, deviation, scale)
+
     eps = EPS_FACTOR * (np.abs(centre) + 1.0)
-    return RobustBaseline(median=centre, scale=MAD_TO_SIGMA * spread + eps)
+    return RobustBaseline(median=centre, scale=scale + eps, used_std=used_std)
 
 
 def robust_z(values: ArrayLike, baseline: RobustBaseline) -> FloatArray:
