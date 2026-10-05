@@ -77,7 +77,8 @@ xai-rca/
 
 ```
 # Python
-cd analyzer && pip install -e ".[dev]" && pytest -q
+cd analyzer && pip install -e ".[dev]" && pytest -q      # the pare library
+pytest experiments/tests -q                             # the experiment adapters, from the repo root
 cd analyzer && uvicorn service.app:app --port 8000
 cd experiments && python run_c1_grounding.py --config configs/c1_re1_ob.yaml
 

@@ -8,9 +8,9 @@ anything waiting on you, then the machine setup and the full list of decisions a
 
 ## Current status
 - Current milestone: M1 (Python PARE core)
-- Next task: M2.3 (`experiments/adapters/rcaeval.py` + a test loading 3 cases)
-- Blockers: none for writing the adapter, but **open question 6 needs an answer before any
-  indicator-level number is reported**: DISK, DELAY and LOSS faults have no matching metric column.
+- Next task: M2.4 (reproduce RCAEval's NSigma and BARO on RE1-OB and compare with our NSIGMA)
+- Blockers: none for M2.4. **Open question 6 still needs an answer before any indicator-level number
+  is reported**: DISK, DELAY and LOSS faults have no matching metric column.
 - Blockers: none. Open question 3, which would have made the M1.10 synthetic check meaningless, was
   settled on 2026-10-03 (decision 38).
 
@@ -52,6 +52,52 @@ anything waiting on you, then the machine setup and the full list of decisions a
   linear dependency model stops working above about 0.7, because the non-linearity is invisible in
   the normal data it is fitted on. That is a limitation to measure and report in E6, not a bug to
   tune away.
+
+### 2026-10-05 - M2.3 - the RCAEval adapter
+- What was done: `experiments/adapters/rcaeval.py` with `list_cases()` and `load_case()`, returning
+  the `Case` and `CaseData` shapes `08` section 3 specifies. It is the only place that knows what an
+  RCAEval folder looks like; everything downstream sees a `Case` and never a CSV.
+  - It **does not import RCAEval**. The data is plain CSV, so reading it needs only pandas, and
+    keeping the dependency out means the experiments run in the analyzer environment next to `pare`
+    rather than in the separate RCAEval one - which matters, because the two cannot share an
+    environment (RCAEval pins numpy 1.x, the analyzer uses 2.x). Only the download script and the
+    M2.4 baseline comparison need RCAEval itself. Decision 55.
+  - The three M2.2 findings are handled: the duplicate `time` column is dropped, no schema is
+    assumed, and columns whose service is not in an explicit allowlist for the system are removed and
+    reported. No rate conversion, since M2.2 established there are no counters.
+  - `normal_mode` supports both the standard protocol (`inject_gap`) and the honest variant
+    (`alarm_lookback`) that `08` section 4 asks E3 to report alongside, so the comparison is a flag
+    rather than a second code path written later.
+- On ground truth, the adapter records rather than guesses: `gt_indicator` is set only for CPU and
+  MEM, where M2.2 measured an unambiguous answer, and is **None** for DISK, DELAY and LOSS.
+  `acceptable_indicators` always carries the full set. An experiment must therefore choose the strict
+  or the loose definition explicitly, which is what open question 6 is about - the adapter cannot
+  quietly pick one.
+- How it was tested (commands + result):
+  - `pytest experiments/tests -q` -> **20 passed**. They skip cleanly when the data is absent, so a
+    fresh clone does not fail its test run for want of a 175 MB download.
+  - `list_cases` finds **125 cases**, 25 per fault type, 25 per broken service, with 50 having an
+    unambiguous indicator - exactly the M2.2 counts.
+  - Three cases are loaded as the task asks, chosen at index 0, 60 and 124 so that both collection
+    batches are covered.
+  - The M2.2 findings are pinned as tests rather than left as prose: the duplicate `time` column is
+    gone, every column maps to a known service, and the contaminated case comes back with its nine
+    foreign columns removed and a warning saying so, while still keeping its own.
+  - End to end: a loaded case drives `analyze()` and produces a finite ranking.
+  - A test asserts the frames and column map an engine receives carry no hint of the answer
+    (hard rule 4) - ground truth lives on the `Case`, which the engine never sees.
+- A note on what the first end-to-end run showed, which is **not** a result: on one case PARE missed
+  and NSIGMA hit. That is expected and uninteresting at this point - **no call graph exists yet**, so
+  PARE has nothing to subtract and is just a robust-z method with a re-anchored window. The graph
+  arrives in M2.5, and until then PARE should not be expected to beat a marginal method on real data.
+- Also added: a `ruff.toml` at the repository root, with the same rules as `analyzer/pyproject.toml`.
+  `experiments/` was outside the analyzer's config and so was being linted by a different standard,
+  which is how two findings appeared only when it was checked by hand.
+- Files changed: new `experiments/adapters/rcaeval.py`, `experiments/adapters/__init__.py`,
+  `experiments/tests/test_rcaeval_adapter.py`, `experiments/conftest.py`, `ruff.toml`;
+  `PROJECT_RULES.md` (section 6 now gives the command for the experiment tests), `docs/07_TASKS.md`,
+  `PROGRESS.md`.
+- Left open / next: M2.4, reproducing RCAEval's own NSigma and BARO and checking ours agrees.
 
 ### 2026-10-04 - M2.2 - what is actually inside RE1 Online Boutique
 No code was written. This is the inspection `07` M2.2 asks for, recorded before the adapter is built.
@@ -1586,6 +1632,22 @@ written into the spec files. One line of reason each.
     alternative was a canonical result file that permanently omitted the two slow engines. Replacing
     rather than appending per engine means a repeated run refreshes a result instead of silently
     weighting that engine twice in the summary.
+
+### M2.3 choices
+
+55. **The adapter does not import RCAEval.** It reads the CSV files directly with pandas.
+    Reason: the data is plain CSV, and importing RCAEval would force every experiment into the
+    separate `.venv-rcaeval` environment, which cannot also hold `pare` because RCAEval pins
+    numpy 1.x against the analyzer's 2.x. Keeping the adapter dependency-free lets the loading, the
+    engines and the metrics all live in one process. RCAEval is still needed for the download script
+    and for running their baselines in M2.4, which is a separate step.
+
+56. **`gt_indicator` is None for DISK, DELAY and LOSS rather than a guess.** The adapter also exposes
+    `acceptable_indicators` with the full candidate set.
+    Reason: RE1-OB has no `disk` and no `loss` metric, and M2.2 measured that DISK splits roughly
+    evenly between `cpu` and the latency percentiles. Any single choice would be an invention
+    presented as data. Leaving it None forces an experiment to state which definition it is using,
+    which is exactly the decision open question 6 is waiting on.
 
 ### Order of work
 

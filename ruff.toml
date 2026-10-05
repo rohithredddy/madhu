@@ -1,0 +1,9 @@
+# Lint settings for everything outside analyzer/, which carries its own copy in
+# analyzer/pyproject.toml. Kept identical to it on purpose: code should not be
+# held to a different standard depending on which folder it lives in.
+line-length = 100
+target-version = "py310"
+
+[lint]
+# E/F: pycodestyle + pyflakes, I: import order, UP: modern syntax, B: likely bugs
+select = ["E", "F", "I", "UP", "B"]
