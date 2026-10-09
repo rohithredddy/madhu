@@ -1,0 +1,21 @@
+Replay alarm timing, measured through the running backend (experiments/check_replay_alarms.py),
+speed 50, PARE after the alarm. The detector is never told the injection time; it is read
+from each case afterwards only to score when the alarm came.
+
+Same 24 cases both times: the 12 synthetic cases and the first 12 replayable RE1 Sock Shop cases.
+
+                         fixed baseline (spec)    rolling baseline (decision 83, default)
+                         early   after            early   after
+RE1 Sock Shop (12)         4       8                2      10
+synthetic (12)             7       5               10       2
+
+Rolling baseline, alarms after the injection: median 16 s late, max 62 s.
+
+Why synthetic cases alarm early: the triggering columns are mem and rps (alarms_*.csv,
+top columns recorded in the diagnostic re-run). pare.synthetic makes mem a random walk and
+rps a slow sine load, so their "normal" range keeps growing; any level-based detector learns
+too narrow a range from a finite baseline. That is a property of the generator, which is
+fixed for the research, not something to tune the detector against. Recorded RCAEval cases
+behave like real telemetry and are the ones the replay page recommends.
+
+Files: alarms_fixed_baseline.csv, alarms_rolling_baseline.csv.

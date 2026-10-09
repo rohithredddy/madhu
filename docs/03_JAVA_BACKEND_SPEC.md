@@ -67,6 +67,8 @@ app:
     alarm-consecutive-rows: 3
     wait-after-alarm-rows: 20
     target-false-alarm-rate: 0.01
+    recalibrate-every-rows: 30    # rolling baseline, decision 83; 0 = fixed baseline
+    gap-rows: 60
   benchmark:
     workers: 2
 ```
@@ -192,6 +194,16 @@ State per replay session. For each new row:
    columns per case. `RobustStats` is the one place this belongs, so both the detector and anything
    else that scores a row inherit it.
 4. If score > threshold for `alarm-consecutive-rows` rows: state `ALARM`, record alarm time and top 5 columns.
+   - **Rolling baseline (decision 83, added in M10).** With `recalibrate-every-rows` > 0 (default 30),
+     every that many rows, and only while no alarm is building, the statistics and threshold are
+     re-learned from the `baseline-rows` rows that ended `gap-rows` (default 60) rows ago, and live rows
+     are scored against the newer half of that window so they are as far from their statistics as the
+     calibration rows were. Slow drift is followed; a sudden fault falls inside the gap and fires before
+     it can be absorbed. Still no use of `injectTime`. Measured through the running application on 24
+     replays (`experiments/results/m10_replay/`): on recorded RCAEval cases, early (false) alarms fall
+     from 4 of 12 to 2 of 12, with the alarm a median 16 s after the fault. Generated cases still alarm
+     early, on their random-walk `mem` and sine-wave load columns - a property of the generator, which
+     the replay page states. `recalibrate-every-rows: 0` restores the fixed baseline below.
 5. After `wait-after-alarm-rows` more rows: run AnalysisService with `mode=REPLAY` (only played rows). State `EXPLAINED`.
 
 Unit tests: hand-computed median/MAD; threshold on known data; alarm fires at the right row on synthetic rows; no alarm on pure normal data with fixed seed; and a test that the detector is given no

@@ -37,7 +37,9 @@ public record AppProperties(
             @Min(20) int baselineRows,
             @Min(1) int alarmConsecutiveRows,
             @Min(0) int waitAfterAlarmRows,
-            @DecimalMin("0.0001") @DecimalMax("0.5") double targetFalseAlarmRate) {}
+            @DecimalMin("0.0001") @DecimalMax("0.5") double targetFalseAlarmRate,
+            @Min(0) int recalibrateEveryRows,
+            @Min(0) int gapRows) {}
 
     /** Settings of the background benchmark jobs (docs/03 section 4.9). */
     public record Benchmark(@Min(1) int workers) {}

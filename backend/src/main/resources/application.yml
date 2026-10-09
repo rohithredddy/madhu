@@ -23,6 +23,11 @@ app:
     alarm-consecutive-rows: 3
     wait-after-alarm-rows: 20
     target-false-alarm-rate: 0.01
+    # Rolling baseline (decision 83): every this many rows, while no alarm is
+    # building, re-learn normal from the baseline-rows rows that ended gap-rows
+    # ago, so slow drift is followed. 0 = the fixed baseline of docs/03 s4.7.
+    recalibrate-every-rows: 30
+    gap-rows: 60
   benchmark:
     workers: 2
 

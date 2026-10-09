@@ -61,7 +61,7 @@ Compare mode: the explanation card, graph and bar chart appear side by side for 
 - When EXPLAINED: the explanation card and the cause vs symptom chart slide in, with a link "open full analysis".
 
 ### 3.5 Synthetic lab `/lab`
-- Sliders and selects: number of services (5 to 40), fault type (`LATENCY`, `CPU`, `MEM`, `ERROR`), propagation strength (0.2 to 1.0), **amplification (0 to 2, default 0.5)**, noise (`LOW` / `MEDIUM` / `HIGH`), root service (random or chosen), seed.
+- Sliders and selects: number of services (5 to 40), fault type (`LATENCY`, `CPU`, `MEM`, `ERROR`), propagation strength (0.2 to 1.0), **amplification (0 to 2, default 0.25)**, noise (`LOW` / `MEDIUM` / `HIGH`), root service (random or chosen), seed.
 - The API values are the UPPERCASE strings listed above, sent exactly as in `06_DATA_CONTRACTS.md`
   section 3. The UI may show them in a friendlier case, but it must not invent other values.
 - "Generate and analyze": creates the case, then runs compare with PARE, PARE_NO_RESIDUAL and SHAP_IFOREST.
@@ -70,8 +70,11 @@ Compare mode: the explanation card, graph and bar chart appear side by side for 
   callers." Amplification, not propagation strength, is the control that produces that effect:
   with purely linear propagation a caller can never look worse than the service that broke, however
   high the propagation. The reason is in `05_PYTHON_ANALYZER_SPEC.md` section 5.
-- Worth knowing when demonstrating: around 0.5 the ordinary methods are fooled and PARE is not,
-  which is the point of the page. Above about 0.7 neither works, so do not present that as a PARE
+- Worth knowing when demonstrating: around 0.25 the ordinary methods start to be fooled and PARE
+  usually is not, which is the point of the page. (Corrected in M10 from "around 0.5": decision 38's
+  table, measured with the real residual model, puts PARE's advantage at 0.25 - 1.00 against 0.80 -
+  and shows it mostly gone by 0.5, 0.53 against 0.43. The earlier figure came from a least-squares
+  proxy.) Above about 0.7 neither works, so do not present that as a PARE
   failure - it is a limit of metric-only analysis and the page should say so.
 
 ### 3.6 Benchmark `/benchmark`

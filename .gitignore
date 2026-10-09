@@ -45,3 +45,7 @@ experiments/results/*/*
 .idea/
 *.iml
 .DS_Store
+.gstack/
+# The replay alarm-timing check (decision 83): 24 rows per file, and the evidence
+# behind a default the application ships with, so it is tracked whole.
+!experiments/results/m10_replay/*

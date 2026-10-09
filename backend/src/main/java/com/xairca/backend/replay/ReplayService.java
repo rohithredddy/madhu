@@ -71,7 +71,8 @@ public class ReplayService {
         // The detector is built from the column count and the replay settings only.
         // It is never told when the fault was injected (docs/03 section 4.7).
         OnlineDetector detector = new OnlineDetector(data.nColumns(), settings.baselineRows(),
-                settings.alarmConsecutiveRows(), settings.targetFalseAlarmRate());
+                settings.alarmConsecutiveRows(), settings.targetFalseAlarmRate(),
+                settings.recalibrateEveryRows(), settings.gapRows());
         String chosen = engine == null || engine.isBlank() ? properties.defaultEngine() : engine;
         ReplaySession session = new ReplaySession(UUID.randomUUID().toString(), data, chosen, speed,
                 detector, settings.waitAfterAlarmRows());

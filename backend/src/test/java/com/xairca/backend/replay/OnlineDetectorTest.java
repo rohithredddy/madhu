@@ -60,6 +60,44 @@ class OnlineDetectorTest {
         assertThat(detector.alarmTimeSec()).isNull();
     }
 
+    /** Rows whose level drifts slowly upward (+0.02 sd per row) with a step at stepRow. */
+    private static double[][] drifting(int n, int stepRow, long seed) {
+        Random random = new Random(seed);
+        double[][] rows = new double[n][2];
+        for (int r = 0; r < n; r++) {
+            rows[r][0] = 10 + 0.02 * r + random.nextGaussian();
+            rows[r][1] = 50 + random.nextGaussian();
+            if (r >= stepRow) {
+                rows[r][1] += 15;
+            }
+        }
+        return rows;
+    }
+
+    private static Integer firstAlarm(OnlineDetector detector, double[][] rows) {
+        for (int r = 0; r < rows.length; r++) {
+            detector.push(T0 + r, rows[r]);
+            if (detector.state() == OnlineDetector.State.ALARM) {
+                return r;
+            }
+        }
+        return null;
+    }
+
+    @Test
+    void aFixedBaselineMistakesSlowDriftForAFault() {
+        // Decision 83's motivating failure: the drifting column leaves the range the
+        // first 300 rows saw long before the real fault at row 900.
+        Integer alarm = firstAlarm(new OnlineDetector(2, 300, 3, 0.01), drifting(1200, 900, 3));
+        assertThat(alarm).isNotNull().isLessThan(900);
+    }
+
+    @Test
+    void aRollingBaselineFollowsDriftAndStillCatchesTheFault() {
+        Integer alarm = firstAlarm(new OnlineDetector(2, 300, 3, 0.01, 30, 60), drifting(1200, 900, 3));
+        assertThat(alarm).isNotNull().isBetween(900, 905);
+    }
+
     @Test
     void scoresAreNotComputedWhileLearning() {
         OnlineDetector detector = new OnlineDetector(3, 10, 3, 0.01);
@@ -77,8 +115,9 @@ class OnlineDetectorTest {
         for (Constructor<?> constructor : OnlineDetector.class.getConstructors()) {
             assertThat(Arrays.stream(constructor.getParameters()).map(Parameter::getName))
                     .noneMatch(name -> name.toLowerCase().contains("inject"));
+            // Only counts and a rate: no time of any kind can be passed in.
             assertThat(constructor.getParameterTypes())
-                    .containsExactly(int.class, int.class, int.class, double.class);
+                    .allMatch(type -> type == int.class || type == double.class);
         }
         for (Method method : OnlineDetector.class.getMethods()) {
             assertThat(method.getName().toLowerCase()).doesNotContain("inject");

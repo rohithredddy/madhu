@@ -25,7 +25,7 @@ public final class TestData {
     public static AppProperties properties(Path dataDir, int baselineRows) {
         return new AppProperties(dataDir.toString(), dataDir.resolve("cases").toString(),
                 dataDir.resolve("uploads").toString(), "http://localhost:1", 2000, "PARE", 30, 300,
-                120, new AppProperties.Replay(3, baselineRows, 3, 20, 0.01),
+                120, new AppProperties.Replay(3, baselineRows, 3, 20, 0.01, 30, 60),
                 new AppProperties.Benchmark(2));
     }
 
