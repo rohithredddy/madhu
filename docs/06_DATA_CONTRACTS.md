@@ -231,7 +231,9 @@ symptom_error, tied_top1, symptom_share, symptom_chance, verdict, runtime_s
   call it - the symptom rate a wrong answer picked at random would get on this case. Empty if no
   graph. A symptom rate is reported next to this floor, never alone.
 
-- `verdict`: `ROOT_CAUSE_FOUND` or `NO_CLEAR_CAUSE`, as returned by the engine.
+- `verdict`: `ROOT_CAUSE_FOUND` or `NO_CLEAR_CAUSE`, as returned by the engine. RCAEval's own
+  baselines (method names `RCAEVAL_*`, scored by `score_rcaeval.py`) have no verdict concept and carry
+  `NO_VERDICT`. Empty means the run failed.
 
 E5 (faithfulness and stability) does not write into `cases.csv`. It writes its own files in the
 same run folder, because it has a different shape (one row per case, method and k, or per

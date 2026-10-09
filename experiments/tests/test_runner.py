@@ -17,7 +17,9 @@ import pandas as pd
 import pytest
 import yaml
 
-from experiments.run_c1_grounding import _combine, _read_config, _summarise
+from experiments.experiment import combine as _combine
+from experiments.experiment import read_config as _read_config
+from experiments.experiment import summarise as _summarise
 from experiments.runner import (
     CASES_CSV_COLUMNS,
     CaseRow,

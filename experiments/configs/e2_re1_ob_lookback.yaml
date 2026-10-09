@@ -1,0 +1,42 @@
+# E2 (RCA accuracy) and E3 (delay sweep) on RCAEval RE1 online-boutique, normal window "alarm_lookback".
+#
+#   analyzer/.venv/Scripts/python.exe experiments/run_rca.py \
+#       --config experiments/configs/e2_re1_ob_lookback.yaml
+#
+# docs/08 section 4. The e2_re1_* configs of one normal mode differ only in run_id,
+# system and graph, so they can be pooled like E1 (configs/e2_re1.yaml).
+
+run_id: e2_re1_ob_lookback
+
+dataset: RE1
+system: online-boutique
+
+# The proposed method, its three ablations, and the two baselines run in our
+# environment. RCAEval's own baselines (NSigma, BARO, epsilon-Diagnosis, CIRCA,
+# RCD, PC-PageRank) are run by run_rcaeval_baselines.py and scored by
+# score_rcaeval.py.
+methods:
+  - PARE
+  - PARE_NO_RESIDUAL
+  - PARE_NO_CP
+  - PARE_LGBM
+  - NSIGMA
+  - SHAP_IFOREST
+
+# E3's sweep. Delay 0 is E2's main table.
+delays_s:
+  - 0.0
+  - 30.0
+  - 60.0
+  - 120.0
+
+graph: online-boutique
+
+# inject_gap: the standard RCAEval protocol, normal ends 30 s before injection.
+# alarm_lookback: normal ends 300 s before the alarm; the injection time is never
+# used. docs/08 section 4, "Stated assumption".
+normal_mode: alarm_lookback
+
+seed: 42
+n_jobs: -2
+limit: null

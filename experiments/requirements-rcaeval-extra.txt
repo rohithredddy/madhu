@@ -1,0 +1,11 @@
+# Installed with --no-deps on top of requirements-rcaeval.txt (task M4.2), so that
+# RCAEval's epsilon-Diagnosis (`e_diagnosis`) can run. It imports
+# `pyrca.analyzers.epsilon_diagnosis` from Salesforce's PyRCA, which needs only
+# these four. A normal install of sfr-pyrca would downgrade scikit-learn to 1.1.3
+# and pull javabridge (a Java build), neither of which the method uses.
+#
+#   uv pip install --python .venv-rcaeval/Scripts/python.exe --no-deps -r requirements-rcaeval-extra.txt
+sfr-pyrca==1.0.1
+dill==0.4.1
+pyyaml==6.0.3
+setuptools==80.10.2
