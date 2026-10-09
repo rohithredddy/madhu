@@ -41,13 +41,14 @@ dependencies = [
 dev = [
     "pytest>=9.1.1",
     "ruff>=0.16.10",
+    # FastAPI's TestClient (starlette.testclient) needs it, for tests/test_service.py.
+    "httpx2>=2.13.1",
 ]
 
-# Only "pare" is declared. The FastAPI "service" package does not exist until
-# M7.1 and declaring it now would break the install; `uvicorn service.app:app`
-# runs from the analyzer/ directory anyway.
+# Both packages are declared: "pare" (the library) and "service" (the FastAPI app,
+# M7). `uvicorn service.app:app` runs from the analyzer/ directory either way.
 [tool.setuptools]
-packages = ["pare"]
+packages = ["pare", "service"]
 
 [tool.setuptools.dynamic]
 version = { attr = "pare.__version__" }

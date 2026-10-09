@@ -399,8 +399,7 @@ def load_case(
             instead and never uses the injection time, which is the honest variant
             experiment E3 reports alongside (`docs/08` section 4).
     """
-    frame = pd.read_csv(case.path / METRICS_FILE.get(case.system, "data.csv"))
-    frame, columns, warnings = _clean(frame, case)
+    frame, columns, warnings = read_case_frame(case)
 
     alarm_time_sec = float(case.inject_time_sec + delay_s)
     times = frame["time"]
@@ -441,6 +440,19 @@ def load_case(
 
 
 # --- reading one file -------------------------------------------------------
+
+
+def read_case_frame(case: Case) -> tuple[pd.DataFrame, list[ColumnInfo], list[str]]:
+    """The whole cleaned series of one case, before any window is cut.
+
+    One `time` column plus the metric columns that belong to the system, the
+    explicit column map, and a note of anything removed. `load_case` cuts its
+    windows from this, and `export_cases.py` writes it to disk for the
+    application, so both see exactly the same columns.
+    """
+    frame = pd.read_csv(case.path / METRICS_FILE.get(case.system, "data.csv"))
+    return _clean(frame, case)
+
 
 
 def _clean(
