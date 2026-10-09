@@ -1,0 +1,4 @@
+M9.5 consistency check: PARE, delay 0 s, the first 20 RE1-OB cases by case id.
+Python run_rca.py (results/e2_re1_ob) AC@1 = 0.250
+Java benchmark (through the backend and the engine service) AC@1 = 0.250
+same top-1 service on 20 of 20 cases, same rank of the true service on 20 of 20, same verdict on 20 of 20
