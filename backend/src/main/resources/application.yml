@@ -1,0 +1,65 @@
+# Configuration for the xai-rca backend. docs/03_JAVA_BACKEND_SPEC.md section 3.
+
+server:
+  port: 8080
+
+app:
+  # Where cases, uploads and the database live. From the XAIRCA_DATA_DIR
+  # environment variable; the default works when started from backend/.
+  # Resolved to an absolute path at startup and logged on one line.
+  data-dir: ${XAIRCA_DATA_DIR:${user.dir}/../data}
+  cases-dir: ${app.data-dir}/cases
+  uploads-dir: ${app.data-dir}/uploads
+  engine-url: http://localhost:8000
+  engine-timeout-ms: 10000
+  default-engine: PARE
+  # The Java side of the window table in docs/05 section 3 step 2.
+  normal-gap-seconds: 30
+  recent-before-seconds: 300
+  recent-after-seconds: 120
+  replay:
+    max-sessions: 3
+    baseline-rows: 300
+    alarm-consecutive-rows: 3
+    wait-after-alarm-rows: 20
+    target-false-alarm-rate: 0.01
+  benchmark:
+    workers: 2
+
+spring:
+  application:
+    name: xai-rca-backend
+  datasource:
+    # Built from app.data-dir, so the database is always beside the cases.
+    url: jdbc:h2:file:${app.data-dir}/db/xairca;AUTO_SERVER=FALSE
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  h2:
+    console:
+      enabled: false
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 60MB
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    com.xairca: INFO
+
+---
+# The H2 console only in the dev profile (docs/03 section 1).
+spring:
+  config:
+    activate:
+      on-profile: dev
+  h2:
+    console:
+      enabled: true

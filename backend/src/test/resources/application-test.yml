@@ -1,0 +1,11 @@
+# Tests never touch the real data folder or the file database (docs/03 section 1).
+# Each Spring test points app.data-dir at its own temporary folder.
+spring:
+  datasource:
+    url: jdbc:h2:mem:xairca-test;DB_CLOSE_DELAY=-1
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+logging:
+  level:
+    com.xairca: WARN

@@ -1,0 +1,57 @@
+{
+  "caseId": "tiny",
+  "source": "SYNTHETIC",
+  "system": "tiny-test",
+  "faultType": "LATENCY",
+  "injectTimeSec": 1700000150,
+  "groundTruth": {
+    "service": "db",
+    "indicator": "db_latency"
+  },
+  "columns": [
+    {
+      "name": "front_latency",
+      "service": "front",
+      "metric": "latency"
+    },
+    {
+      "name": "front_cpu",
+      "service": "front",
+      "metric": "cpu"
+    },
+    {
+      "name": "mid_latency",
+      "service": "mid",
+      "metric": "latency"
+    },
+    {
+      "name": "mid_cpu",
+      "service": "mid",
+      "metric": "cpu"
+    },
+    {
+      "name": "db_latency",
+      "service": "db",
+      "metric": "latency"
+    },
+    {
+      "name": "db_cpu",
+      "service": "db",
+      "metric": "cpu"
+    }
+  ],
+  "graph": {
+    "source": "SYNTHETIC_TRUE",
+    "edges": [
+      {
+        "from": "front",
+        "to": "mid"
+      },
+      {
+        "from": "mid",
+        "to": "db"
+      }
+    ]
+  },
+  "notes": "hand-made test case: a latency step in db at row 150, inherited by mid and front"
+}
