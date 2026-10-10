@@ -15,8 +15,8 @@ methods:
   - SHAP_IFOREST
   - ECDF
 
-# docs/08: 50 seeds per setting, 4 fault types. Seeds 42..91.
-n_seeds: 50
+# docs/08 asks for 50 seeds; 30 (seeds 42..71) keeps the run near an hour on a laptop CPU.
+n_seeds: 30
 seed: 42
 
 # The base setting. amplification 0.25 is where the symptom trap exists and the

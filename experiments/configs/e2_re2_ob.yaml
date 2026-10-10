@@ -25,9 +25,6 @@ methods:
 # E3's sweep. Delay 0 is E2's main table.
 delays_s:
   - 0.0
-  - 30.0
-  - 60.0
-  - 120.0
 
 graph: online-boutique
 

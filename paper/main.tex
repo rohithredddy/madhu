@@ -1,0 +1,363 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+% The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{url}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+% Marks text that waits for an experiment still running. Remove before submission.
+\newcommand{\pending}[1]{\textcolor{red}{[pending: #1]}}
+
+\begin{document}
+
+\title{Do Anomaly Explanations Point at the Cause or at the Symptom?\\
+Propagation-Aware Root-Cause Explanations for Microservices}
+
+\author{\IEEEauthorblockN{Author Name}
+\IEEEauthorblockA{\textit{Department} \\
+\textit{Institution}\\
+City, Country \\
+email@example.com}
+\and
+\IEEEauthorblockN{Author Name}
+\IEEEauthorblockA{\textit{Department} \\
+\textit{Institution}\\
+City, Country \\
+email@example.com}
+}
+
+\maketitle
+
+\begin{abstract}
+When a microservice fails, its callers slow down too, and an anomaly detector sees
+many services misbehaving at once. Feature-attribution explanations such as SHAP are
+often used to tell operators which service to look at, but it has not been measured
+whether they name the service that broke or one that merely inherited the problem.
+We measure this on 465 failure cases from the RCAEval benchmark with known ground
+truth. An Isolation Forest explained with TreeSHAP names the faulty service in 54.9\%
+of RE1 cases but the faulty metric in only 10.0\%, and 65.1\% of its wrong answers
+blame a caller of the real culprit, about 4.5 times the chance level. The pattern
+repeats on RE2. We then present PARE, a CPU-only method that uses the service call
+graph to separate what a service does to itself from what it inherits from the
+services it calls. PARE halves the symptom rate of a robust $n$-sigma ranker and of
+TreeSHAP (0.33 against 0.65) at the cost of some top-1 accuracy, and it stays
+accurate when the alarm arrives late, where several published baselines collapse
+(for example, NSigma falls from 0.73 to 0.02 AC@1 at a 120\,s delay). We release the
+method, the evaluation code and a working application.
+\end{abstract}
+
+\begin{IEEEkeywords}
+root cause analysis, microservices, explainable AI, anomaly detection, AIOps
+\end{IEEEkeywords}
+
+\section{Introduction}
+A request to a microservice application passes through a chain of services. When
+one of them degrades, every service that waits on it degrades as well. An operator
+looking at dashboards, or at the output of an anomaly detector, therefore sees a
+group of unhealthy services and has to decide which one is the origin. Getting this
+wrong is costly: the team restarts or rolls back the wrong component while the real
+fault keeps running.
+
+A common answer is to train an anomaly detector on the metrics and explain its
+alarm with a feature-attribution method such as SHAP~\cite{lundberg2017shap} or
+LIME~\cite{ribeiro2016lime}. The explanation ranks metrics by how much they pushed
+the anomaly score, and the top metric is read as the likely cause. This reading has
+a weakness that is specific to distributed systems. Attribution methods explain the
+\emph{detector}, not the \emph{system}. A caller whose latency doubled because its
+callee slowed down is, from the detector's point of view, just as anomalous as the
+callee, and often more so, because latency accumulates along the call chain. The
+explanation is then faithful to the model and still points at a symptom.
+
+We ask three questions. \textbf{RQ1:} how often do common anomaly explanations name
+the true root-cause service and the true root-cause metric? \textbf{RQ2:} when they
+are wrong, do they blame services that call the culprit more often than chance?
+\textbf{RQ3:} can a method that knows the call graph reduce that error, and what
+does it cost? We also report how all methods behave when the detector fires late,
+since in practice alarms rarely coincide with the start of a fault.
+
+Our contributions are:
+\begin{itemize}
+\item A measurement, on real failures with ground truth, of how often
+attribution-based explanations blame symptoms. We introduce a symptom rate with an
+explicit chance level, and score metric-level correctness separately from
+service-level correctness (Section~\ref{sec:e1}).
+\item PARE (Propagation-Aware Residual Explanations), a lightweight method that
+models each service's metrics from those of the services it calls, ranks services
+by the part that is not explained by their callees, and walks the call graph toward
+the deepest abnormal service (Section~\ref{sec:method}).
+\item An evaluation on RCAEval~\cite{pham2025rcaeval} against ten methods,
+including RCAEval's own implementations of NSigma, BARO~\cite{pham2024baro} and
+CIRCA~\cite{li2022circa}, with ablations, a graph-quality study, a controlled
+synthetic study, and a delay study under a protocol that never reveals the
+injection time to any method (Sections~\ref{sec:setup}--\ref{sec:results}).
+\end{itemize}
+The code, the experiment configurations, and an application with a replay mode and
+a live detector are available with the paper.
+
+\section{Background and Related Work}
+\textbf{Root-cause analysis for microservices.} Surveys group the field into
+methods based on metrics, traces, logs, and their combination~\cite{soldani2022survey}.
+Graph-based methods such as MonitorRank~\cite{kim2013monitorrank} and
+MicroRCA~\cite{wu2020microrca} build a dependency graph and rank services with a
+random walk. Causal methods learn or exploit a causal structure: CIRCA uses a
+structural graph and regression-based hypothesis testing~\cite{li2022circa}, and
+RCD learns causal structure from metrics~\cite{ikram2022rcd}. Statistical methods
+score each metric against its normal behaviour; $\varepsilon$-Diagnosis compares
+distributions in small windows~\cite{shan2019ediagnosis}, and BARO combines Bayesian
+online change-point detection with a robust ranking step~\cite{pham2024baro}.
+Sage uses learned causal models for performance debugging~\cite{gan2021sage}.
+RCAEval collects these methods and publishes failure datasets with injected faults
+and known culprits~\cite{pham2025rcaeval}; we use it throughout.
+
+\textbf{Explaining anomaly detectors.} SHAP~\cite{lundberg2017shap} and its tree
+variant TreeSHAP~\cite{lundberg2020tree} assign each input a share of a model's
+output. Paired with an Isolation Forest~\cite{liu2008iforest} they are a common way
+to explain multivariate anomalies. Deletion tests~\cite{samek2017evaluating}
+measure whether removing the highest-ranked inputs removes the model's response. Such
+tests evaluate faithfulness to the model. Our concern is different: whether the
+explanation is grounded in the system's actual failure, which needs ground truth
+about the system rather than about the model.
+
+\textbf{Gap.} RCA papers usually report whether the culprit service is in the top
+$k$. They rarely ask whether the top-ranked metric is the injected one, or whether
+the wrong answers follow the direction of fault propagation. We measure both.
+
+\section{The PARE Method}\label{sec:method}
+PARE takes a normal window of metrics, a recent window around the alarm, a column
+map from metric to service, and a call graph whose edges point from caller to
+callee. It returns a ranked list of services, a role for each (cause, symptom,
+abnormal, normal), and the metric that best explains the top service.
+
+\textbf{Step 1: robust marginal scores.} For each metric $c$ we take the median
+$m_c$ and the scaled median absolute deviation $s_c$ of the normal window~\cite{rousseeuw1993mad}.
+When the MAD is zero but the column still varies, $s_c$ falls back to the standard
+deviation; otherwise a single movement would score in the millions. The marginal
+score of $c$ over an analysis window $W$ is
+\begin{equation}
+M_c = \frac{\left|\operatorname{median}_{t\in W} x_c(t) - m_c\right|}{s_c}.
+\end{equation}
+Using the median over the window, rather than the maximum, keeps a single spike from
+dominating.
+
+\textbf{Step 2: change-point re-anchoring.} Detectors fire after a fault has begun.
+PARE picks the five metrics that move most in a search window around the alarm,
+finds the single best split of each with binary segmentation~\cite{truong2020ruptures},
+and starts the analysis window at the median of these split points.
+
+\textbf{Step 3: residual scores.} For a service $s$ with callees $\mathcal{C}(s)$,
+each metric $c$ of $s$ is regressed on all metrics of $\mathcal{C}(s)$ at lags 0
+and 1 with ridge regression, fitted on the normal window only. Past values of $s$
+itself are excluded, so the model cannot learn the incident after it starts. The
+self score $S_c$ is computed like $M_c$, but on the residual $r_c(t)=x_c(t)-\hat{x}_c(t)$:
+the part of the movement that the callees do not explain. A service with no callees
+keeps $S_c = M_c$. We also report the inherited fraction
+$1-|\Delta r_c|/|\Delta x_c|$, clipped to $[0,1]$, where $\Delta$ is the change in
+median between the normal and analysis windows.
+
+\textbf{Step 4: ranking and traversal.} The service score is $S_s=\max_c S_c$.
+Starting from the service with the largest marginal score, PARE moves to the callee
+with the highest $S$ while that callee's score exceeds the current one, and places
+the end of this walk first. If the top score is below a threshold (3.0), the verdict
+is \emph{no clear cause} and no service is labelled as the cause. A service is
+labelled a symptom when it is clearly abnormal ($M\geq3$) but at least 60\% of its
+top metric's movement is inherited.
+
+PARE needs no GPU and no training beyond one small ridge model per metric. On a
+laptop CPU it takes 2.2\,s per RE1 case on average (measured with eleven cases
+running in parallel), against 6.5\,s for Isolation Forest with TreeSHAP.
+
+\section{Evaluation Setup}\label{sec:setup}
+\textbf{Data.} We use RCAEval RE1~\cite{pham2025rcaeval}: 375 cases from Online
+Boutique~\cite{onlineboutique}, Sock Shop~\cite{sockshop} and Train
+Ticket~\cite{zhou2021trainticket}, 125 each, with CPU, memory, disk, delay and
+packet-loss faults injected into a known service. We also use the 90 Online Boutique
+cases of RE2, which add socket faults and carry traces. Call graphs for Online
+Boutique and Sock Shop were extracted from the applications' deployment manifests.
+Train Ticket has no graph, so it appears only where no graph is needed. For RE2 we
+also built a graph from the traces (caller-to-callee span pairs in the pre-fault
+period only): its nine edges are all present in the manifest graph.
+
+\textbf{Windows and protocols.} The normal window ends 30\,s before the injection,
+as in RCAEval. The alarm is placed at the injection time plus a delay
+$d\in\{0,30,60,120\}$\,s, and methods receive data from 300\,s before to 120\,s
+after the alarm. Because this protocol uses the injection time to end the normal
+window, we repeat every run under an \emph{alarm-only} protocol in which the normal
+window ends 300\,s before the alarm and no method is ever told the injection time.
+Ground truth is used only for scoring.
+
+\textbf{Metrics.} AC@$k$ is the share of cases whose culprit service is in the top
+$k$; Avg@5 is the mean of AC@1..5. ExpAC@$k$ asks the same of the culprit
+\emph{metric}, and is computed only for CPU, memory and socket faults, where the
+injected resource has a metric of its own. Ties are scored as the expected value
+under a random order of the tied items. The \emph{symptom rate} is the share of
+wrong top-1 answers that blame a caller of the culprit. We report it next to its
+chance level: the rate that wrong answers chosen at random among the other services
+would reach on the same cases.
+
+\textbf{Methods.} Explainers: Isolation Forest with TreeSHAP, PCA reconstruction
+error, and an ECDF tail score in the style of ECOD~\cite{li2022ecod}. Rankers: a
+robust $n$-sigma using the same statistics as PARE's Step~1, PARE and three
+ablations (no residual, no change point, LightGBM instead of ridge). RCAEval's own
+NSigma, BARO, CIRCA, $\varepsilon$-Diagnosis, PC-PageRank and RCD were run through
+the RCAEval package with a 300\,s limit per case; RCD did not run with the
+available dependency versions and is counted as failed. All seeds are fixed (42).
+Paired comparisons use the Wilcoxon signed-rank test~\cite{wilcoxon1945} on
+reciprocal rank with Holm correction~\cite{holm1979}.
+
+\section{Results}\label{sec:results}
+
+\subsection{E1: Do explanations name the cause?}\label{sec:e1}
+\input{tables/ieee_e1}
+
+Table~\ref{tab:e1} answers RQ1 and RQ2. TreeSHAP's explanation contains the right
+service often (AC@1 0.549 on RE1, 0.667 on the CPU and memory cases) but its top
+metric is the injected one in only 10.0\% of the cases where that metric is
+unambiguous. On RE2 the figures are 0.533 and 0.067. Its wrong answers lean toward
+the callers of the culprit: 65.1\% of them on RE1 against a chance level of 14.5\%,
+and 42.9\% against 16.0\% on RE2. The simpler PCA reconstruction error is more
+accurate on both questions (ExpAC@1 0.353 on RE1) and about 24 times faster
+(146\,ms against 3.6\,s per case).
+
+Fig.~\ref{fig:example} shows one case. A delay is injected into
+\texttt{checkoutservice}; TreeSHAP spreads its attribution over most services and
+ranks \texttt{frontend}, which calls \texttt{checkoutservice}, first. PARE's score is
+concentrated on the culprit.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig1_motivating_example.pdf}
+\caption{RE1 case \texttt{checkoutservice\_delay-2}: TreeSHAP attribution and PARE
+scores per service, each scaled to the method's maximum. The case was chosen by a
+fixed rule (first case where TreeSHAP blames a caller and PARE ranks the culprit
+first with its top self score).}
+\label{fig:example}
+\end{figure}
+
+\subsection{E2: Root-cause accuracy}
+\input{tables/ieee_e2}
+
+Table~\ref{tab:e2} gives accuracy with an on-time alarm. On the 250 RE1 cases with a
+call graph, the robust $n$-sigma ranker is the most accurate single method at
+$d=0$ (AC@1 0.852) and PARE reaches 0.804. PARE's wrong answers, however, blame a
+caller of the culprit far less often: 0.327 against 0.649 for $n$-sigma and 0.651
+for TreeSHAP. The ablations show where this comes from. Removing the residual step
+leaves accuracy almost unchanged (0.796) but raises the symptom rate to 0.412, so
+the residual is what steers the wrong answers away from callers. Removing the
+change point raises AC@1 to 0.888 at $d=0$: with an on-time alarm there is little
+to re-anchor, and an imprecise split can move the window off the fault. Replacing
+ridge with LightGBM changes little on real data. On RE2, PARE, $n$-sigma and PARE
+without change point tie at 0.922, against 0.533 for TreeSHAP.
+
+Under the alarm-only protocol (lower block of Table~\ref{tab:e2}), RCAEval's NSigma
+and BARO are close to PARE at $d=0$, and its other methods trail well behind.
+\pending{Wilcoxon/Holm p-values for PARE against each method, from experiments/results/e2\_re1/stats}
+
+\subsection{E3: Late alarms}
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig2_avg5_vs_delay.pdf}
+\caption{Avg@5 against detection delay on RE1 Online Boutique. Left: no method is
+told the injection time. Right: the benchmark protocol (our methods only).}
+\label{fig:delay}
+\end{figure}
+
+Fig.~\ref{fig:delay} and the 120\,s columns of Table~\ref{tab:e2} show what happens
+when the alarm is late. RCAEval's NSigma drops from AC@1 0.728 to 0.024 and CIRCA
+from 0.496 to 0.072; BARO, which has its own change-point step, holds better (0.640).
+Under the same alarm-only conditions PARE reaches 0.792 and our robust $n$-sigma
+0.832. The difference is not knowledge of the fault time, which no method has here.
+RCAEval's implementations treat everything before the alarm as normal, so a late
+alarm puts part of the fault into the reference data. Keeping a gap between the
+reference window and the alarm, and scoring the window by its median, avoids this.
+On the 250-case pool PARE's accuracy rises with delay (0.804 to 0.864) and passes
+$n$-sigma at 120\,s (0.836), most likely because the change point then has a real
+onset to find.
+
+\subsection{E4: How good must the graph be?}
+\input{tables/ieee_e4}
+Table~\ref{tab:e4} gives PARE on RE2 with four graphs, always scored against the
+manifest graph. The graph read from traces performs exactly like the manifest
+graph (AC@1 0.922, symptom rate 0.286), even though it lacks four services that
+emit no spans. A graph inferred from metric correlations, or no graph at all, lowers
+AC@1 slightly (0.911) and raises the symptom rate to 0.375. The graph therefore
+matters more for \emph{which} wrong answers PARE gives than for how many.
+
+\subsection{E5: Faithfulness and stability}
+\IfFileExists{tables/ieee_e5.tex}{\input{tables/ieee_e5}}{}
+\pending{E5 deletion, compactness and stability results from experiments/results/e5\_re1}
+The deletion test rewards a ranking that removes the loudest metrics first. PARE
+deliberately ranks a quieter metric that is not explained by its callees above a
+louder inherited one, so this test is expected to favour marginal methods; we
+therefore read it next to accuracy rather than in place of it.
+
+\subsection{E6: When does PARE help?}
+\IfFileExists{figures/fig6_e6_synthetic.pdf}{%
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig6_e6_synthetic.pdf}
+\caption{Controlled synthetic study: AC@1 and symptom rate as one factor varies.}
+\label{fig:e6}
+\end{figure}}{}
+On synthetic systems the true cause and propagation are known exactly, so one factor
+can be changed at a time. Under purely linear propagation a caller can never look
+worse than its callee, and every method finds the culprit. The trap appears when a
+caller degrades more than in proportion once its callee is slow (amplification).
+\pending{E6 numbers from experiments/results/e6\_synthetic}
+
+\section{Discussion and Threats to Validity}
+\textbf{What the residual does and does not do.} On synthetic data the residual is
+what separates cause from symptom. On RE1 its effect on accuracy is small; its
+effect is on the symptom rate. Inspecting the cases where TreeSHAP blames a caller
+and PARE is right shows why: the ridge model, fitted on the narrow normal range,
+extrapolates poorly when a callee moves far outside it, so callers can receive a
+large residual. PARE still ranks the culprit first in these cases because the
+graph walk moves from the caller to its abnormal callee. A model that extrapolates
+more conservatively is a clear direction for future work. Tree ensembles are not
+suitable here, because they cannot extrapolate at all.
+
+\textbf{Construct validity.} For disk, delay and loss faults no metric is the
+injected resource, so we exclude them from ExpAC. The symptom rate needs a call
+graph, which Train Ticket lacks in RE1; its cases count only toward accuracy.
+
+\textbf{External validity.} RE1 and RE2 come from three demo applications with
+injected faults. Real incidents can be slower, overlapping or caused by
+configuration, and results may differ. RCAEval's methods were run as published;
+their accuracy under late alarms reflects how they define the normal period, which
+is a property of the implementations we used rather than of every possible variant.
+
+\textbf{Internal validity.} All numbers in this paper are produced by scripts from
+saved results, with fixed seeds and saved configurations. One design change was
+made after a first run on RE1: the change-point step originally chose which metrics
+to search using data before the alarm only, which fails when the alarm is on time.
+We report the corrected version and keep the diagnosis that led to it.
+
+\section{Implementation}
+The method runs as a Python library with a small REST service. A Java Spring Boot
+backend manages cases, calls the engine, falls back to a Java $n$-sigma ranker when
+the engine is unavailable, and turns results into plain-language explanations. A
+React interface shows the call graph with roles, a chart of marginal against self
+scores, and a replay mode in which an online detector with a conformal threshold
+watches the metrics as they arrive and triggers an explanation when it fires. On 20
+RE1 cases the Java benchmark path and the Python experiments return identical
+rankings.
+
+\section{Conclusion}
+Attribution-based explanations of anomaly detectors often point at services that
+are only suffering from a fault elsewhere, and they rarely name the faulty metric.
+A method that uses the call graph to subtract what a service inherits from its
+callees cuts this symptom error in half on real benchmark failures, keeps working
+when the alarm is late, and costs some top-1 accuracy against a strong robust
+baseline. We think RCA evaluations should report where the wrong answers point, not
+only how many answers are right.
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

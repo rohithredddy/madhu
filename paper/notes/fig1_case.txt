@@ -1,0 +1,6 @@
+Figure 1 case: re1-ob-checkoutservice_delay-2 (fault DELAY, culprit checkoutservice).
+  TreeSHAP top service: frontend (a caller of the culprit).
+  PARE top service: checkoutservice.
+  Chosen by rule: first case id where SHAP_IFOREST commits a symptom error, PARE ranks the culprit alone at 1, and the culprit has PARE's top self score.
+  Observed while choosing (all 20 cases where SHAP blames a symptom and PARE is right): PARE's residual usually RAISES the blamed caller's score above its marginal score; PARE is right through its graph walk, not through the residual.
+One case PARE gets wrong: re1-ob-adservice_cpu-1 (culprit adservice, PARE blamed recommendationservice, verdict NO_CLEAR_CAUSE).
