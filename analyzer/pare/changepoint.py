@@ -203,18 +203,26 @@ def _columns_to_search(
     search: npt.NDArray[np.bool_],
     settings: PareConfig,
 ) -> list[int]:
-    """Pick the columns worth searching: the most unusual ones before the alarm.
+    """Pick the columns worth searching: the most unusual ones in the search window.
 
-    The spec ranks by ``max |z|`` over the recent rows **up to the alarm**. The
-    reasoning is that a column already moving before the detector noticed is a
-    column that knows when things started.
+    Ranked by ``max |z|`` over **the same window that is then searched**, which
+    includes the little data after the alarm (``cp_lookahead_s``; none in replay).
 
-    When the alarm coincides with the very start of the data there are no rows
-    before it to rank by. Rather than give up, the whole search window is used
-    instead; this is noted in the reason the caller receives.
+    Decision 84 (M4.1) changed this from "the rows up to the alarm", which was the
+    original spec. That rule fails exactly when the alarm is on time: with no delay
+    there is no fault data before the alarm at all, so the columns it chose were
+    the noisiest *normal* ones, and their best split was a split in noise.
+    Measured on RE1 Online Boutique and Sock Shop at delay 0: the change point
+    landed a median 73.5 s before the injection, and in 76 of 250 cases the
+    analysis window ended before the fault began, so PARE analysed only normal
+    data (AC@1 0.400 against 0.888 with re-anchoring switched off). With a delay
+    the old rule worked, because the rows before the alarm then hold the fault.
+
+    ``alarm_time_sec`` and ``times`` are kept in the signature for the reason text
+    and for symmetry with the search; the window itself is ``search``.
     """
-    before_alarm = search & (times <= alarm_time_sec)
-    window = before_alarm if int(before_alarm.sum()) >= MIN_ROWS_TO_SEARCH else search
+    del times, alarm_time_sec  # the search window already encodes both
+    window = search
 
     z = np.abs(robust_z(data[window], baseline))
     # A missing reading is not movement, so it counts as zero rather than

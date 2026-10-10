@@ -1,0 +1,7 @@
+Where PARE's change point lands (RE1 Online Boutique + Sock Shop)
+         cases  median_cp_minus_inject_s  cp_before_inject_by_60s_or_more  window_misses_the_fault
+delay_s                                                                                           
+0.0        250                      24.0                               21                        7
+30.0       250                      29.0                                8                        3
+60.0       250                      30.5                                2                        1
+120.0      250                      33.0                                1                        0

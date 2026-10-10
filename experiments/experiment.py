@@ -63,6 +63,16 @@ def run_from_command_line(
     parser.add_argument(
         "--limit", type=int, default=None, help="overrides the config, for a smoke run"
     )
+    parser.add_argument(
+        "--rerun-methods",
+        nargs="+",
+        default=None,
+        help=(
+            "re-run only these methods of an existing run and replace their rows, "
+            "keeping every other method's rows as they were; for when a change to "
+            "one engine leaves the others untouched (decision 84)"
+        ),
+    )
     args = parser.parse_args(argv)
 
     config = read_config(args.config)
@@ -106,9 +116,20 @@ def run_from_command_line(
     )
     note(f"  normal window: {config.get('normal_mode', 'inject_gap')}")
 
+    methods = list(config["methods"])
+    kept: list[CaseRow] = []
+    if args.rerun_methods:
+        unknown = [m for m in args.rerun_methods if m not in methods]
+        if unknown:
+            print(f"--rerun-methods names methods not in this run: {unknown}", file=sys.stderr)
+            return 2
+        kept = _rows_to_keep(args.results_root / str(config["run_id"]), args.rerun_methods)
+        methods = list(args.rerun_methods)
+        note(f"  re-running only {methods}; keeping {len(kept)} rows of the others")
+
     jobs = [
         (case, method, float(delay))
-        for method in config["methods"]
+        for method in methods
         for delay in config["delays_s"]
         for case in cases
     ]
@@ -137,6 +158,7 @@ def run_from_command_line(
         )
     elapsed = time.perf_counter() - started
     note(f"finished in {elapsed:.1f} s")
+    rows = kept + list(rows)
 
     failures = [row for row in rows if row.error]
     if failures:
@@ -152,8 +174,13 @@ def run_from_command_line(
     config_for_disk["elapsed_s"] = round(elapsed, 1)
     config_for_disk["cases"] = len(cases)
     config_for_disk["pare_version"] = pare_version()
+    if args.rerun_methods:
+        # Say in the saved config which rows are newer than the rest.
+        config_for_disk["rerun_methods"] = list(args.rerun_methods)
+        config_for_disk["elapsed_s_of_rerun"] = config_for_disk.pop("elapsed_s")
 
     frame = pd.DataFrame([row.contract_row() for row in rows])
+    frame["runtime_s"] = pd.to_numeric(frame["runtime_s"])
     overall = summarise(frame, by=None)
     by_fault = summarise(frame, by="fault_type")
 
@@ -179,6 +206,31 @@ def run_from_command_line(
     (results_dir / "report.txt").write_text(report + "\n", encoding="utf-8")
     print(f"\nwrote {results_dir}")
     return 0
+
+
+def _rows_to_keep(results_dir: Path, rerun: Sequence[str]) -> list[CaseRow]:
+    """The rows of an earlier run that a partial re-run leaves alone.
+
+    Read back from its cases.csv (and failures.csv, so a kept failure stays a
+    failure rather than turning into a silent gap). Values stay as written; the
+    summaries parse what they need.
+    """
+    cases_file = results_dir / "cases.csv"
+    if not cases_file.exists():
+        raise FileNotFoundError(f"{cases_file} does not exist; run the whole configuration first")
+    old = pd.read_csv(cases_file, keep_default_na=False)
+    errors: dict[tuple[str, str, float], str] = {}
+    failures_file = results_dir / "failures.csv"
+    if failures_file.exists() and failures_file.stat().st_size > 2:
+        for item in pd.read_csv(failures_file).to_dict("records"):
+            key = (str(item["case_id"]), str(item["method"]), float(item["delay_s"]))
+            errors[key] = str(item["error"])
+    kept = []
+    for record in old[~old["method"].isin(rerun)].to_dict("records"):
+        key = (str(record["case_id"]), str(record["method"]), float(record["delay_s"]))
+        record["error"] = errors.get(key, "")
+        kept.append(CaseRow(**record))
+    return kept
 
 
 # --- pooling runs across systems --------------------------------------------

@@ -527,3 +527,24 @@ def test_the_three_system_configs_differ_only_in_system_graph_and_run_id():
         keys = set(configs[0]) | set(other)
         differing = {key for key in keys if configs[0].get(key) != other.get(key)}
         assert differing <= allowed
+
+
+def test_a_partial_rerun_keeps_every_other_methods_rows(tmp_path: Path):
+    """Decision 84's --rerun-methods: replacing one engine's rows must leave the
+    others exactly as they were, failures included."""
+    from experiments.experiment import _rows_to_keep
+
+    frame = _summary_frame(rank_gt_service=[1, 2, 3, 1]).assign(
+        method=["PARE", "PARE", "NSIGMA", "NSIGMA"],
+        case_id=["a", "b", "a", "b"], run_id="r", dataset="RE1", seed=42, delay_s=0.0,
+        rank_gt_indicator_loose=1, top1_indicator="x", tied_gt_indicator_loose=1,
+        symptom_error="", tied_top1=1,
+    )
+    frame.reindex(columns=list(CASES_CSV_COLUMNS)).to_csv(tmp_path / "cases.csv", index=False)
+    pd.DataFrame([{"run_id": "r", "case_id": "b", "method": "NSIGMA", "delay_s": 0.0,
+                   "error": "boom"}]).to_csv(tmp_path / "failures.csv", index=False)
+
+    kept = _rows_to_keep(tmp_path, ["PARE"])
+
+    assert [row.method for row in kept] == ["NSIGMA", "NSIGMA"]
+    assert [row.error for row in kept] == ["", "boom"]

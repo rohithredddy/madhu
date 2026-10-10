@@ -16,31 +16,27 @@
     "error"
   ],
   "engines": [
-    "ECDF",
-    "NSIGMA",
     "PARE",
-    "PARE_LGBM",
-    "PARE_NO_CP",
     "PARE_NO_RESIDUAL",
-    "PCA_RECON",
-    "SHAP_IFOREST"
+    "PARE_NO_CP",
+    "NSIGMA",
+    "ECDF",
+    "PCA_RECON"
   ],
   "pare_version": "0.1.0",
   "python": "3.10.20",
   "platform": "Windows-10-10.0.26200-SP0",
-  "elapsed_s": 797.6,
+  "elapsed_s": 162.8,
   "gate_passed": true,
   "engines_run_this_time": [
-    "ECDF",
-    "NSIGMA",
     "PARE",
-    "PARE_LGBM",
-    "PARE_NO_CP",
     "PARE_NO_RESIDUAL",
-    "PCA_RECON",
-    "SHAP_IFOREST"
+    "PARE_NO_CP",
+    "NSIGMA",
+    "ECDF",
+    "PCA_RECON"
   ],
-  "rows_carried_forward": 0,
+  "rows_carried_forward": 800,
   "engines_in_file": [
     "ECDF",
     "NSIGMA",

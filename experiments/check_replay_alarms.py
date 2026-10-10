@@ -27,15 +27,18 @@ API = "http://localhost:8080/api"
 
 def call(method: str, path: str, body: dict | None = None) -> dict:
     data = None if body is None else json.dumps(body).encode()
-    request = urllib.request.Request(f"{API}{path}", data=data, method=method,
-                                     headers={"Content-Type": "application/json"})
+    request = urllib.request.Request(
+        f"{API}{path}", data=data, method=method, headers={"Content-Type": "application/json"}
+    )
     with urllib.request.urlopen(request, timeout=60) as response:
         text = response.read().decode()
         return json.loads(text) if text else {}
 
 
 def replay(case_id: str, engine: str) -> dict:
-    session = call("POST", "/replay", {"caseId": case_id, "speed": 50, "engine": engine})["sessionId"]
+    session = call("POST", "/replay", {"caseId": case_id, "speed": 50, "engine": engine})[
+        "sessionId"
+    ]
     while True:
         state = call("GET", f"/replay/{session}")
         if state["state"] in ("EXPLAINED", "FINISHED", "STOPPED"):
@@ -54,7 +57,9 @@ def main() -> int:
     listed = call("GET", "/cases?size=1000")["items"]
     rows = []
     for prefix in args.cases:
-        chosen = [c for c in listed if c["caseId"].startswith(prefix) and c["replayable"]][: args.limit]
+        chosen = [c for c in listed if c["caseId"].startswith(prefix) and c["replayable"]][
+            : args.limit
+        ]
         for summary in chosen:
             detail = call("GET", f"/cases/{summary['caseId']}")
             inject = detail["meta"]["injectTimeSec"]
@@ -62,26 +67,41 @@ def main() -> int:
             alarm = state["alarmTimeSec"]
             run = state.get("run") or {}
             evaluation = run.get("evaluation") or {}
-            rows.append({
-                "case_id": summary["caseId"],
-                "alarm_minus_inject_s": None if alarm is None else alarm - inject,
-                "outcome": "never" if alarm is None else ("early" if alarm < inject else "after"),
-                "threshold": state["threshold"],
-                "top_columns_at_alarm": " ".join(state.get("topColumnsAtAlarm") or []),
-                "verdict": (run.get("response") or {}).get("verdict"),
-                "correct_top1": evaluation.get("correctTop1"),
-            })
+            rows.append(
+                {
+                    "case_id": summary["caseId"],
+                    "alarm_minus_inject_s": None if alarm is None else alarm - inject,
+                    "outcome": "never"
+                    if alarm is None
+                    else ("early" if alarm < inject else "after"),
+                    "threshold": state["threshold"],
+                    "top_columns_at_alarm": " ".join(state.get("topColumnsAtAlarm") or []),
+                    "verdict": (run.get("response") or {}).get("verdict"),
+                    "correct_top1": evaluation.get("correctTop1"),
+                }
+            )
             print(rows[-1], flush=True)
 
     frame = pd.DataFrame(rows)
     args.out.mkdir(parents=True, exist_ok=True)
     frame.to_csv(args.out / "alarms.csv", index=False)
-    summary = frame.groupby(frame["case_id"].str.split("-").str[0])["outcome"].value_counts().unstack(fill_value=0)
-    text = "Replay alarm timing (detector never told the injection time)\n" + summary.to_string() + "\n"
+    summary = (
+        frame.groupby(frame["case_id"].str.split("-").str[0])["outcome"]
+        .value_counts()
+        .unstack(fill_value=0)
+    )
+    text = (
+        "Replay alarm timing (detector never told the injection time)\n"
+        + summary.to_string()
+        + "\n"
+    )
     after = frame[frame.outcome == "after"]["alarm_minus_inject_s"]
     if len(after):
-        text += f"\nalarms after the injection: median {after.median():.0f} s late, max {after.max():.0f} s\n"
-    (args.out / "summary.txt").write_text(text, encoding="utf-8")
+        text += (
+            f"\nalarms after the injection: median {after.median():.0f} s late, "
+            f"max {after.max():.0f} s\n"
+        )
+    (args.out / "report.txt").write_text(text, encoding="utf-8")
     print(text)
     return 0
 

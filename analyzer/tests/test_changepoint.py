@@ -293,3 +293,33 @@ def test_on_a_synthetic_case_it_finds_the_injection_time():
     assert abs(found.time_sec - case.inject_time_sec) <= 5, (
         f"estimated {found.time_sec - case.inject_time_sec:+.0f}s from the real injection"
     )
+
+
+def test_an_on_time_alarm_still_finds_the_change_from_the_faulty_column():
+    """Decision 84. With the alarm exactly at the change there is no fault data
+    before it, so ranking columns by their movement *before the alarm* picked the
+    noisiest normal columns and split them in noise - on RE1 the change point
+    landed a median 73.5 s early. Columns are now ranked over the searched window,
+    which includes the rows after the alarm.
+
+    Five normal columns, one of which had a brief unrelated burst well before the
+    alarm (real telemetry has these), plus one that steps at the alarm. The old rule
+    ranked the burst column first and split it at the burst; the estimate must come
+    from the column that actually changed.
+    """
+    rng = np.random.default_rng(3)
+    total, change_at = 400, 340
+    noisy = rng.normal(0.0, 1.0, (total, 5))
+    noisy[150:160, 0] += 6.0  # a burst, 190 rows before the alarm
+    faulty = step_series(change_at=change_at, total=total, size=8.0, seed=4).reshape(-1, 1)
+    values = np.hstack([noisy, faulty])
+    times = START + np.arange(total, dtype=np.float64)
+    columns = [ColumnInfo(f"s{i}_x", f"s{i}", "x") for i in range(6)]
+    baseline = robust_baseline(values[:250])
+    settings = PareConfig(cp_top_k=1, cp_lookback_s=300, cp_lookahead_s=60)
+
+    found = estimate_change_point(times, values, columns, baseline, START + change_at, settings)
+
+    assert found.estimated
+    assert found.columns == ("s5_x",)
+    assert abs(found.time_sec - (START + change_at)) <= 3

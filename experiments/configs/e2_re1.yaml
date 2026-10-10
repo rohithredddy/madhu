@@ -1,0 +1,12 @@
+# E2/E3 pooled over the RE1 systems that have a call graph (Online Boutique,
+# Sock Shop), normal window "inject_gap". Runs nothing; reads the per-system
+# runs, refuses to pool runs whose settings differ. Train Ticket joins once M5.2
+# builds its graph from traces: PARE without a graph is not PARE.
+#
+#   analyzer/.venv/Scripts/python.exe experiments/run_rca.py --config experiments/configs/e2_re1.yaml
+
+run_id: e2_re1
+
+combine_runs:
+  - e2_re1_ob
+  - e2_re1_ss
