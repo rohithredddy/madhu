@@ -93,7 +93,8 @@ change-point step, `top_k` is only the length of the returned indicator list.
 
 ### Step 2. Change-point re-anchoring
 - Purpose: real detectors are late. Find where the change really started.
-- Take the top `cp_top_k` (default 5) columns by `max |z_c(t)|` over `recent` up to the alarm.
+- Take the top `cp_top_k` (default 5) columns by `max |z_c(t)|` over the change-point search window (the same window that is then searched, so it includes the lookahead after the alarm).
+  - Decision 84 (M4.1): this used to be "over `recent` up to the alarm". With an on-time alarm there is no fault data before the alarm, so that rule picked the noisiest normal columns. On RE1 OB+SS at delay 0 the change point landed a median 73.5 s before the injection and the window missed the fault in 76 of 250 cases; after the change, median 24 s after and 7 of 250 missed (`experiments/results/m4_cp/`).
 - For each, take the change-point search window from the table below, standardize it, and find the single best change point with `ruptures.Binseg(model="l2").fit(x).predict(n_bkps=1)`.
   - API checked against the installed `ruptures v1.1.10` on 2026-10-03, so this is not a guess:
     `predict(n_bkps=1)` returns a **list of breakpoint indices whose last element is always

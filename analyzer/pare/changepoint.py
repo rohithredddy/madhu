@@ -12,8 +12,9 @@ detection is late, which is research question RQ4.
 
 The method, from ``docs/05_PYTHON_ANALYZER_SPEC.md`` section 3 step 2:
 
-1. Pick the ``cp_top_k`` columns that look most unusual in the run-up to the
-   alarm. Those are the ones that have something to say about when it started.
+1. Pick the ``cp_top_k`` columns that look most unusual in the window around the
+   alarm (decision 84). Those are the ones that have something to say about
+   when it started.
 2. For each, search a window around the alarm for the single best split point,
    using ``ruptures.Binseg(model="l2")``.
 3. Take the median of those candidates. One column may be fooled by a blip; the
