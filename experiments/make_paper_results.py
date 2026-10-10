@@ -30,10 +30,38 @@ import pandas as pd  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from experiments.make_figures import GRID, INK, INK_SECONDARY, SURFACE  # noqa: E402
+from experiments.make_figures import GRID, INK, INK_SECONDARY  # noqa: E402
 from experiments.make_tables import Table, _num  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[1]
+
+# IEEE two-column layout: a figure in one column is 3.5 in wide, and text in it
+# should print at 7-8 pt in a serif face like the body text. Fonts are embedded
+# as TrueType (fonttype 42), which IEEE PDF checks require.
+COLUMN_IN = 3.5
+plt.rcParams.update({
+    "font.family": "serif",
+    "font.serif": ["Times New Roman", "Times", "STIXGeneral", "DejaVu Serif"],
+    "mathtext.fontset": "stix",
+    "font.size": 8,
+    "axes.labelsize": 8,
+    "xtick.labelsize": 7,
+    "ytick.labelsize": 7,
+    "legend.fontsize": 6.5,
+    "axes.linewidth": 0.6,
+    "pdf.fonttype": 42,
+    "ps.fonttype": 42,
+})
+GRAPH_LEVELS = {"TRUE": "True", "DROP_20": "$-$20%", "ADD_20": "+20%", "NONE": "None"}
+# Print background: plain white, not the screen off-white of make_figures.py.
+SURFACE = "#ffffff"
+# Legend names short enough for a 3.5 in figure.
+FIG_NAMES = {
+    "PARE": "PARE", "PARE_NO_CP": "PARE w/o change pt.", "PARE_NO_RESIDUAL": "PARE w/o residual",
+    "NSIGMA": "Robust $n$-sigma", "SHAP_IFOREST": "IForest+TreeSHAP",
+    "RCAEVAL_NSIGMA": "NSigma (RCAEval)", "RCAEVAL_BARO": "BARO (RCAEval)",
+    "RCAEVAL_CIRCA": "CIRCA (RCAEval)",
+}
 RESULTS = REPO / "experiments" / "results"
 TABLES = REPO / "paper" / "tables"
 FIGURES = REPO / "paper" / "figures"
@@ -251,9 +279,10 @@ def figure6() -> None:
     import yaml
     config = RESULTS / "e6_synthetic" / "config.yaml"
     order = yaml.safe_load(config.read_text(encoding="utf-8"))["factors"] if config.exists() else {}
-    fig, axes = plt.subplots(2, 2, figsize=(7.2, 5.2), dpi=200)
+    fig, axes = plt.subplots(2, 2, figsize=(COLUMN_IN, 3.4), dpi=300)
     fig.patch.set_facecolor(SURFACE)
-    for ax, (factor, metric, ylabel) in zip(axes.flat, panels, strict=True):
+    for letter, ax, (factor, metric, ylabel) in zip("abcd", axes.flat, panels, strict=True):
+        ax.set_title(f"({letter})", fontsize=7, loc="left", color=INK)
         part = frame[frame["factor"] == factor]
         # The order the config lists the levels in, not the alphabetical order of
         # the summary file (which would put "TRUE" after "NONE").
@@ -265,19 +294,19 @@ def figure6() -> None:
             values = [pd.to_numeric(rows.loc[lv, metric], errors="coerce")
                       if lv in rows.index else float("nan") for lv in levels]
             ax.plot(range(len(levels)), values, marker="o", markersize=3,
-                    linewidth=2.2 if method == "PARE" else 1.4,
-                    color=LINE[method], label=NAMES[method], zorder=3)
+                    linewidth=1.6 if method == "PARE" else 1.0,
+                    color=LINE[method], label=FIG_NAMES[method], zorder=3)
         ax.set_xticks(range(len(levels)))
-        ax.set_xticklabels(levels, fontsize=7, color=INK)
-        ax.set_xlabel(FACTOR_NAMES[factor], fontsize=8, color=INK)
-        ax.set_ylabel(ylabel, fontsize=8, color=INK)
+        ax.set_xticklabels([GRAPH_LEVELS.get(lv, lv) for lv in levels], color=INK,
+                           fontsize=7)
+        ax.set_xlabel(FACTOR_NAMES[factor], color=INK)
+        ax.set_ylabel(ylabel, color=INK)
         ax.set_ylim(0, 1.05)
         _style(ax)
-    axes[0, 0].legend(fontsize=6.5, frameon=False, loc="lower left")
-    fig.text(0.01, 0.005, "Synthetic cases, 30 seeds x 4 fault types per point. "
-             "Base: 10 services, propagation 0.8, amplification 0.25, true graph.",
-             fontsize=5.5, color=INK_SECONDARY)
-    fig.tight_layout(rect=(0, 0.02, 1, 1))
+    handles, labels = axes[0, 0].get_legend_handles_labels()
+    fig.legend(handles, labels, frameon=False, loc="upper center", ncol=3,
+               handlelength=1.6, columnspacing=1.0)
+    fig.tight_layout(rect=(0, 0, 1, 0.88), h_pad=0.6, w_pad=0.6)
     _save(fig, "fig6_e6_synthetic")
 
 
@@ -297,32 +326,31 @@ def figure2() -> None:
     # there our normal window is cut using the injection time.
     panels = []
     if lookback is not None:
-        panels.append(("Alarm time only: no method is told the injection time",
+        panels.append(("(a) Alarm time only (no method knows the injection time)",
                        pd.concat([lookback, rcaeval]) if rcaeval is not None else lookback))
-    panels.append(("Benchmark protocol: normal window ends 30 s before the injection", gap))
+    panels.append(("(b) Benchmark protocol (normal ends 30 s before injection)", gap))
     methods = ["PARE", "PARE_NO_CP", "NSIGMA", "SHAP_IFOREST",
                "RCAEVAL_NSIGMA", "RCAEVAL_BARO", "RCAEVAL_CIRCA"]
-    fig, axes = plt.subplots(1, len(panels), figsize=(7.2, 3.8), dpi=200, sharey=True,
+    fig, axes = plt.subplots(len(panels), 1, figsize=(COLUMN_IN, 4.1), dpi=300, sharex=True,
                              squeeze=False)
     fig.patch.set_facecolor(SURFACE)
-    for ax, (title, frame) in zip(axes[0], panels, strict=True):
+    for ax, (title, frame) in zip(axes[:, 0], panels, strict=True):
         for method in [m for m in methods if m in set(frame["method"])]:
             rows = frame[frame["method"] == method].sort_values("delay_s")
             ax.plot(rows["delay_s"], rows["avg5"], marker="o", markersize=3,
-                    linewidth=2.2 if method == "PARE" else 1.3,
+                    linewidth=1.6 if method == "PARE" else 1.0,
                     linestyle="--" if method.startswith("RCAEVAL") else "-",
-                    color=LINE[method], label=NAMES[method], zorder=3)
+                    color=LINE[method], label=FIG_NAMES[method], zorder=3)
         ax.set_title(title, fontsize=7, color=INK)
-        ax.set_xlabel("Detection delay (s)", fontsize=8, color=INK)
+        ax.set_ylabel("Avg@5", color=INK)
         ax.set_xticks([0, 30, 60, 120])
         ax.set_ylim(0, 1.0)
         _style(ax)
-    axes[0][0].set_ylabel("Avg@5", fontsize=8, color=INK)
+    axes[-1][0].set_xlabel("Detection delay (s)", color=INK)
     handles, labels = axes[0][0].get_legend_handles_labels()
-    fig.legend(handles, labels, fontsize=6.5, frameon=False, loc="lower center", ncol=4)
-    fig.text(0.01, 0.005, "RE1 Online Boutique, 125 cases per point. Dashed: RCAEval's "
-             "own implementations.", fontsize=5.5, color=INK_SECONDARY)
-    fig.tight_layout(rect=(0, 0.13, 1, 1))
+    fig.legend(handles, labels, frameon=False, loc="lower center", ncol=3,
+               handlelength=1.8, columnspacing=1.0)
+    fig.tight_layout(rect=(0, 0.11, 1, 1), h_pad=0.8)
     _save(fig, "fig2_avg5_vs_delay")
 
 
@@ -391,7 +419,7 @@ def figure1() -> None:
         top = max(values) or 1.0
         return [v / top for v in values]
 
-    fig, ax = plt.subplots(figsize=(7.2, 3.2), dpi=200)
+    fig, ax = plt.subplots(figsize=(COLUMN_IN, 2.5), dpi=300)
     fig.patch.set_facecolor(SURFACE)
     x = range(len(services))
     all_shap = scaled([shap_scores.get(s.service, 0.0) for s in result.services])
@@ -403,24 +431,23 @@ def figure1() -> None:
     ax.bar([i - 0.27 for i in x], [shap_of[s.service] for s in services], width=0.26,
            color="#2a78d6", label="TreeSHAP attribution", zorder=2)
     ax.bar([i for i in x], [marg_of[s.service] for s in services], width=0.26,
-           color="#b9b7b0", label="PARE marginal score: how unusual it looks", zorder=2)
+           color="#b9b7b0", label="PARE marginal score", zorder=2)
     ax.bar([i + 0.27 for i in x], [self_of[s.service] for s in services], width=0.26,
-           color="#c4302b", label="PARE self score: how much is its own problem", zorder=2)
+           color="#c4302b", label="PARE self score", zorder=2)
     ax.set_xticks(list(x))
     labels = []
     for s in services:
+        # "checkoutservice" -> "checkout": the suffix repeats on every Online Boutique name.
+        name = s.service.removesuffix("service") or s.service
         tag = " (culprit)" if s.service == case.gt_service else ""
-        tag += " <- TreeSHAP" if s.service == shap.loc[chosen, "top1_service"] else ""
-        labels.append(s.service + tag)
-    ax.set_xticklabels(labels, rotation=25, ha="right", fontsize=6.5, color=INK)
-    ax.set_ylabel("Score / method's maximum", fontsize=8, color=INK)
+        tag += " (SHAP top)" if s.service == shap.loc[chosen, "top1_service"] else ""
+        labels.append(name + tag)
+    ax.set_xticklabels(labels, rotation=35, ha="right", fontsize=6.5, color=INK)
+    ax.set_ylabel("Score / method maximum", color=INK)
     ax.set_ylim(0, 1.15)
     _style(ax)
-    ax.legend(fontsize=6.5, frameon=False)
-    fig.text(0.01, 0.005, f"{chosen}, delay 0 s. TreeSHAP's top service is a caller of the "
-             f"culprit; PARE ranks {case.gt_service} first.", fontsize=5.5,
-             color=INK_SECONDARY)
-    fig.tight_layout(rect=(0, 0.03, 1, 1))
+    ax.legend(frameon=False, loc="upper right", handlelength=1.2)
+    fig.tight_layout()
     _save(fig, "fig1_motivating_example")
 
     NOTES.mkdir(parents=True, exist_ok=True)
