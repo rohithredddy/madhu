@@ -25,6 +25,7 @@ What the data actually looks like was established in M2.2 and is recorded in
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -159,6 +160,20 @@ SYSTEM_SERVICES: dict[str, frozenset[str]] = {
     ),
 }
 
+# Where one dataset's deployment differs from its system's list above. RE3-TT
+# carries four Train Ticket datastores that RE1-TT does not, in all 30 of its
+# cases (M5.3). `istio-init` appears in 7 of them and stays out, as on RE1.
+DATASET_SERVICES: dict[tuple[str, str], frozenset[str]] = {
+    ("RE3", "train-ticket"): SYSTEM_SERVICES["train-ticket"]
+    | {"ts-food-mysql", "ts-notification-mongo", "ts-preserve-mongo", "ts-preserve-other-mongo"},
+}
+
+
+def system_services(dataset: str, system: str) -> frozenset[str] | None:
+    """The services one dataset's data of one system may contain."""
+    return DATASET_SERVICES.get((dataset, system), SYSTEM_SERVICES.get(system))
+
+
 # Which file in a run folder holds the metrics, per system.
 #
 # RE1-OB ships one file, `data.csv`. RE1-SS ships two: `data.csv` holds about 436
@@ -176,6 +191,25 @@ METRICS_FILE: dict[str, str] = {
     "train-ticket": "simple_data.csv",
 }
 
+# Where one dataset differs from its system's entry above. RE2-OB ships
+# `metrics.csv` (418 raw series) and `simple_metrics.csv` (70 to 78 derived
+# per-service series, measured over all 90 cases in M5.1). The simple file uses
+# the RE1 vocabulary (`cpu`, `mem`, `workload`, `error`, `latency-50`,
+# `latency-90`) plus `socket` and `diskio`, so it is the one comparable with RE1
+# and the one used here, as RE1-SS's `simple_data.csv` is (decision 85).
+DATASET_METRICS_FILE: dict[tuple[str, str], str] = {
+    ("RE2", "online-boutique"): "simple_metrics.csv",
+    # The same layout in RE3-TT: simple_metrics.csv has 294 to 322 columns in the
+    # RE1 vocabulary plus socket and diskio (M5.3).
+    ("RE3", "train-ticket"): "simple_metrics.csv",
+}
+
+
+def metrics_file(dataset: str, system: str) -> str:
+    """The file in a run folder that holds one dataset's metrics for one system."""
+    return DATASET_METRICS_FILE.get((dataset, system), METRICS_FILE.get(system, "data.csv"))
+
+
 # The metric names each system's data actually uses, read off every case in the
 # M2.2 (Online Boutique) and M3.2 (Sock Shop, Train Ticket) inspections. Used only to say how
 # many metrics are acceptable for a fault type *on this system*: Sock Shop has no
@@ -192,6 +226,17 @@ SYSTEM_METRICS: dict[str, frozenset[str]] = {
     ),
 }
 
+# Where one dataset's metric names differ from its system's entry above. RE2-OB
+# has no `load` and no plain `latency`, and adds `socket` and `diskio` (M5.1).
+DATASET_METRICS: dict[tuple[str, str], frozenset[str]] = {
+    ("RE2", "online-boutique"): frozenset(
+        {"cpu", "mem", "diskio", "socket", "workload", "error", "latency-50", "latency-90"}
+    ),
+    ("RE3", "train-ticket"): frozenset(
+        {"cpu", "mem", "diskio", "socket", "workload", "error", "latency-50", "latency-90"}
+    ),
+}
+
 # Folder name suffix -> the fault type recorded on a Case. Uppercase, as
 # docs/06 section 2 requires of every enum-like value.
 FAULT_TYPES = {
@@ -200,7 +245,30 @@ FAULT_TYPES = {
     "disk": "DISK",
     "delay": "DELAY",
     "loss": "LOSS",
+    # RE2 only. Measured in M5.1: the broken service's `socket` column moves
+    # (median robust z far above 3) in 15 of 15 SOCKET cases.
+    "socket": "SOCKET",
+    # RE3 only: code-level faults, kept under the dataset's own names (decision 5).
+    "f1": "F1",
+    "f2": "F2",
+    "f3": "F3",
+    "f4": "F4",
 }
+
+# RE3 folds a second batch of one fault into a folder with a numeric suffix:
+# `ts-route-service_f3_1` holds more F3 runs of ts-route-service (M5.3).
+_SECOND_BATCH = re.compile(r"^(?P<service>.+)_(?P<fault>[a-z0-9]+)_\d+$")
+
+
+def parse_fault_folder(name: str) -> tuple[str, str] | None:
+    """(service, fault type) from a fault folder's name, or None if it is not one."""
+    service, _, suffix = name.rpartition("_")
+    if service and suffix in FAULT_TYPES:
+        return service, FAULT_TYPES[suffix]
+    batch = _SECOND_BATCH.match(name)
+    if batch and batch.group("fault") in FAULT_TYPES:
+        return batch.group("service"), FAULT_TYPES[batch.group("fault")]
+    return None
 
 # Which of a service's metrics counts as the ground-truth indicator.
 #
@@ -220,6 +288,16 @@ FAULT_TYPES = {
 INDICATOR_METRICS: dict[str, tuple[str, ...]] = {
     "CPU": ("cpu",),
     "MEM": ("mem",),
+    # RE2 only, and like CPU and MEM a fault with a metric of its own (M5.1).
+    "SOCKET": ("socket",),
+    # RE3's code-level faults have no metric of their own. A defect in code is
+    # expected to show in the requests it serves, so the loose set is the error
+    # and latency columns. Fixed before any method was run on RE3. Measured in
+    # M5.3, and stated as a limitation rather than used to redefine the set: in
+    # RE3-TT the faulty service's `mem` (26 of 30 cases) or `cpu` moves most, by a
+    # median robust z of about 60, while error and latency barely move - which
+    # looks like the pod being redeployed with the faulty build, not the defect.
+    **{f"F{n}": ("error", "latency-90", "latency-50", "latency") for n in range(1, 5)},
     # measured: never plain `latency`, it splits between the two percentiles
     "DELAY": ("latency-90", "latency-50", "latency"),
     "LOSS": ("latency-90", "latency-50", "latency"),
@@ -229,7 +307,11 @@ INDICATOR_METRICS: dict[str, tuple[str, ...]] = {
     # 25 DISK cases, but on RE1-TT `mem` does in 23 of 25, and `mem` is not in this
     # set. Open question 10 in PROGRESS.md. Affects only the loose (secondary)
     # score; DISK has no strict one.
-    "DISK": ("cpu", "latency-90", "latency-50", "latency"),
+    # `diskio` added in M5.1 for RE2, the first data to carry a disk metric (it
+    # moves in all 15 RE2-OB DISK cases). No RE1 system has it, so on RE1
+    # acceptable_metrics() drops it and nothing there changes. DISK stays loose
+    # only, so the headline strict score is defined the same way on every dataset.
+    "DISK": ("cpu", "latency-90", "latency-50", "latency", "diskio"),
 }
 
 # Fault types whose indicator is a single, unambiguous metric.
@@ -242,16 +324,18 @@ INDICATOR_METRICS: dict[str, tuple[str, ...]] = {
 # 149 and about 10,000; all 100 cases above 3). The fault label says which
 # resource was stressed, so the answer is still not a judgement call; the
 # measurement says only that naming it is harder there. M3.2.
-UNAMBIGUOUS_FAULTS = frozenset({"CPU", "MEM"})
+UNAMBIGUOUS_FAULTS = frozenset({"CPU", "MEM", "SOCKET"})
 
 
-def acceptable_metrics(system: str, fault_type: str) -> tuple[str, ...]:
+def acceptable_metrics(
+    system: str, fault_type: str, dataset: str = "RE1"
+) -> tuple[str, ...]:
     """The metrics that count as a correct indicator for one fault on one system.
 
-    `INDICATOR_METRICS` restricted to the metrics the system's data contains, so a
+    `INDICATOR_METRICS` restricted to the metrics the dataset's data contains, so a
     loose score is never read against a set padded with columns that cannot exist.
     """
-    present = SYSTEM_METRICS.get(system)
+    present = DATASET_METRICS.get((dataset, system), SYSTEM_METRICS.get(system))
     metrics = INDICATOR_METRICS[fault_type]
     return metrics if present is None else tuple(m for m in metrics if m in present)
 
@@ -261,6 +345,7 @@ DATASET_SYSTEM_FOLDER = {
     ("RE1", "train-ticket"): "RE1-TT",
     ("RE2", "online-boutique"): "RE2-OB",
     ("RE3", "online-boutique"): "RE3-OB",
+    ("RE3", "train-ticket"): "RE3-TT",
 }
 
 
@@ -331,22 +416,22 @@ def list_cases(
             f"experiments/download_rcaeval.py --dataset {folder}"
         )
 
-    metrics_file = METRICS_FILE.get(system, "data.csv")
+    file_name = metrics_file(dataset, system)
     cases: list[Case] = []
     for fault_folder in sorted(p for p in base.iterdir() if p.is_dir()):
-        service, _, suffix = fault_folder.name.rpartition("_")
-        fault_type = FAULT_TYPES.get(suffix)
-        if fault_type is None or not service:
+        parsed = parse_fault_folder(fault_folder.name)
+        if parsed is None:
             continue  # not a case folder
+        service, fault_type = parsed
 
         for run_folder in sorted(
             (p for p in fault_folder.iterdir() if p.is_dir()), key=_run_order
         ):
             inject_file = run_folder / "inject_time.txt"
-            if not (run_folder / metrics_file).exists() or not inject_file.exists():
+            if not (run_folder / file_name).exists() or not inject_file.exists():
                 continue
 
-            metrics = acceptable_metrics(system, fault_type)
+            metrics = acceptable_metrics(system, fault_type, dataset)
             cases.append(
                 Case(
                     case_id=f"{dataset.lower()}-{folder.split('-')[-1].lower()}-"
@@ -450,7 +535,7 @@ def read_case_frame(case: Case) -> tuple[pd.DataFrame, list[ColumnInfo], list[st
     windows from this, and `export_cases.py` writes it to disk for the
     application, so both see exactly the same columns.
     """
-    frame = pd.read_csv(case.path / METRICS_FILE.get(case.system, "data.csv"))
+    frame = pd.read_csv(case.path / metrics_file(case.dataset, case.system))
     return _clean(frame, case)
 
 
@@ -464,7 +549,7 @@ def _clean(
     explicit column map, and a note of anything removed.
     """
     warnings: list[str] = []
-    known = SYSTEM_SERVICES.get(case.system)
+    known = system_services(case.dataset, case.system)
 
     # The duplicate `time` column. pandas has already renamed it to `time.1`.
     duplicates = [c for c in frame.columns if c != "time" and c.split(".")[0] == "time"]

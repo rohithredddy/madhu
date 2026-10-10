@@ -30,6 +30,19 @@ KNOWN_SYSTEMS = {
     "sock-shop": "sock-shop.yaml",
 }
 
+# Further graphs of a system, under a name of their own, for the graph ablation
+# (experiment E4): name -> (file, the system it describes). Built from the
+# benchmark's own traces by build_graph_from_traces.py, so each can be compared
+# with the hand-written graph of the same system.
+EXTRA_GRAPHS: dict[str, tuple[str, str]] = {
+    "online-boutique-traces": ("online-boutique-traces.yaml", "online-boutique"),
+}
+
+
+def graph_names() -> list[str]:
+    """Every graph name `read_graph_file` accepts."""
+    return sorted(set(KNOWN_SYSTEMS) | set(EXTRA_GRAPHS))
+
 
 @dataclass(frozen=True)
 class GraphFile:
@@ -59,14 +72,18 @@ class GraphFile:
         return CallGraph.from_edges(list(self.edges), source=self.source)
 
 
-def read_graph_file(system: str, graphs_dir: Path | None = None) -> GraphFile:
-    """Read and validate one graph file. Raises rather than guessing."""
+def read_graph_file(name: str, graphs_dir: Path | None = None) -> GraphFile:
+    """Read and validate one graph file. Raises rather than guessing.
+
+    ``name`` is a system (its default graph) or a name from `EXTRA_GRAPHS`.
+    """
     directory = graphs_dir or GRAPHS_DIR
-    filename = KNOWN_SYSTEMS.get(system)
-    if filename is None:
-        raise ValueError(
-            f"no graph known for system {system!r}; known: {sorted(KNOWN_SYSTEMS)}"
-        )
+    if name in KNOWN_SYSTEMS:
+        filename, system = KNOWN_SYSTEMS[name], name
+    elif name in EXTRA_GRAPHS:
+        filename, system = EXTRA_GRAPHS[name]
+    else:
+        raise ValueError(f"no graph known for system {name!r}; known: {graph_names()}")
 
     path = directory / filename
     if not path.exists():
@@ -112,9 +129,9 @@ def read_graph_file(system: str, graphs_dir: Path | None = None) -> GraphFile:
     )
 
 
-def load_graph(system: str, graphs_dir: Path | None = None) -> CallGraph:
-    """The graph for one system, ready to hand to an engine."""
-    return read_graph_file(system, graphs_dir).to_call_graph()
+def load_graph(name: str, graphs_dir: Path | None = None) -> CallGraph:
+    """The graph of one name (see `read_graph_file`), ready to hand to an engine."""
+    return read_graph_file(name, graphs_dir).to_call_graph()
 
 
 @dataclass(frozen=True)

@@ -1,0 +1,53 @@
+# E6, the controlled synthetic study (M6.1, docs/08 section 4).
+#
+#   analyzer/.venv/Scripts/python.exe experiments/run_synthetic_study.py \
+#       --config experiments/configs/e6_synthetic.yaml
+#
+# One factor at a time: every setting is the base with one value changed.
+
+run_id: e6_synthetic
+
+methods:
+  - PARE
+  - PARE_NO_RESIDUAL
+  - PARE_NO_CP
+  - NSIGMA
+  - SHAP_IFOREST
+  - ECDF
+
+# docs/08: 50 seeds per setting, 4 fault types. Seeds 42..91.
+n_seeds: 50
+seed: 42
+
+# The base setting. amplification 0.25 is where the symptom trap exists and the
+# residual can still undo it (the M1 gate's setting, decision 38); at 0 there is
+# nothing for any method to get wrong, so every other factor would be measured on
+# a problem with no trap in it.
+base:
+  n_services: 10
+  propagation: 0.8
+  amplification: 0.25
+  noise: 1.0
+  graph: "TRUE"   # quoted: bare TRUE is a YAML boolean
+  delay_rows: 0
+
+factors:
+  n_services: [5, 10, 20, 40]
+  propagation: [0.2, 0.5, 0.8, 1.0]
+  amplification: [0.0, 0.25, 0.5, 1.0, 2.0]
+  # LOW / MEDIUM / HIGH
+  noise: [0.5, 1.0, 2.0]
+  graph: ["TRUE", DROP_20, ADD_20, NONE]
+  # One row is one second (pare.synthetic.STEP_SEC).
+  delay_rows: [0, 10, 30, 60]
+
+# Fixed across the whole grid. n_abnormal especially: a MEM fault ramps to its
+# peak at the last abnormal row, so changing it changes the fault (docs/08).
+windows:
+  n_normal: 600
+  n_abnormal: 120
+  normal_gap_s: 30
+  recent_before_s: 300
+  recent_after_s: 120
+
+n_jobs: -2

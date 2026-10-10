@@ -89,6 +89,12 @@ def run_from_command_line(
         return 2
 
     graph = load_graph(config["graph"]) if config.get("graph") else None
+    # E4 only: what the engine is told, when it differs from the scoring graph.
+    # A graph file's name, or CORRELATION / NONE (runner.run_case).
+    told = config.get("engine_graph")
+    engine_graph = (
+        load_graph(told) if told and told not in ("CORRELATION", "NONE") else told
+    )
     log: list[str] = []
 
     def note(line: str) -> None:
@@ -101,7 +107,8 @@ def run_from_command_line(
     note(f"  by fault type: {counts['by_fault']}")
     note(
         f"  {counts['unambiguous_indicator']} cases have an unambiguous "
-        f"ground-truth indicator (CPU and MEM); the strict ExpAC@k uses those"
+        f"ground-truth indicator (CPU, MEM, and SOCKET on RE2); the strict "
+        f"ExpAC@k uses those"
     )
     note(f"  methods: {', '.join(config['methods'])}")
     note(f"  delays: {config['delays_s']} s")
@@ -114,6 +121,8 @@ def run_from_command_line(
             else ""
         )
     )
+    if told:
+        note(f"  graph given to the engines: {told} (scoring still uses the graph above)")
     note(f"  normal window: {config.get('normal_mode', 'inject_gap')}")
 
     methods = list(config["methods"])
@@ -153,6 +162,7 @@ def run_from_command_line(
                 graph=graph,
                 config=settings,
                 normal_mode=config.get("normal_mode", "inject_gap"),
+                engine_graph=engine_graph,
             )
             for case, method, delay in jobs
         )
@@ -486,8 +496,20 @@ def acceptable_count(group: pd.DataFrame) -> object:
     from experiments.adapters.rcaeval import acceptable_metrics
 
     fault = str(group["fault_type"].iloc[0])
+    # "dataset" is part of the cases.csv contract (docs/06 section 5) and every
+    # real run has it; a minimal test fixture may not, and every case before
+    # RE2/RE3 existed was RE1. Missing means RE1, never a crash.
+    if "dataset" in group.columns:
+        datasets = group["dataset"].astype(str)
+    else:
+        datasets = pd.Series(["RE1"] * len(group))
+    if set(datasets) == {"SYNTHETIC"}:
+        return 1  # every synthetic fault shows in exactly one column (E6)
     sizes = sorted(
-        {len(acceptable_metrics(str(system), fault)) for system in group["system"]}
+        {
+            len(acceptable_metrics(str(system), fault, str(dataset)))
+            for system, dataset in zip(group["system"], datasets, strict=True)
+        }
     )
     return sizes[0] if len(sizes) == 1 else f"{sizes[0]}-{sizes[-1]}"
 
@@ -507,9 +529,10 @@ def legend() -> str:
         [
             "ExpAC@k  : the ground-truth INDICATOR is in the top k explained "
             "features. RQ1.",
-            "           Strict: only the CPU and MEM cases, where the right metric "
-            "is not a",
-            "           judgement call. This is the headline (docs/08 section 4).",
+            "           Strict: only the CPU and MEM cases (and SOCKET on RE2), where "
+            "the right",
+            "           metric is not a judgement call. This is the headline "
+            "(docs/08 section 4).",
             "exp_ac*_loose : every case, counting any plausible metric for the fault "
             "type as",
             "           correct. Read it only next to acceptable_indicators in the "

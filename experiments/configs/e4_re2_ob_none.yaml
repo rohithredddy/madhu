@@ -1,0 +1,31 @@
+# E4, call-graph ablation, arm "none", on RCAEval RE2 Online Boutique (M5.4).
+#
+# docs/08 section 4: PARE with a graph from (a) traces, (b) the static
+# architecture file, (c) correlation, (d) no graph. The four e4_re2_ob_* configs
+# differ only in run_id and engine_graph. In this arm PARE is told the graph is
+# an empty graph: PARE has nothing to subtract and nothing to walk.
+#
+# Scoring (symptom_error) always uses the static graph in "graph", whatever PARE
+# was told: "did the blamed service call the culprit" is a fact about the system.
+#
+#   analyzer/.venv/Scripts/python.exe experiments/run_rca.py #       --config experiments/configs/e4_re2_ob_none.yaml
+
+run_id: e4_re2_ob_none
+
+dataset: RE2
+system: online-boutique
+
+methods:
+  - PARE
+
+delays_s:
+  - 0.0
+
+graph: online-boutique
+engine_graph: NONE
+
+normal_mode: inject_gap
+
+seed: 42
+n_jobs: -2
+limit: null

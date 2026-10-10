@@ -25,6 +25,7 @@ from experiments.adapters.rcaeval import (
     acceptable_metrics,
     list_cases,
     load_case,
+    metrics_file,
     summarise,
     times_of,
     values_of,
@@ -57,12 +58,16 @@ def test_a_missing_download_says_how_to_fix_it():
         list_cases(Path("nowhere"), "RE1", "online-boutique")
 
 
-def test_only_cpu_and_mem_have_an_unambiguous_indicator():
+def test_only_faults_with_a_metric_of_their_own_have_an_unambiguous_indicator():
     """RE1-OB has no `disk` and no `loss` metric, so those fault types cannot have
-    one correct answer. Recorded as open question 6."""
-    assert UNAMBIGUOUS_FAULTS == {"CPU", "MEM"}
+    one correct answer. Recorded as open question 6. SOCKET (RE2 only, M5.1) is
+    strict for the same reason CPU and MEM are: a `socket` metric exists and
+    moves in every case. On RE1 no case is SOCKET, so RE1's strict set is still
+    exactly CPU and MEM."""
+    assert UNAMBIGUOUS_FAULTS == {"CPU", "MEM", "SOCKET"}
     assert INDICATOR_METRICS["CPU"] == ("cpu",)
     assert INDICATOR_METRICS["MEM"] == ("mem",)
+    assert INDICATOR_METRICS["SOCKET"] == ("socket",)
     for fault in ("DISK", "DELAY", "LOSS"):
         assert len(INDICATOR_METRICS[fault]) > 1, f"{fault} should offer a set"
 
@@ -357,3 +362,93 @@ def test_the_injected_metric_exists_for_every_strict_case(system):
             continue
         header = pd.read_csv(case.path / METRICS_FILE[system], nrows=0).columns
         assert case.gt_indicator in header, case.case_id
+
+
+# --- RE2 (M5.1) ---------------------------------------------------------------
+
+HAVE_RE2_OB = (ROOT / "RE2" / "RE2-OB").exists()
+
+
+def test_re2_online_boutique_reads_the_simple_metrics_file():
+    """RE2-OB's comparable file is simple_metrics.csv; RE1 is unchanged."""
+    assert metrics_file("RE2", "online-boutique") == "simple_metrics.csv"
+    assert metrics_file("RE1", "online-boutique") == "data.csv"
+    assert metrics_file("RE1", "sock-shop") == "simple_data.csv"
+
+
+def test_the_disk_metric_counts_only_where_the_data_has_it():
+    """`diskio` exists in RE2 only, so RE1's DISK acceptable sets do not change."""
+    assert acceptable_metrics("online-boutique", "DISK") == (
+        "cpu", "latency-90", "latency-50", "latency",
+    )
+    assert acceptable_metrics("online-boutique", "DISK", "RE2") == (
+        "cpu", "latency-90", "latency-50", "diskio",
+    )
+    assert acceptable_metrics("online-boutique", "SOCKET", "RE2") == ("socket",)
+
+
+@pytest.mark.skipif(not HAVE_RE2_OB, reason="RE2-OB not downloaded")
+def test_re2_online_boutique_has_90_cases_over_six_fault_types():
+    cases = list_cases(ROOT, "RE2", "online-boutique")
+    summary = summarise(cases)
+    assert summary["cases"] == 90
+    assert {c.fault_type for c in cases} == {"CPU", "MEM", "DISK", "DELAY", "LOSS", "SOCKET"}
+    # The stray `multi-source-data` folder inside one fault folder is not a run.
+    assert all(c.run in {"1", "2", "3"} for c in cases)
+    assert len({c.case_id for c in cases}) == 90
+
+
+@pytest.mark.skipif(not HAVE_RE2_OB, reason="RE2-OB not downloaded")
+def test_re2_strict_indicators_are_real_columns_and_windows_load():
+    for case in list_cases(ROOT, "RE2", "online-boutique"):
+        header = pd.read_csv(case.path / "simple_metrics.csv", nrows=0).columns
+        if case.gt_indicator is not None:
+            assert case.gt_indicator in header, case.case_id
+    case = next(
+        c for c in list_cases(ROOT, "RE2", "online-boutique")
+        if c.case_id == "re2-ob-checkoutservice_cpu-2"
+    )
+    data = load_case(case)
+    # This run ends with 256 rows that have no time value (M5.1); they are dropped.
+    assert any("no time value" in warning for warning in data.warnings)
+    assert not data.normal.empty and not data.recent.empty
+    assert {column.service for column in data.columns} <= SYSTEM_SERVICES["online-boutique"]
+
+
+# --- RE3 (M5.3) ---------------------------------------------------------------
+
+HAVE_RE3_TT = (ROOT / "RE3" / "RE3-TT").exists()
+
+
+def test_fault_folder_names_parse_including_the_second_batch_folder():
+    from experiments.adapters.rcaeval import parse_fault_folder
+
+    assert parse_fault_folder("checkoutservice_cpu") == ("checkoutservice", "CPU")
+    assert parse_fault_folder("ts-auth-service_f1") == ("ts-auth-service", "F1")
+    assert parse_fault_folder("ts-route-service_f3_1") == ("ts-route-service", "F3")
+    assert parse_fault_folder("multi-source-data") is None
+    assert parse_fault_folder(".DS_Store") is None
+
+
+def test_code_level_faults_are_loose_only():
+    """No metric is a code defect's own, so F1-F4 have no strict indicator."""
+    for fault in ("F1", "F2", "F3", "F4"):
+        assert fault not in UNAMBIGUOUS_FAULTS
+        assert acceptable_metrics("train-ticket", fault, "RE3") == (
+            "error", "latency-90", "latency-50",
+        )
+
+
+@pytest.mark.skipif(not HAVE_RE3_TT, reason="RE3-TT not downloaded")
+def test_re3_train_ticket_has_30_cases_on_two_services():
+    cases = list_cases(ROOT, "RE3", "train-ticket")
+    assert len(cases) == 30
+    assert {c.gt_service for c in cases} == {"ts-auth-service", "ts-route-service"}
+    assert {c.fault_type for c in cases} == {"F1", "F2", "F3", "F4"}
+    assert all(c.gt_indicator is None for c in cases)
+    assert len({c.case_id for c in cases}) == 30
+    data = load_case(cases[0])
+    # Only istio-init, an init container, is dropped; the four RE3 datastores stay.
+    dropped = [w for w in data.warnings if "not belonging" in w]
+    assert all("istio-init" in w for w in dropped)
+    assert "ts-preserve-mongo" in {c.service for c in data.columns}

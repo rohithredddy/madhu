@@ -261,3 +261,31 @@ def test_the_sock_shop_graph_matches_the_data():
     assert check.undeclared_isolated == ()
     assert check.is_usable
     assert check.missing_from_graph == ("rabbitmq-exporter",)
+
+
+# --- graphs built from traces (M5.2) -------------------------------------------
+
+
+def test_the_online_boutique_trace_graph_loads_by_name_and_says_where_it_came_from():
+    from experiments.adapters.graphs import EXTRA_GRAPHS, graph_names
+
+    assert "online-boutique-traces" in graph_names()
+    assert EXTRA_GRAPHS["online-boutique-traces"][1] == "online-boutique"
+    graph = load_graph("online-boutique-traces")
+    assert graph.source == "TRACES"
+    assert not graph.is_empty
+
+
+def test_every_traced_edge_is_also_in_the_static_graph():
+    """The measured graph confirms the hand-written one: RE2-OB's traces produced
+    9 edges and every one of them is an edge of the static graph, same direction.
+    What the traces lack are the services no span mentions (adservice, cartservice,
+    shippingservice, redis), and the file says so under no_edges."""
+    traced = set(read_graph_file("online-boutique-traces").edges)
+    static = set(read_graph_file("online-boutique").edges)
+    assert traced <= static
+    missing = {name for edge in static - traced for name in edge}
+    untraced = set(read_graph_file("online-boutique-traces").no_edges)
+    # every static edge the traces lack touches a service the traces never saw
+    assert all(a in untraced or b in untraced for a, b in static - traced)
+    assert {"adservice", "cartservice", "shippingservice", "redis"} <= missing

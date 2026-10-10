@@ -1,0 +1,53 @@
+# E1, explanation grounding, on RCAEval RE2 Online Boutique (M5.3, metrics only).
+#
+# RE2-OB is read from simple_metrics.csv (decision 85). The graph is the static
+# Online Boutique graph: the RE2 trace graph misses four services (M5.2), so it
+# cannot be what symptom_error is judged against.
+#
+# Answers RQ1 ("how often do standard anomaly explanations rank the true
+# root-cause indicator in their top k?") and RQ2 ("when they are wrong, do they
+# point at downstream services?"). docs/08 section 4 specifies it.
+#
+#   analyzer/.venv/Scripts/python.exe experiments/run_c1_grounding.py \
+#       --config experiments/configs/c1_re2_ob.yaml
+
+run_id: e1_re2_ob
+
+dataset: RE2
+system: online-boutique
+
+# The explainers a practitioner would actually reach for, which is the point of
+# E1: it measures the common practice, not our method. PARE itself is deliberately
+# absent - E2 (M4.1) is where the proposed method is measured. PARE_NO_RESIDUAL
+# stands in for ordinary marginal scoring; note it keeps the change-point
+# re-anchoring and the graph traversal, since it is PARE minus the residual step
+# rather than a bare robust z.
+methods:
+  - ECDF
+  - PCA_RECON
+  - SHAP_IFOREST
+  - PARE_NO_RESIDUAL
+
+# E1's main table is delay 0 only. The sweep is E3 (M4.3).
+delays_s:
+  - 0.0
+
+# The call graph. The explainer baselines never receive it - the engine enforces
+# that through EngineSpec.use_graph - but it is always needed to score
+# symptom_error, which asks whether a wrongly blamed service calls the real
+# culprit.
+graph: online-boutique
+
+# The standard RCAEval protocol: the normal window ends 30 s before the injection.
+# docs/08 section 4 states the assumption and asks E3 to also report
+# "alarm_lookback", which never uses the injection time.
+normal_mode: inject_gap
+
+seed: 42
+
+# joblib. -2 leaves one core free so the machine stays usable; 1 disables
+# parallelism, which is what to use when a traceback matters.
+n_jobs: -2
+
+# null runs every case. A number takes the first N, for a smoke run.
+limit: null

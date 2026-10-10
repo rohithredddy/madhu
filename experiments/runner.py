@@ -140,6 +140,7 @@ def run_case(
     graph: CallGraph | None = None,
     config: PareConfig | None = None,
     normal_mode: str = "inject_gap",
+    engine_graph: CallGraph | str | None = None,
 ) -> CaseRow:
     """Run one engine on one case and score the answer.
 
@@ -162,6 +163,12 @@ def run_case(
         normal_mode: Passed through to the adapter. ``"inject_gap"`` is the
             standard RCAEval protocol; ``"alarm_lookback"`` is the honest variant
             `docs/08` section 4 asks E3 to report alongside.
+        engine_graph: What the engine is told the graph is, when that should differ
+            from ``graph`` - experiment E4 hands PARE a wrong or missing graph and
+            still scores its answer against the real one. ``None`` means ``graph``;
+            a :class:`CallGraph` is used as given; ``"CORRELATION"`` infers one from
+            this case's own normal window (:func:`correlation_graph`); ``"NONE"``
+            gives an empty graph. Scoring always uses ``graph``.
     """
     settings = config or PareConfig()
     if settings.top_k == PareConfig().top_k:
@@ -173,6 +180,9 @@ def run_case(
         data = load_case(
             case, delay_s=delay_s, graph=scoring_graph, normal_mode=normal_mode
         )
+        told = _engine_graph_for(data, engine_graph)
+        if told is not None:
+            data = replace(data, graph=told)
         result = analyze(_request_for(data, engine, settings))
     except Exception as error:  # noqa: BLE001 - recorded, never hidden
         return _failed_row(
@@ -241,6 +251,45 @@ def run_case(
         symptom_chance="" if chance is None else round(chance, 6),
         verdict=result.verdict,
         runtime_s=runtime_s,
+    )
+
+
+# The metrics the correlation graph may be inferred from, in order of preference:
+# the first one the case has is used. Latency, because latency is what actually
+# flows between services (pare.graph.infer_from_correlation). RE1-OB carries plain
+# `latency`; Sock Shop, Train Ticket and RE2-OB have only the percentiles, so they
+# fall through to `latency-90`.
+CORRELATION_METRICS = ("latency", "latency-90")
+
+
+def correlation_graph(data: CaseData) -> CallGraph:
+    """A call graph guessed from one case's normal window, for E4.
+
+    Uses only `data.normal`, which ends before the fault, so it carries no
+    information about the answer.
+    """
+    present = {column.metric for column in data.columns}
+    metric = next((m for m in CORRELATION_METRICS if m in present), None)
+    if metric is None:
+        return CallGraph.empty()
+    names = [column.name for column in data.columns]
+    return CallGraph.infer_from_correlation(
+        data.normal[names].to_numpy(dtype=float), data.columns, metric=metric
+    )
+
+
+def _engine_graph_for(
+    data: CaseData, engine_graph: CallGraph | str | None
+) -> CallGraph | None:
+    """Resolve `run_case`'s `engine_graph` argument; None keeps `data.graph`."""
+    if engine_graph is None or isinstance(engine_graph, CallGraph):
+        return engine_graph
+    if engine_graph == "CORRELATION":
+        return correlation_graph(data)
+    if engine_graph == "NONE":
+        return CallGraph.empty()
+    raise ValueError(
+        f"engine_graph must be a CallGraph, 'CORRELATION' or 'NONE', got {engine_graph!r}"
     )
 
 

@@ -285,6 +285,67 @@ def _graph():
     return load_graph("online-boutique")
 
 
+# --- E4: the graph the engine is told can differ from the scoring graph -------
+
+
+def _told_graph(monkeypatch, one_case, **kwargs):
+    """Run PARE and return (row, the graph the engine actually received)."""
+    import experiments.runner as runner_module
+
+    captured = {}
+    real_analyze = runner_module.analyze
+
+    def spy(request):
+        captured["graph"] = request.graph
+        return real_analyze(request)
+
+    monkeypatch.setattr(runner_module, "analyze", spy)
+    row = run_case(one_case, "PARE", run_id="t", **kwargs)
+    return row, captured["graph"]
+
+
+@needs_data
+def test_without_an_engine_graph_the_engine_gets_the_scoring_graph(one_case, monkeypatch):
+    row, told = _told_graph(monkeypatch, one_case, graph=_graph())
+    assert row.error == ""
+    assert set(told.edges) == set(_graph().edges)
+
+
+@needs_data
+def test_a_missing_engine_graph_is_still_scored_against_the_real_one(one_case, monkeypatch):
+    """E4's NONE arm: PARE is told nothing, but symptom_error still asks whether
+    its answer called the real culprit, which only the real graph can say."""
+    row, told = _told_graph(monkeypatch, one_case, graph=_graph(), engine_graph="NONE")
+    assert told.is_empty
+    alone = run_case(one_case, "PARE", run_id="t", graph=None)
+    # The same answer as running with no graph at all...
+    assert row.top1_service == alone.top1_service
+    # ...but its symptom question is judged on the real graph, and was not without it.
+    assert row.symptom_chance != "" and alone.symptom_chance == ""
+
+
+@needs_data
+def test_a_correlation_engine_graph_is_inferred_from_the_normal_window(one_case, monkeypatch):
+    from experiments.adapters.rcaeval import load_case
+    from experiments.runner import correlation_graph
+
+    row, told = _told_graph(
+        monkeypatch, one_case, graph=_graph(), engine_graph="CORRELATION"
+    )
+    assert row.error == ""
+    assert told.source == "CORRELATION"
+    expected = correlation_graph(load_case(one_case, graph=_graph()))
+    assert set(told.edges) == set(expected.edges)
+
+
+def test_an_unknown_engine_graph_is_refused():
+    """A typo in a config must not quietly fall back to some other graph."""
+    from experiments.runner import _engine_graph_for
+
+    with pytest.raises(ValueError, match="engine_graph"):
+        _engine_graph_for(None, "TRACE")  # type: ignore[arg-type]
+
+
 # --- the E1 configuration ---------------------------------------------------
 
 
