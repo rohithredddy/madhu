@@ -1,0 +1,2 @@
+method,cases,failed,exp_ac1,exp_ac3,exp_ac5,strict_cases,ac1_strict,exp_ac1_loose,exp_ac3_loose,ac1,ac3,avg5,wrong_top1,symptom_judged,symptom_rate,symptom_chance,no_clear_cause,mean_ms
+PARE,90,0,0.2222,0.2889,0.3556,45,0.9778,0.3778,0.5556,0.9111,0.9667,0.9556,8.0,8.0,0.375,0.1818,0,1261.5

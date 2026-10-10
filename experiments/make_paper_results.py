@@ -247,14 +247,21 @@ def figure6() -> None:
         return
     panels = [("amplification", "ac1", "AC@1"), ("amplification", "symptom_rate",
               "Symptom rate"), ("propagation", "ac1", "AC@1"), ("graph", "ac1", "AC@1")]
-    methods = ["PARE", "PARE_NO_RESIDUAL", "NSIGMA", "SHAP_IFOREST"]
+    methods = ["PARE", "PARE_NO_CP", "PARE_NO_RESIDUAL", "NSIGMA", "SHAP_IFOREST"]
+    import yaml
+    config = RESULTS / "e6_synthetic" / "config.yaml"
+    order = yaml.safe_load(config.read_text(encoding="utf-8"))["factors"] if config.exists() else {}
     fig, axes = plt.subplots(2, 2, figsize=(7.2, 5.2), dpi=200)
     fig.patch.set_facecolor(SURFACE)
     for ax, (factor, metric, ylabel) in zip(axes.flat, panels, strict=True):
         part = frame[frame["factor"] == factor]
-        levels = list(dict.fromkeys(part["level"].astype(str)))
+        # The order the config lists the levels in, not the alphabetical order of
+        # the summary file (which would put "TRUE" after "NONE").
+        levels = [str(v) for v in order.get(factor, [])] or list(
+            dict.fromkeys(part["level"].astype(str)))
         for method in methods:
-            rows = part[part["method"] == method].set_index(part["level"].astype(str))
+            rows = part[part["method"] == method]
+            rows = rows.set_index(rows["level"].astype(str))
             values = [pd.to_numeric(rows.loc[lv, metric], errors="coerce")
                       if lv in rows.index else float("nan") for lv in levels]
             ax.plot(range(len(levels)), values, marker="o", markersize=3,
@@ -614,7 +621,7 @@ def ieee_tables() -> None:
         for m in [x for x in E5_METHODS if x in set(e5["method"])]:
             r = e5[e5["method"] == m].iloc[0]
             body.append(f"{SHORT[m]} & {_f(r['deletion_auc'])} & "
-                        f"{float(r['compactness_median']):.0f} & {_f(r['jaccard_top5'])} & "
+                        f"{float(r['compactness_median']):g} & {_f(r['jaccard_top5'])} & "
                         f"{_f(r['kendall_tau'])} \\\\")
         _ieee("ieee_e5", f"E5: deletion area (lower is more faithful; random order "
               f"{float(e5['random_auc'].mean()):.3f}), compactness (indicators holding "

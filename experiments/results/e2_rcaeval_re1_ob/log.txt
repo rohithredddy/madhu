@@ -1,0 +1,5 @@
+scored 3000 rankings from experiments\results\e2_rcaeval_re1_ob
+660 failed or fell back; all in failures.csv
+  RCAEVAL_CIRCA: 80 failed, e.g. fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked
+  RCAEVAL_PC_PAGERANK: 80 failed, e.g. fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the un
+  RCAEVAL_RCD: 500 failed, e.g. AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'

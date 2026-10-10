@@ -48,65 +48,65 @@ If a working application is needed early: do M0, M1, M7, M8, M9, M10 (using synt
 - [x] M3.4 `paper/notes/E1_findings.md`: 10 plain lines, only numbers from result files.
 
 ## M4 - E2 accuracy and E3 delay sweep on RE1
-- [ ] M4.1 `run_rca.py` for our engines.
-- [ ] M4.2 RCAEval baselines through their package (time limit, failures logged).
-- [ ] M4.3 Delay sweep and figure 2.
-- [ ] M4.4 `stats.py`; significance in table 3.
-- [ ] M4.5 Motivating example figure 1 (one case where SHAP_IFOREST blames a symptom and PARE is right; also note one case where PARE is wrong).
+- [x] M4.1 `run_rca.py` for our engines.
+- [x] M4.2 RCAEval baselines through their package (time limit, failures logged). Online Boutique only; Sock Shop and Train Ticket skipped for time (stated in the paper). RCD cannot run with the installed causal-learn.
+- [x] M4.3 Delay sweep and figure 2 (`make_paper_results.py`).
+- [x] M4.4 `stats.py`; significance reported in the paper's E2 section (`results/e2_re1/stats_*.csv`).
+- [x] M4.5 Motivating example figure 1 (one case where SHAP_IFOREST blames a symptom and PARE is right; also note one case where PARE is wrong). Chosen by rule; `paper/notes/fig1_case.txt`.
 
 ## M5 - RE2/RE3 and E4 graph ablation
-- [ ] M5.1 RE2 download one system at a time; chunked loading; parquet cache.
-- [ ] M5.2 `build_graph_from_traces.py`.
-- [ ] M5.3 E1, E2 on RE2 and RE3 (metrics part); limitations noted.
-- [ ] M5.4 E4 graph ablation, table 4.
+- [x] M5.1 RE2 download one system at a time; chunked loading. RE2-OB and RE3-TT on disk; no parquet cache (not needed at this size).
+- [x] M5.2 `build_graph_from_traces.py`. Online Boutique from RE2 traces (9 edges, all in the static graph). Train Ticket graph not built.
+- [x] M5.3 E1, E2 on RE2 Online Boutique; limitations noted. RE3 adapter ready but not run (no Train Ticket graph).
+- [x] M5.4 E4 graph ablation, table 4.
 
 ## M6 - E6 controlled synthetic study
-- [ ] M6.1 `run_synthetic_study.py` with the factor grid from `08_EXPERIMENTS_SPEC.md`.
-- [ ] M6.2 Figures: AC@1 and symptom rate vs propagation; AC@1 vs graph quality.
-- [ ] M6.3 `paper/notes/E6_findings.md`.
+- [x] M6.1 `run_synthetic_study.py` with the factor grid from `08_EXPERIMENTS_SPEC.md` (30 seeds per setting, not 50).
+- [x] M6.2 Figures: AC@1 and symptom rate vs amplification; AC@1 vs propagation and graph quality (figure 6).
+- [x] M6.3 Findings written directly into the paper's E6 section instead of a separate note.
 
 ## M7 - Python engine service + case export
-- [ ] M7.1 `service/schemas.py` matching `06_DATA_CONTRACTS.md` section 3.
-- [ ] M7.2 `service/app.py`: `/health`, `/v1/engines`, `/v1/analyze`, `/v1/synthetic`.
-- [ ] M7.3 Tests with FastAPI TestClient.
-- [ ] M7.4 `experiments/export_cases.py` -> `data/cases/` (skip if RCAEval not downloaded yet; synthetic cases still work).
-- [ ] M7.5 `scripts/make_synthetic_cases.py`: writes 12 synthetic cases (3 per fault type) so the app has data from day one.
+- [x] M7.1 `service/schemas.py` matching `06_DATA_CONTRACTS.md` section 3.
+- [x] M7.2 `service/app.py`: `/health`, `/v1/engines`, `/v1/analyze`, `/v1/synthetic`.
+- [x] M7.3 Tests with FastAPI TestClient.
+- [x] M7.4 `experiments/export_cases.py` -> `data/cases/` (skip if RCAEval not downloaded yet; synthetic cases still work).
+- [x] M7.5 `scripts/make_synthetic_cases.py`: writes 12 synthetic cases (3 per fault type) so the app has data from day one.
 - Done when: sample request answers in under 2 s and case folders validate against section 2.
 
 ## M8 - Java backend core
-- [ ] M8.1 Spring Boot project in `backend/`, config, H2, health endpoint, Swagger.
-- [ ] M8.2 CaseCatalogService + CaseLoader + case endpoints (+ tiny test case).
-- [ ] M8.3 AnalyzerClient + WindowSplitter (+ leakage tests).
-- [ ] M8.4 FallbackRanker (+ test against Python NSIGMA sample).
-- [ ] M8.5 ExplanationRenderer (+ template tests).
-- [ ] M8.6 AnalysisService, AnalysisRun entity, analyze/compare/runs endpoints, report export.
+- [x] M8.1 Spring Boot project in `backend/`, config, H2, health endpoint, Swagger.
+- [x] M8.2 CaseCatalogService + CaseLoader + case endpoints (+ tiny test case).
+- [x] M8.3 AnalyzerClient + WindowSplitter (+ leakage tests).
+- [x] M8.4 FallbackRanker (+ test against Python NSIGMA sample).
+- [x] M8.5 ExplanationRenderer (+ template tests).
+- [x] M8.6 AnalysisService, AnalysisRun entity, analyze/compare/runs endpoints, report export.
 - Done when: with the Python service running, `POST /api/cases/{id}/analyze` returns a full AnalysisRun for a synthetic case; with Python stopped, the fallback is used and says so.
 
 ## M9 - Java replay, synthetic, upload, benchmark
-- [ ] M9.1 RobustStats, ConformalThreshold, OnlineDetector (+ tests).
-- [ ] M9.2 ReplayService + endpoints (+ fast integration test reaching EXPLAINED).
-- [ ] M9.3 SyntheticService + endpoint.
-- [ ] M9.4 UploadService + validator + guess-columns endpoint.
-- [ ] M9.5 BenchmarkService + AccuracyCalculator + endpoints. Consistency check: on 20 cases, Java benchmark AC@1 for PARE equals the Python `run_rca.py` value on the same cases and delay.
+- [x] M9.1 RobustStats, ConformalThreshold, OnlineDetector (+ tests).
+- [x] M9.2 ReplayService + endpoints (+ fast integration test reaching EXPLAINED).
+- [x] M9.3 SyntheticService + endpoint.
+- [x] M9.4 UploadService + validator + guess-columns endpoint.
+- [x] M9.5 BenchmarkService + AccuracyCalculator + endpoints. Consistency check: on 20 cases, Java benchmark AC@1 for PARE equals the Python `run_rca.py` value on the same cases and delay.
 
 ## M10 - React frontend
-- [ ] M10.1 Vite + React + TS project, router, API client and types, proxy, layout, Home page, status chips.
-- [ ] M10.2 Cases list + Case detail (explanation card, call graph, cause vs symptom chart, indicator table, series chart).
-- [ ] M10.3 Compare mode.
-- [ ] M10.4 Replay page.
-- [ ] M10.5 Synthetic lab page.
-- [ ] M10.6 Benchmark page.
-- [ ] M10.7 Upload page.
-- [ ] M10.8 How-it-works page.
-- [ ] M10.9 `scripts/start-all.sh` and `start-all.bat`; `npm run build:backend` for single-server mode.
+- [x] M10.1 Vite + React + TS project, router, API client and types, proxy, layout, Home page, status chips.
+- [x] M10.2 Cases list + Case detail (explanation card, call graph, cause vs symptom chart, indicator table, series chart).
+- [x] M10.3 Compare mode.
+- [x] M10.4 Replay page.
+- [x] M10.5 Synthetic lab page.
+- [x] M10.6 Benchmark page.
+- [x] M10.7 Upload page.
+- [x] M10.8 How-it-works page.
+- [x] M10.9 `scripts/start-all.sh` and `start-all.bat`; `npm run build:backend` for single-server mode.
 - Done when: every page in `04_REACT_FRONTEND_SPEC.md` works end to end (analyze, compare, replay, synthetic lab, benchmark, upload) with no console errors, using both synthetic and RCAEval cases.
 
 ## M11 - Explanation quality and final results
-- [ ] M11.1 E5 faithfulness and stability on RE1 (and RE2 if time).
-- [ ] M11.2 Regenerate all tables and figures; `paper/notes/RESULTS_SUMMARY.md` (numbers only from results files).
+- [x] M11.1 E5 faithfulness and stability on RE1. Stability uses the +/-10 s window shifts only (no seed or subsample repeats).
+- [x] M11.2 Regenerate all tables and figures; the paper draft `paper/main.tex` replaces RESULTS_SUMMARY.md (numbers only from results files).
 - Done when: every table/figure in `08_EXPERIMENTS_SPEC.md` section 6 exists.
 
 ## M12 - Polish
-- [ ] M12.1 Root README: what it is, how to run the application, how to reproduce each table.
+- [x] M12.1 Root README: what it is, how to run the application, how to reproduce each table.
 - [ ] M12.2 Fresh-clone test: follow README on a clean folder; fix anything missing.
 - [ ] M12.3 Tag `v1.0`.

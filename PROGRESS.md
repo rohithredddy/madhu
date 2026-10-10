@@ -7,33 +7,25 @@ Order of this file: what is happening now, then the log of what was done (newest
 anything waiting on you, then the machine setup and the full list of decisions as reference.
 
 ## Current status
-- Current milestone: **M3 (E1 explanation grounding) is done** - M3.1 to M3.4 all ticked. Next is
-  M4.1, `run_rca.py`. **Stop point:** `07` makes M3.2 the gate before the application track, and
-  decision 17 says to stop and report there. The E1 result below is in; PARE's own RE1 result is
-  M4's question, and what is already known about it is the fourth bullet.
-- **C1 holds on all of RE1, and more strongly than M3.1 reported.** Over 375 cases on three systems,
-  Isolation Forest + TreeSHAP names the right *service* 0.667 of the time on the CPU and MEM cases and
-  the right *metric* 0.100 of the time on the same cases - a 0.567 gap. **0.651 of its wrong answers
-  blame a service that calls the real culprit, against a chance floor of 0.145** - about 4.5 times
-  chance, and it holds on both systems that have a graph (0.636 Online Boutique, 0.667 Sock Shop).
-  Worst on DELAY faults, 0.862. Numbers in `paper/notes/E1_findings.md`, Table 2 and Figure 3.
-- **The best explainer is not the popular one.** PCA reconstruction beats TreeSHAP on both questions
-  (ExpAC@1 0.353 vs 0.100, AC@1 0.667 vs 0.549) at 146 ms a case against 3.6 s.
-- **Where PARE stands on real data is unchanged and still the thing to know.** On RE1-OB at delay 0:
-  AC@1 0.384 against NSIGMA's 0.848 (M2.5 / question 9). E1 does not run PARE by design; M4.1 will
-  measure it on all of RE1. The graph-as-symptom-filter result (symptom rate 0.2208 -> 0.0779 with the
-  graph) is OB only so far. CPU is where PARE is weakest (0.120) and is the place to start.
-- **Two numbers from M3.1 were wrong and are corrected in its entry**: ECDF's symptom rate (rank-1
-  ties were being broken alphabetically) and the service-versus-metric gap (compared over different
-  cases). Neither changes a conclusion; both changed figures already written down.
-- **Waiting on you**: open question 10 (one loose-scoring definition, secondary table only), the call
-  graphs on the "check by hand" list, and a disk note - all three RE1 systems are on disk (2.5 GB, 19 GB
-  free), which breaks decision 66's one-at-a-time policy because deleting data was not permitted from
-  here. Delete `data/RCAEval/RE1/RE1-SS` and `RE1-TT` yourself if you want the policy kept;
-  `download_rcaeval.py` re-fetches each in a minute or two.
-- Indicator scoring, unchanged: the **headline ExpAC@k is strict** (CPU and MEM only); the loose
-  definition is secondary, per fault type, with the acceptable-set size beside it - now per system,
-  since Sock Shop and Train Ticket have no plain `latency` metric.
+- **2026-10-11: M0-M11 done, M12.1 done.** Open: M12.2 (fresh-clone test) and M12.3 (tag v1.0).
+  The paper draft is `paper/main.tex` (IEEE conference, 6-page target); every number in it is
+  generated from `experiments/results/` by `make_tables.py`, `make_figures.py` and
+  `make_paper_results.py`.
+- **Headline results** (all in the paper, with sources):
+  - E1: TreeSHAP names the culprit service in 0.549 of RE1 cases but the culprit metric in 0.100;
+    0.651 of its wrong answers blame a caller of the culprit (chance 0.145). Replicates on RE2-OB.
+  - E2: on 250 RE1 cases at delay 0, robust n-sigma AC@1 0.852, PARE 0.804, PARE without change
+    point 0.888; PARE's symptom rate 0.327 against 0.649 (n-sigma) and 0.651 (TreeSHAP). The
+    residual is what lowers it (0.412 without). n-sigma better at d=0 (Holm p=0.004, negligible
+    effect); no significant difference from 30 s on.
+  - E3: alarm-only protocol, 120 s late: PARE 0.792, RCAEval NSigma 0.024, CIRCA 0.072, BARO 0.640.
+  - E4: trace graph = static graph (0.922); correlation or no graph 0.911, symptom 0.286 -> 0.375.
+  - E6: PARE without change point beats n-sigma at every amplification; the change-point step lowers
+    accuracy on synthetic data too.
+- **Deviations, all stated in the paper or docs/07:** RCAEval baselines on Online Boutique only;
+  no Train Ticket graph, so RE3 not run; E6 30 seeds; E5 stability uses alarm shifts only.
+- Waiting on you: open question 10; the call graphs on the "check by hand" list; data folders
+  (RE1 x3, RE2-OB, RE3-TT, ~12 GB) can be deleted to free disk.
 
 ## Log
 <!-- Template for each entry:

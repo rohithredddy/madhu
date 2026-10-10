@@ -1,0 +1,62 @@
+run_id: e2_re1
+combine_runs:
+- e2_re1_ob
+- e2_re1_ss
+pare_version: 0.1.0
+source_configs:
+  e2_re1_ob:
+    run_id: e2_re1_ob
+    dataset: RE1
+    system: online-boutique
+    methods:
+    - PARE
+    - PARE_NO_RESIDUAL
+    - PARE_NO_CP
+    - PARE_LGBM
+    - NSIGMA
+    - SHAP_IFOREST
+    delays_s:
+    - 0.0
+    - 30.0
+    - 60.0
+    - 120.0
+    graph: online-boutique
+    normal_mode: inject_gap
+    seed: 42
+    n_jobs: -2
+    limit: null
+    cases: 125
+    pare_version: 0.1.0
+    rerun_methods:
+    - PARE
+    - PARE_NO_RESIDUAL
+    - PARE_LGBM
+    elapsed_s_of_rerun: 1408.5
+  e2_re1_ss:
+    run_id: e2_re1_ss
+    dataset: RE1
+    system: sock-shop
+    methods:
+    - PARE
+    - PARE_NO_RESIDUAL
+    - PARE_NO_CP
+    - PARE_LGBM
+    - NSIGMA
+    - SHAP_IFOREST
+    delays_s:
+    - 0.0
+    - 30.0
+    - 60.0
+    - 120.0
+    graph: sock-shop
+    normal_mode: inject_gap
+    seed: 42
+    n_jobs: -2
+    limit: null
+    cases: 125
+    pare_version: 0.1.0
+    rerun_methods:
+    - PARE
+    - PARE_NO_RESIDUAL
+    - PARE_LGBM
+    elapsed_s_of_rerun: 1093.4

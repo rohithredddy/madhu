@@ -1,0 +1,20 @@
+methods:
+- PARE
+- PARE_NO_RESIDUAL
+- NSIGMA
+- SHAP_IFOREST
+- PCA_RECON
+- ECDF
+systems:
+- online-boutique
+- sock-shop
+dataset: RE1
+delay_s: 0.0
+shifts_s:
+- -10.0
+- 10.0
+max_k: 10
+random_orders: 10
+seed: 42
+limit: null
+elapsed_s: 849.2

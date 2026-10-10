@@ -8,22 +8,22 @@
 | Isolation Forest + TreeSHAP [SHAP_IFOREST] | 0.100 | 0.267 | 0.373 | 0.549 | 0.667 | 0.567 | 0.651 | 0.145 | 3564 |
 | PCA reconstruction error [PCA_RECON] | 0.353 | 0.553 | 0.620 | 0.667 | 0.667 | 0.313 | 0.366 | 0.144 | 146 |
 | ECDF tail score (ECOD-style) [ECDF] | 0.105 | 0.288 | 0.392 | 0.135 | 0.172 | 0.067 | 0.192 | 0.132 | 123 |
-| Robust z-score (PARE without residuals) [PARE_NO_RESIDUAL] | 0.160 | 0.313 | 0.373 | 0.325 | 0.367 | 0.207 | 0.184 | 0.131 | 502 |
+| Robust z-score (PARE without residuals) [PARE_NO_RESIDUAL] | 0.407 | 0.767 | 0.840 | 0.728 | 0.827 | 0.420 | 0.412 | 0.143 | 684 |
 | Online Boutique (125 cases) |  |  |  |  |  |  |  |  |  |
 | Isolation Forest + TreeSHAP [SHAP_IFOREST] | 0.240 | 0.520 | 0.640 | 0.648 | 0.760 | 0.520 | 0.636 | 0.161 | 2993 |
 | PCA reconstruction error [PCA_RECON] | 0.300 | 0.380 | 0.420 | 0.592 | 0.440 | 0.140 | 0.216 | 0.151 | 73 |
 | ECDF tail score (ECOD-style) [ECDF] | 0.241 | 0.644 | 0.809 | 0.268 | 0.394 | 0.153 | 0.224 | 0.153 | 67 |
-| Robust z-score (PARE without residuals) [PARE_NO_RESIDUAL] | 0.200 | 0.360 | 0.420 | 0.384 | 0.380 | 0.180 | 0.221 | 0.142 | 471 |
+| Robust z-score (PARE without residuals) [PARE_NO_RESIDUAL] | 0.540 | 0.760 | 0.780 | 0.704 | 0.760 | 0.220 | 0.351 | 0.149 | 687 |
 | Sock Shop (125 cases) |  |  |  |  |  |  |  |  |  |
 | Isolation Forest + TreeSHAP [SHAP_IFOREST] | 0.020 | 0.180 | 0.300 | 0.664 | 0.780 | 0.760 | 0.667 | 0.129 | 3711 |
 | PCA reconstruction error [PCA_RECON] | 0.160 | 0.500 | 0.580 | 0.840 | 0.900 | 0.740 | 0.750 | 0.129 | 73 |
 | ECDF tail score (ECOD-style) [ECDF] | 0.050 | 0.149 | 0.248 | 0.103 | 0.092 | 0.042 | 0.166 | 0.114 | 66 |
-| Robust z-score (PARE without residuals) [PARE_NO_RESIDUAL] | 0.140 | 0.400 | 0.460 | 0.440 | 0.460 | 0.320 | 0.143 | 0.118 | 429 |
+| Robust z-score (PARE without residuals) [PARE_NO_RESIDUAL] | 0.160 | 0.780 | 0.920 | 0.888 | 0.920 | 0.760 | 0.571 | 0.128 | 571 |
 | Train Ticket (125 cases) |  |  |  |  |  |  |  |  |  |
 | Isolation Forest + TreeSHAP [SHAP_IFOREST] | 0.040 | 0.100 | 0.180 | 0.336 | 0.460 | 0.420 |  |  | 3987 |
 | PCA reconstruction error [PCA_RECON] | 0.600 | 0.780 | 0.860 | 0.568 | 0.660 | 0.060 |  |  | 290 |
 | ECDF tail score (ECOD-style) [ECDF] | 0.024 | 0.072 | 0.120 | 0.035 | 0.031 | 0.007 |  |  | 235 |
-| Robust z-score (PARE without residuals) [PARE_NO_RESIDUAL] | 0.140 | 0.180 | 0.240 | 0.152 | 0.260 | 0.120 |  |  | 606 |
+| Robust z-score (PARE without residuals) [PARE_NO_RESIDUAL] | 0.520 | 0.760 | 0.820 | 0.592 | 0.800 | 0.280 |  |  | 792 |
 
 - ExpAC@k is strict: the 150 CPU and MEM cases of all of RE1 (50 per system), where the right metric is the one the fault stressed. AC@1 is the coarse question, the right service, over every case; 'AC@1, CPU+MEM' is the same over the strict cases only, and Gap is it minus ExpAC@1 - right service, wrong metric - on identical cases.
 - Symptom rate: of the wrong top-1 answers, the share that blamed a service which calls the real culprit. Chance: the same rate for a wrong answer picked at random among the ranked services. Read the rate against it.

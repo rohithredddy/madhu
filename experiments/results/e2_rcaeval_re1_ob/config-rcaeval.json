@@ -1,0 +1,26 @@
+{
+  "script": "run_rcaeval_baselines.py",
+  "dataset": "RE1",
+  "system": "online-boutique",
+  "folder": "RE1-OB",
+  "metrics_file": "data.csv",
+  "dataset_arg_passed_to_rcaeval": "ob",
+  "methods": [
+    "NSIGMA",
+    "BARO",
+    "E_DIAGNOSIS",
+    "CIRCA",
+    "RCD",
+    "PC_PAGERANK"
+  ],
+  "delay_s": [
+    0.0,
+    30.0,
+    60.0,
+    120.0
+  ],
+  "timeout_s": 300.0,
+  "workers": 8,
+  "cases": 125,
+  "limit": null
+}

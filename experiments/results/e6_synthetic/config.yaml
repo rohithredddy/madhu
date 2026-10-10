@@ -1,0 +1,57 @@
+run_id: e6_synthetic
+methods:
+- PARE
+- PARE_NO_RESIDUAL
+- PARE_NO_CP
+- NSIGMA
+- SHAP_IFOREST
+- ECDF
+n_seeds: 30
+seed: 42
+base:
+  n_services: 10
+  propagation: 0.8
+  amplification: 0.25
+  noise: 1.0
+  graph: 'TRUE'
+  delay_rows: 0
+factors:
+  n_services:
+  - 5
+  - 10
+  - 20
+  - 40
+  propagation:
+  - 0.2
+  - 0.5
+  - 0.8
+  - 1.0
+  amplification:
+  - 0.0
+  - 0.25
+  - 0.5
+  - 1.0
+  - 2.0
+  noise:
+  - 0.5
+  - 1.0
+  - 2.0
+  graph:
+  - 'TRUE'
+  - DROP_20
+  - ADD_20
+  - NONE
+  delay_rows:
+  - 0
+  - 10
+  - 30
+  - 60
+windows:
+  n_normal: 600
+  n_abnormal: 120
+  normal_gap_s: 30
+  recent_before_s: 300
+  recent_after_s: 120
+n_jobs: -2
+elapsed_s: 2096.2
+runs: 17280

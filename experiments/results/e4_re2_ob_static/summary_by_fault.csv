@@ -1,0 +1,7 @@
+method,fault_type,cases,failed,exp_ac1,exp_ac3,exp_ac5,strict_cases,ac1_strict,exp_ac1_loose,exp_ac3_loose,ac1,ac3,avg5,wrong_top1,symptom_judged,symptom_rate,symptom_chance,no_clear_cause,mean_ms,acceptable_indicators
+PARE,CPU,15,0,0.3333,0.4,0.4,15,1.0,0.3333,0.4,1.0,1.0,1.0,0.0,0.0,,,0,1395.3,1
+PARE,DELAY,15,0,,,,0,,0.4,0.6,0.8,1.0,0.9333,3.0,3.0,0.0,0.0909,0,1433.3,2
+PARE,DISK,15,0,,,,0,,0.0,0.4,1.0,1.0,1.0,0.0,0.0,,,0,1457.1,4
+PARE,LOSS,15,0,,,,0,,0.4,0.6,0.7333,0.9333,0.88,4.0,4.0,0.5,0.2273,0,1449.5,2
+PARE,MEM,15,0,0.3333,0.4,0.5333,15,1.0,0.3333,0.4,1.0,1.0,1.0,0.0,0.0,,,0,1438.1,1
+PARE,SOCKET,15,0,0.0,0.0,0.0,15,1.0,0.0,0.0,1.0,1.0,1.0,0.0,0.0,,,0,1349.7,1

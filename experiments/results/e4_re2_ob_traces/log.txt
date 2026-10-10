@@ -1,0 +1,53 @@
+E2/E3 RCA accuracy: e4_re2_ob_traces
+  RE2 online-boutique, 90 cases
+  by fault type: {'CPU': 15, 'DELAY': 15, 'DISK': 15, 'LOSS': 15, 'MEM': 15, 'SOCKET': 15}
+  45 cases have an unambiguous ground-truth indicator (CPU, MEM, and SOCKET on RE2); the strict ExpAC@k uses those
+  methods: PARE
+  delays: [0.0] s
+  graph: online-boutique, 11 services - used for scoring symptom_error, never given to a baseline engine
+  graph given to the engines: online-boutique-traces (scoring still uses the graph above)
+  normal window: inject_gap
+
+running 90 (case, method, delay) combinations
+finished in 14.8 s
+
+no failures
+
+--- E2/E3 RCA accuracy: RE2 online-boutique, delay [0.0] s ---
+
+method  cases  failed  exp_ac1  exp_ac3  exp_ac5  strict_cases  ac1_strict  exp_ac1_loose  exp_ac3_loose    ac1    ac3   avg5  wrong_top1  symptom_judged  symptom_rate  symptom_chance  no_clear_cause  mean_ms
+  PARE     90       0   0.2222   0.2667   0.3556            45         1.0         0.2556         0.4444 0.9222 0.9889 0.9667         7.0             7.0        0.2857          0.1688               0   1015.2
+
+--- by fault type ---
+method fault_type  cases  failed exp_ac1 exp_ac3 exp_ac5  strict_cases ac1_strict  exp_ac1_loose  exp_ac3_loose    ac1    ac3   avg5  wrong_top1  symptom_judged symptom_rate symptom_chance  no_clear_cause  mean_ms  acceptable_indicators
+  PARE        CPU     15       0  0.3333     0.4     0.4            15        1.0         0.3333         0.4000 1.0000 1.0000 1.0000         0.0             0.0                                           0   1011.2                      1
+  PARE      DELAY     15       0                                     0                    0.3333         0.7333 0.8000 0.9333 0.9067         3.0             3.0          0.0         0.0909               0   1014.1                      2
+  PARE       DISK     15       0                                     0                    0.0000         0.4667 1.0000 1.0000 1.0000         0.0             0.0                                           0   1032.4                      4
+  PARE       LOSS     15       0                                     0                    0.5333         0.6667 0.7333 1.0000 0.8933         4.0             4.0          0.5         0.2273               0   1036.4                      2
+  PARE        MEM     15       0  0.3333     0.4  0.6667            15        1.0         0.3333         0.4000 1.0000 1.0000 1.0000         0.0             0.0                                           0   1039.3                      1
+  PARE     SOCKET     15       0     0.0     0.0     0.0            15        1.0         0.0000         0.0000 1.0000 1.0000 1.0000         0.0             0.0                                           0    957.9                      1
+
+ExpAC@k  : the ground-truth INDICATOR is in the top k explained features. RQ1.
+           Strict: only the CPU and MEM cases (and SOCKET on RE2), where the right
+           metric is not a judgement call. This is the headline (docs/08 section 4).
+exp_ac*_loose : every case, counting any plausible metric for the fault type as
+           correct. Read it only next to acceptable_indicators in the per-fault
+           table; pooled across fault types it means nothing.
+AC@k     : the ground-truth SERVICE is in the top k. The coarse question.
+symptom_rate : of the WRONG top-1 answers, the share that blamed a service which
+           calls the real culprit - so it was a victim, not the cause. RQ2.
+           Empty when nothing was wrong or no graph was available.
+           Rank-1 ties are scored as ties, like AC@k: a case counts by the share of
+           its tied top group that calls the culprit, not by whichever was listed first.
+wrong_top1 : expected wrong top-1 answers, ties broken at random; exactly
+           (1 - AC@1) x cases, so it can be fractional.
+symptom_judged : the part of wrong_top1 with a call graph to judge by; symptom_rate's
+           denominator.
+symptom_chance : the symptom rate random wrong answers would get on the same cases -
+           the share of non-culprit services that call the culprit. Read symptom_rate
+           against it: only the excess says a method is drawn to victims.
+no_clear_cause : NOT comparable between methods. The rule is a fixed threshold on
+           the rank-1 score (min_cause_score, 3.0), and these methods do not share
+           a scale - SHAP_IFOREST reports mean absolute SHAP, which is almost never
+           above 3, so it reads NO_CLEAR_CAUSE on nearly every case while still
+           ranking well. Read it per method, never across them.

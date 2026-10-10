@@ -1,0 +1,668 @@
+run_id,case_id,method,delay_s,error
+e2_rcaeval_re1_ob,re1-ob-adservice_cpu-5,RCAEVAL_CIRCA,0.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-adservice_disk-2,RCAEVAL_CIRCA,0.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-3,RCAEVAL_CIRCA,0.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-2,RCAEVAL_CIRCA,0.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-5,RCAEVAL_CIRCA,0.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_loss-3,RCAEVAL_CIRCA,0.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_cpu-4,RCAEVAL_CIRCA,0.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_delay-4,RCAEVAL_CIRCA,0.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_disk-2,RCAEVAL_CIRCA,0.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-1,RCAEVAL_CIRCA,0.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-4,RCAEVAL_CIRCA,0.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-5,RCAEVAL_CIRCA,0.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-currencyservice_disk-4,RCAEVAL_CIRCA,0.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-currencyservice_loss-2,RCAEVAL_CIRCA,0.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-3,RCAEVAL_CIRCA,0.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-4,RCAEVAL_CIRCA,0.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-1,RCAEVAL_CIRCA,0.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-2,RCAEVAL_CIRCA,0.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-4,RCAEVAL_CIRCA,0.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_loss-4,RCAEVAL_CIRCA,0.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-adservice_cpu-1,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_cpu-2,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_cpu-3,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_cpu-4,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_cpu-5,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_delay-1,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_delay-2,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_delay-3,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_delay-4,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_delay-5,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_disk-1,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_disk-2,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_disk-3,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_disk-4,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_disk-5,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_loss-1,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_loss-2,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_loss-4,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_loss-3,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_loss-5,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_mem-1,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_mem-2,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_mem-3,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_mem-4,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_mem-5,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_cpu-1,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_cpu-2,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_cpu-3,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_cpu-4,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_cpu-5,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_delay-1,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_delay-2,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_delay-3,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_delay-4,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_delay-5,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-1,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-2,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-3,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-4,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-5,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_loss-1,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_loss-2,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_loss-3,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_loss-4,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_loss-5,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_mem-1,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_mem-2,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_mem-3,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_mem-5,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_mem-4,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_cpu-1,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_cpu-2,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_cpu-3,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_cpu-4,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_cpu-5,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_delay-1,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_delay-2,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_delay-3,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_delay-4,RCAEVAL_RCD,0.0,"ValueError: Input X contains NaN.
+KBinsDiscretizer does not accept missing values encoded as NaN natively. For supervised learning, you might want to consider sklearn.ensemble.HistGradientBoostingClassifier and Regressor which accept missing values encoded as NaNs natively. Alternatively, it is possible to preprocess the data, for instance by using an imputer transformer in a pipeline or drop samples with missing values. See https://scikit-learn.org/stable/modules/impute.html You can find a list of all estimators that handle NaN values at the following page: https://scikit-learn.org/stable/modules/impute.html#estimators-that-handle-nan-values"
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_delay-5,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_disk-1,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_disk-2,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_disk-4,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_disk-3,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_disk-5,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-1,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-2,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-4,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-5,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-3,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_mem-1,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_mem-2,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_mem-3,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_mem-4,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_mem-5,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_cpu-1,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_cpu-2,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_cpu-3,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_cpu-4,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_cpu-5,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_delay-1,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_delay-2,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_delay-3,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_delay-4,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_delay-5,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_disk-1,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_disk-3,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_disk-2,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_disk-4,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_disk-5,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_loss-1,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_loss-2,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_loss-3,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_loss-4,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_loss-5,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_mem-1,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_mem-2,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_mem-3,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_mem-4,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_mem-5,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-1,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-2,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-3,RCAEVAL_RCD,0.0,"ValueError: Input X contains NaN.
+KBinsDiscretizer does not accept missing values encoded as NaN natively. For supervised learning, you might want to consider sklearn.ensemble.HistGradientBoostingClassifier and Regressor which accept missing values encoded as NaNs natively. Alternatively, it is possible to preprocess the data, for instance by using an imputer transformer in a pipeline or drop samples with missing values. See https://scikit-learn.org/stable/modules/impute.html You can find a list of all estimators that handle NaN values at the following page: https://scikit-learn.org/stable/modules/impute.html#estimators-that-handle-nan-values"
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-4,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-5,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_delay-1,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_delay-2,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_delay-3,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_delay-4,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_delay-5,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-1,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-3,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-4,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-2,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-5,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_loss-3,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_loss-1,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_loss-2,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_loss-4,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_loss-5,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_mem-1,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_mem-2,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_mem-3,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_mem-4,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_mem-5,RCAEVAL_RCD,0.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_cpu-5,RCAEVAL_PC_PAGERANK,0.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-adservice_disk-2,RCAEVAL_PC_PAGERANK,0.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-2,RCAEVAL_PC_PAGERANK,0.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-3,RCAEVAL_PC_PAGERANK,0.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-5,RCAEVAL_PC_PAGERANK,0.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_loss-3,RCAEVAL_PC_PAGERANK,0.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_cpu-4,RCAEVAL_PC_PAGERANK,0.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_delay-4,RCAEVAL_PC_PAGERANK,0.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_disk-2,RCAEVAL_PC_PAGERANK,0.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-1,RCAEVAL_PC_PAGERANK,0.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-5,RCAEVAL_PC_PAGERANK,0.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-4,RCAEVAL_PC_PAGERANK,0.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-currencyservice_disk-4,RCAEVAL_PC_PAGERANK,0.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-currencyservice_loss-2,RCAEVAL_PC_PAGERANK,0.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-3,RCAEVAL_PC_PAGERANK,0.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-4,RCAEVAL_PC_PAGERANK,0.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-1,RCAEVAL_PC_PAGERANK,0.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-2,RCAEVAL_PC_PAGERANK,0.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-4,RCAEVAL_PC_PAGERANK,0.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_loss-4,RCAEVAL_PC_PAGERANK,0.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-adservice_cpu-5,RCAEVAL_CIRCA,30.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-adservice_disk-2,RCAEVAL_CIRCA,30.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-2,RCAEVAL_CIRCA,30.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-3,RCAEVAL_CIRCA,30.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-5,RCAEVAL_CIRCA,30.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_loss-3,RCAEVAL_CIRCA,30.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_cpu-4,RCAEVAL_CIRCA,30.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_delay-4,RCAEVAL_CIRCA,30.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_disk-2,RCAEVAL_CIRCA,30.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-1,RCAEVAL_CIRCA,30.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-5,RCAEVAL_CIRCA,30.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-4,RCAEVAL_CIRCA,30.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-currencyservice_disk-4,RCAEVAL_CIRCA,30.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-currencyservice_loss-2,RCAEVAL_CIRCA,30.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-3,RCAEVAL_CIRCA,30.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-4,RCAEVAL_CIRCA,30.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-1,RCAEVAL_CIRCA,30.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-2,RCAEVAL_CIRCA,30.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-4,RCAEVAL_CIRCA,30.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_loss-4,RCAEVAL_CIRCA,30.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-adservice_cpu-1,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_cpu-2,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_cpu-3,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_cpu-5,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_cpu-4,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_delay-1,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_delay-2,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_delay-3,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_delay-4,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_delay-5,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_disk-1,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_disk-2,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_disk-3,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_disk-4,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_disk-5,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_loss-3,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_loss-1,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_loss-2,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_loss-4,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_loss-5,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_mem-1,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_mem-2,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_mem-3,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_mem-4,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_mem-5,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_cpu-1,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_cpu-2,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_cpu-3,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_cpu-4,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_cpu-5,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_delay-1,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_delay-2,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_delay-4,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_delay-3,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_delay-5,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-1,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-2,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-3,RCAEVAL_RCD,30.0,"ValueError: Input X contains NaN.
+KBinsDiscretizer does not accept missing values encoded as NaN natively. For supervised learning, you might want to consider sklearn.ensemble.HistGradientBoostingClassifier and Regressor which accept missing values encoded as NaNs natively. Alternatively, it is possible to preprocess the data, for instance by using an imputer transformer in a pipeline or drop samples with missing values. See https://scikit-learn.org/stable/modules/impute.html You can find a list of all estimators that handle NaN values at the following page: https://scikit-learn.org/stable/modules/impute.html#estimators-that-handle-nan-values"
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-4,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-5,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_loss-1,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_loss-2,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_loss-3,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_loss-4,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_loss-5,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_mem-1,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_mem-2,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_mem-3,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_mem-4,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_mem-5,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_cpu-1,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_cpu-2,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_cpu-3,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_cpu-4,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_cpu-5,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_delay-1,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_delay-3,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_delay-2,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_delay-4,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_delay-5,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_disk-1,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_disk-2,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_disk-3,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_disk-4,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_disk-5,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-1,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-2,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-3,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-4,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-5,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_mem-1,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_mem-3,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_mem-2,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_mem-4,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_mem-5,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_cpu-1,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_cpu-2,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_cpu-3,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_cpu-4,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_cpu-5,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_delay-2,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_delay-1,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_delay-3,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_delay-4,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_delay-5,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_disk-2,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_disk-1,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_disk-3,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_disk-4,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_disk-5,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_loss-1,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_loss-2,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_loss-3,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_loss-4,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_loss-5,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_mem-1,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_mem-2,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_mem-3,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_mem-4,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_mem-5,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-1,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-3,RCAEVAL_RCD,30.0,"ValueError: Input X contains NaN.
+KBinsDiscretizer does not accept missing values encoded as NaN natively. For supervised learning, you might want to consider sklearn.ensemble.HistGradientBoostingClassifier and Regressor which accept missing values encoded as NaNs natively. Alternatively, it is possible to preprocess the data, for instance by using an imputer transformer in a pipeline or drop samples with missing values. See https://scikit-learn.org/stable/modules/impute.html You can find a list of all estimators that handle NaN values at the following page: https://scikit-learn.org/stable/modules/impute.html#estimators-that-handle-nan-values"
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-2,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-4,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_delay-1,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_delay-2,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_delay-3,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-5,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_delay-4,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_delay-5,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-1,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-2,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-3,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-4,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-5,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_loss-1,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_loss-2,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_loss-4,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_loss-3,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_loss-5,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_mem-1,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_mem-2,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_mem-3,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_mem-4,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_mem-5,RCAEVAL_RCD,30.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_cpu-5,RCAEVAL_PC_PAGERANK,30.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-adservice_disk-2,RCAEVAL_PC_PAGERANK,30.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-2,RCAEVAL_PC_PAGERANK,30.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-3,RCAEVAL_PC_PAGERANK,30.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-5,RCAEVAL_PC_PAGERANK,30.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_loss-3,RCAEVAL_PC_PAGERANK,30.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_cpu-4,RCAEVAL_PC_PAGERANK,30.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_delay-4,RCAEVAL_PC_PAGERANK,30.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_disk-2,RCAEVAL_PC_PAGERANK,30.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-1,RCAEVAL_PC_PAGERANK,30.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-5,RCAEVAL_PC_PAGERANK,30.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-4,RCAEVAL_PC_PAGERANK,30.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-currencyservice_disk-4,RCAEVAL_PC_PAGERANK,30.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-currencyservice_loss-2,RCAEVAL_PC_PAGERANK,30.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-3,RCAEVAL_PC_PAGERANK,30.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-4,RCAEVAL_PC_PAGERANK,30.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-1,RCAEVAL_PC_PAGERANK,30.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-2,RCAEVAL_PC_PAGERANK,30.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-4,RCAEVAL_PC_PAGERANK,30.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_loss-4,RCAEVAL_PC_PAGERANK,30.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-adservice_cpu-5,RCAEVAL_CIRCA,60.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-adservice_disk-2,RCAEVAL_CIRCA,60.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-3,RCAEVAL_CIRCA,60.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-2,RCAEVAL_CIRCA,60.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-5,RCAEVAL_CIRCA,60.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_loss-3,RCAEVAL_CIRCA,60.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_cpu-4,RCAEVAL_CIRCA,60.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_delay-4,RCAEVAL_CIRCA,60.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_disk-2,RCAEVAL_CIRCA,60.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-1,RCAEVAL_CIRCA,60.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-5,RCAEVAL_CIRCA,60.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-4,RCAEVAL_CIRCA,60.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-currencyservice_disk-4,RCAEVAL_CIRCA,60.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-currencyservice_loss-2,RCAEVAL_CIRCA,60.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-3,RCAEVAL_CIRCA,60.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-4,RCAEVAL_CIRCA,60.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-1,RCAEVAL_CIRCA,60.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-2,RCAEVAL_CIRCA,60.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-4,RCAEVAL_CIRCA,60.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_loss-4,RCAEVAL_CIRCA,60.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-adservice_cpu-1,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_cpu-2,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_cpu-3,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_cpu-4,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_cpu-5,RCAEVAL_RCD,60.0,"ValueError: Input X contains NaN.
+KBinsDiscretizer does not accept missing values encoded as NaN natively. For supervised learning, you might want to consider sklearn.ensemble.HistGradientBoostingClassifier and Regressor which accept missing values encoded as NaNs natively. Alternatively, it is possible to preprocess the data, for instance by using an imputer transformer in a pipeline or drop samples with missing values. See https://scikit-learn.org/stable/modules/impute.html You can find a list of all estimators that handle NaN values at the following page: https://scikit-learn.org/stable/modules/impute.html#estimators-that-handle-nan-values"
+e2_rcaeval_re1_ob,re1-ob-adservice_delay-1,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_delay-2,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_delay-3,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_delay-4,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_delay-5,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_disk-1,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_disk-2,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_disk-3,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_disk-4,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_disk-5,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_loss-1,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_loss-2,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_loss-3,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_loss-4,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_loss-5,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_mem-1,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_mem-2,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_mem-3,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_mem-4,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_mem-5,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_cpu-1,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_cpu-2,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_cpu-3,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_cpu-4,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_delay-1,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_cpu-5,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_delay-2,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_delay-3,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_delay-4,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_delay-5,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-1,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-2,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-3,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-4,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-5,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_loss-1,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_loss-2,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_loss-3,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_loss-4,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_loss-5,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_mem-1,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_mem-2,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_mem-3,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_mem-4,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_mem-5,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_cpu-1,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_cpu-2,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_cpu-3,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_cpu-4,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_cpu-5,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_delay-2,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_delay-1,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_delay-3,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_delay-4,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_delay-5,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_disk-1,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_disk-2,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_disk-3,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_disk-4,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_disk-5,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-1,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-2,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-3,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-4,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-5,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_mem-1,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_mem-2,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_mem-3,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_mem-4,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_mem-5,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_cpu-1,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_cpu-2,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_cpu-3,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_cpu-4,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_cpu-5,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_delay-1,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_delay-2,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_delay-3,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_delay-4,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_delay-5,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_disk-1,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_disk-2,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_disk-3,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_disk-4,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_disk-5,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_loss-1,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_loss-2,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_loss-3,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_loss-4,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_loss-5,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_mem-1,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_mem-2,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_mem-3,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_mem-4,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_mem-5,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-1,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-3,RCAEVAL_RCD,60.0,"ValueError: Input X contains NaN.
+KBinsDiscretizer does not accept missing values encoded as NaN natively. For supervised learning, you might want to consider sklearn.ensemble.HistGradientBoostingClassifier and Regressor which accept missing values encoded as NaNs natively. Alternatively, it is possible to preprocess the data, for instance by using an imputer transformer in a pipeline or drop samples with missing values. See https://scikit-learn.org/stable/modules/impute.html You can find a list of all estimators that handle NaN values at the following page: https://scikit-learn.org/stable/modules/impute.html#estimators-that-handle-nan-values"
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-2,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-4,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-5,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_delay-1,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_delay-2,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_delay-3,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_delay-4,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_delay-5,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-1,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-2,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-3,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-4,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-5,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_loss-1,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_loss-2,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_loss-3,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_loss-4,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_loss-5,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_mem-1,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_mem-2,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_mem-3,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_mem-4,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_mem-5,RCAEVAL_RCD,60.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_cpu-5,RCAEVAL_PC_PAGERANK,60.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-adservice_disk-2,RCAEVAL_PC_PAGERANK,60.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-2,RCAEVAL_PC_PAGERANK,60.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-3,RCAEVAL_PC_PAGERANK,60.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-5,RCAEVAL_PC_PAGERANK,60.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_loss-3,RCAEVAL_PC_PAGERANK,60.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_cpu-4,RCAEVAL_PC_PAGERANK,60.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_delay-4,RCAEVAL_PC_PAGERANK,60.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_disk-2,RCAEVAL_PC_PAGERANK,60.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-1,RCAEVAL_PC_PAGERANK,60.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-5,RCAEVAL_PC_PAGERANK,60.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-4,RCAEVAL_PC_PAGERANK,60.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-currencyservice_disk-4,RCAEVAL_PC_PAGERANK,60.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-currencyservice_loss-2,RCAEVAL_PC_PAGERANK,60.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-3,RCAEVAL_PC_PAGERANK,60.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-4,RCAEVAL_PC_PAGERANK,60.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-1,RCAEVAL_PC_PAGERANK,60.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-2,RCAEVAL_PC_PAGERANK,60.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-4,RCAEVAL_PC_PAGERANK,60.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_loss-4,RCAEVAL_PC_PAGERANK,60.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-adservice_cpu-5,RCAEVAL_CIRCA,120.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-adservice_disk-2,RCAEVAL_CIRCA,120.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-3,RCAEVAL_CIRCA,120.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-2,RCAEVAL_CIRCA,120.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-5,RCAEVAL_CIRCA,120.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_loss-3,RCAEVAL_CIRCA,120.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_cpu-4,RCAEVAL_CIRCA,120.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_delay-4,RCAEVAL_CIRCA,120.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_disk-2,RCAEVAL_CIRCA,120.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-1,RCAEVAL_CIRCA,120.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-5,RCAEVAL_CIRCA,120.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-4,RCAEVAL_CIRCA,120.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-currencyservice_disk-4,RCAEVAL_CIRCA,120.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-currencyservice_loss-2,RCAEVAL_CIRCA,120.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-3,RCAEVAL_CIRCA,120.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-4,RCAEVAL_CIRCA,120.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-1,RCAEVAL_CIRCA,120.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-2,RCAEVAL_CIRCA,120.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-4,RCAEVAL_CIRCA,120.0,fell back to column order: circa failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_loss-4,RCAEVAL_CIRCA,120.0,fell back to column order: circa failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-adservice_cpu-1,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_cpu-2,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_cpu-3,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_cpu-4,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_cpu-5,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_delay-1,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_delay-2,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_delay-3,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_delay-4,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_delay-5,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_disk-1,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_disk-2,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_disk-3,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_disk-4,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_disk-5,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_loss-1,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_loss-2,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_loss-3,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_loss-4,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_loss-5,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_mem-1,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_mem-2,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_mem-3,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_mem-4,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_mem-5,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_cpu-1,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_cpu-2,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_cpu-3,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_cpu-4,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_cpu-5,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_delay-1,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_delay-2,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_delay-3,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_delay-4,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_delay-5,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-1,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-2,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-3,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-4,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-5,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_loss-1,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_loss-2,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_loss-3,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_loss-4,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_loss-5,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_mem-3,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_mem-1,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_mem-2,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_mem-4,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-cartservice_mem-5,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_cpu-1,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_cpu-2,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_cpu-3,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_cpu-4,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_cpu-5,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_delay-1,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_delay-2,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_delay-3,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_delay-4,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_delay-5,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_disk-1,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_disk-2,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_disk-3,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_disk-4,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_disk-5,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-1,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-2,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-3,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-4,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-5,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_mem-1,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_mem-2,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_mem-3,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_mem-4,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_mem-5,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_cpu-1,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_cpu-2,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_cpu-3,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_cpu-4,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_cpu-5,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_delay-1,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_delay-2,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_delay-3,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_delay-4,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_delay-5,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_disk-1,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_disk-2,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_disk-3,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_disk-4,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_disk-5,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_loss-1,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_loss-2,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_loss-3,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_loss-4,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_loss-5,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_mem-1,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_mem-2,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_mem-3,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_mem-4,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-currencyservice_mem-5,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-1,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-3,RCAEVAL_RCD,120.0,"ValueError: Input X contains NaN.
+KBinsDiscretizer does not accept missing values encoded as NaN natively. For supervised learning, you might want to consider sklearn.ensemble.HistGradientBoostingClassifier and Regressor which accept missing values encoded as NaNs natively. Alternatively, it is possible to preprocess the data, for instance by using an imputer transformer in a pipeline or drop samples with missing values. See https://scikit-learn.org/stable/modules/impute.html You can find a list of all estimators that handle NaN values at the following page: https://scikit-learn.org/stable/modules/impute.html#estimators-that-handle-nan-values"
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-4,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-5,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_delay-1,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-2,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_delay-2,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_delay-3,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_delay-4,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_delay-5,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-1,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-2,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-3,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-4,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-5,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_loss-1,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_loss-2,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_loss-3,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_loss-4,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_loss-5,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_mem-1,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_mem-2,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_mem-3,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_mem-4,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_mem-5,RCAEVAL_RCD,120.0,AttributeError: module 'causallearn.utils.PCUtils.SkeletonDiscovery' has no attribute 'local_skeleton_discovery'
+e2_rcaeval_re1_ob,re1-ob-adservice_cpu-5,RCAEVAL_PC_PAGERANK,120.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-adservice_disk-2,RCAEVAL_PC_PAGERANK,120.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-3,RCAEVAL_PC_PAGERANK,120.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-2,RCAEVAL_PC_PAGERANK,120.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_disk-5,RCAEVAL_PC_PAGERANK,120.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-cartservice_loss-3,RCAEVAL_PC_PAGERANK,120.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_cpu-4,RCAEVAL_PC_PAGERANK,120.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_delay-4,RCAEVAL_PC_PAGERANK,120.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_disk-2,RCAEVAL_PC_PAGERANK,120.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-1,RCAEVAL_PC_PAGERANK,120.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-5,RCAEVAL_PC_PAGERANK,120.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-checkoutservice_loss-4,RCAEVAL_PC_PAGERANK,120.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-currencyservice_disk-4,RCAEVAL_PC_PAGERANK,120.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-currencyservice_loss-2,RCAEVAL_PC_PAGERANK,120.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-3,RCAEVAL_PC_PAGERANK,120.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_cpu-4,RCAEVAL_PC_PAGERANK,120.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-1,RCAEVAL_PC_PAGERANK,120.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-2,RCAEVAL_PC_PAGERANK,120.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_disk-4,RCAEVAL_PC_PAGERANK,120.0,fell back to column order: pc_pagerank failed (AssertionError: Input data contains NaN. Please check.); returning the unranked column order
+e2_rcaeval_re1_ob,re1-ob-productcatalogservice_loss-4,RCAEVAL_PC_PAGERANK,120.0,fell back to column order: pc_pagerank failed (ValueError: Data correlation matrix is singular. Cannot run fisherz test. Please check your data.); returning the unranked column order

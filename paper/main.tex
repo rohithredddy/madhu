@@ -12,8 +12,6 @@
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 
-% Marks text that waits for an experiment still running. Remove before submission.
-\newcommand{\pending}[1]{\textcolor{red}{[pending: #1]}}
 
 \begin{document}
 
@@ -257,7 +255,12 @@ without change point tie at 0.922, against 0.533 for TreeSHAP.
 
 Under the alarm-only protocol (lower block of Table~\ref{tab:e2}), RCAEval's NSigma
 and BARO are close to PARE at $d=0$, and its other methods trail well behind.
-\pending{Wilcoxon/Holm p-values for PARE against each method, from experiments/results/e2\_re1/stats}
+Paired tests on the 250 cases (Wilcoxon on reciprocal rank, Holm-corrected) confirm
+that $n$-sigma ranks better than PARE at $d=0$ ($p=0.004$), but the effect is
+negligible (Cliff's $\delta=-0.06$), and from $d=30$\,s on the two are not
+significantly different. PARE ranks significantly better than TreeSHAP at 30, 60
+and 120\,s ($p<10^{-5}$, small effect, $\delta\approx0.22$--$0.24$); at $d=0$ the
+difference does not survive the correction ($p=0.064$).
 
 \subsection{E3: Late alarms}
 \begin{figure}[t]
@@ -291,27 +294,55 @@ matters more for \emph{which} wrong answers PARE gives than for how many.
 
 \subsection{E5: Faithfulness and stability}
 \IfFileExists{tables/ieee_e5.tex}{\input{tables/ieee_e5}}{}
-\pending{E5 deletion, compactness and stability results from experiments/results/e5\_re1}
-The deletion test rewards a ranking that removes the loudest metrics first. PARE
-deliberately ranks a quieter metric that is not explained by its callees above a
-louder inherited one, so this test is expected to favour marginal methods; we
-therefore read it next to accuracy rather than in place of it.
+Table~\ref{tab:e5} reports explanation quality on the 250 RE1 cases with a graph.
+Every method removes the anomaly much faster than a random ordering of metrics
+(deletion area 0.41--0.69 against 0.947), and PARE does so in 80\% of cases. The
+marginal rankers score best on this test ($n$-sigma 0.417, PARE without residual
+0.406, PARE 0.542). This is expected: the deletion test rewards removing the
+loudest metrics first, while PARE deliberately ranks a quieter metric that its
+callees do not explain above a louder inherited one. We therefore read the test
+next to accuracy, not in place of it. PARE's explanations are compact (a median of
+five indicators carry 80\% of its score, against 27 for TreeSHAP) and stable when
+the alarm moves by $\pm$10\,s (top-5 Jaccard 0.935, Kendall $\tau$ 0.923), at the
+level of the other methods.
 
 \subsection{E6: When does PARE help?}
 \IfFileExists{figures/fig6_e6_synthetic.pdf}{%
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{figures/fig6_e6_synthetic.pdf}
-\caption{Controlled synthetic study: AC@1 and symptom rate as one factor varies.}
+\caption{Controlled synthetic study: AC@1 and symptom rate as one factor varies
+(30 seeds $\times$ 4 fault types per point). At low amplification the robust methods
+make almost no wrong answers, so their symptom rate there rests on very few cases.}
 \label{fig:e6}
 \end{figure}}{}
 On synthetic systems the true cause and propagation are known exactly, so one factor
-can be changed at a time. Under purely linear propagation a caller can never look
-worse than its callee, and every method finds the culprit. The trap appears when a
-caller degrades more than in proportion once its callee is slow (amplification).
-\pending{E6 numbers from experiments/results/e6\_synthetic}
+can be changed at a time. Each setting uses 30 seeds and four fault types (latency,
+CPU, memory, errors), varying one factor from a base of ten services, propagation
+0.8, amplification 0.25 and the true graph. Under purely linear propagation a caller
+can never look worse than its callee, and the robust methods all find the culprit
+(AC@1 0.992 for $n$-sigma and for PARE without change point). The trap appears when
+a caller degrades more than in proportion once its callee is slow (amplification).
+As amplification rises from 0.25 to 2.0, $n$-sigma falls from 0.942 to 0.667, while
+PARE without the change-point step stays ahead at every level (0.992, 0.908, 0.767,
+0.742 against 0.942, 0.817, 0.725, 0.667). At amplification 0.25 the residual cuts
+the symptom rate from 0.471 (PARE without residual) to 0.308, against 0.857 for
+$n$-sigma and 0.811 for TreeSHAP. Graph errors cost little: with 20\% of edges
+removed or 20\% wrong edges added, PARE without change point stays at 0.983--0.992,
+and with no graph at 0.958. TreeSHAP degrades with system size (0.775 with five
+services, 0.408 with forty). As on RE1, the change-point step lowers accuracy here
+(0.892 against 0.992 at the base setting); it narrows the gap only with a 60-row
+delay (0.975 against 1.000).
 
 \section{Discussion and Threats to Validity}
+\textbf{Which parts of PARE matter.} Three components carry the gains: robust
+windowed scoring (which makes every method in our family insensitive to late
+alarms), the residual (which lowers the symptom rate on both real and synthetic
+data), and the graph walk. The change-point step did not pay off: it lowered
+accuracy with on-time alarms on RE1 and on synthetic data, and only caught up when
+the alarm was late. We report PARE as designed, and recommend running it without
+re-anchoring when the alarm is known to be prompt.
+
 \textbf{What the residual does and does not do.} On synthetic data the residual is
 what separates cause from symptom. On RE1 its effect on accuracy is small; its
 effect is on the symptom rate. Inspecting the cases where TreeSHAP blames a caller

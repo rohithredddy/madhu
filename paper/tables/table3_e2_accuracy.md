@@ -18,12 +18,19 @@
 | RCAEval PC-PageRank [RCAEVAL_PC_PAGERANK] | 0.112 | 0.272 | 0.262 | 0.000 | 0.187 (0.145) | 21644 | 20 |
 | RCAEval RCD [RCAEVAL_RCD] | 0.000 | 0.000 | 0.000 | 0.000 |  | 262 | 125 |
 | RE1 Online Boutique + Sock Shop (250 cases) |  |  |  |  |  |  |  |
-| PARE (proposed) [PARE] | 0.400 | 0.564 | 0.547 | 0.180 | 0.073 (0.130) | 5538 |  |
-| PARE, LightGBM dependency model [PARE_LGBM] | 0.416 | 0.540 | 0.540 | 0.200 | 0.055 (0.129) | 20762 |  |
-| PARE without residuals [PARE_NO_RESIDUAL] | 0.412 | 0.552 | 0.558 | 0.170 | 0.184 (0.131) | 42079 |  |
+| PARE (proposed) [PARE] | 0.804 | 0.900 | 0.882 | 0.360 | 0.327 (0.143) | 2170 |  |
+| PARE, LightGBM dependency model [PARE_LGBM] | 0.812 | 0.884 | 0.878 | 0.450 | 0.298 (0.143) | 21193 |  |
+| PARE without residuals [PARE_NO_RESIDUAL] | 0.796 | 0.892 | 0.886 | 0.350 | 0.412 (0.143) | 780 |  |
 | PARE without change point [PARE_NO_CP] | 0.888 | 0.956 | 0.945 | 0.510 | 0.607 (0.158) | 968 |  |
 | N-sigma (ours, robust) [NSIGMA] | 0.852 | 0.968 | 0.948 | 0.560 | 0.649 (0.149) | 102 |  |
 | Isolation Forest + TreeSHAP [SHAP_IFOREST] | 0.656 | 0.896 | 0.858 | 0.130 | 0.651 (0.145) | 6498 |  |
+| RE2 Online Boutique (90 cases) |  |  |  |  |  |  |  |
+| PARE (proposed) [PARE] | 0.922 | 0.989 | 0.969 | 0.222 | 0.286 (0.169) | 2117 |  |
+| PARE, LightGBM dependency model [PARE_LGBM] | 0.911 | 0.978 | 0.967 | 0.222 | 0.375 (0.182) | 21697 |  |
+| PARE without residuals [PARE_NO_RESIDUAL] | 0.911 | 0.989 | 0.971 | 0.222 | 0.375 (0.182) | 632 |  |
+| PARE without change point [PARE_NO_CP] | 0.922 | 1.000 | 0.973 | 0.222 | 0.286 (0.156) | 1353 |  |
+| N-sigma (ours, robust) [NSIGMA] | 0.922 | 1.000 | 0.976 | 0.222 | 0.286 (0.156) | 66 |  |
+| Isolation Forest + TreeSHAP [SHAP_IFOREST] | 0.533 | 0.856 | 0.798 | 0.067 | 0.429 (0.160) | 4478 |  |
 
 - AC@k: the true service is in the top k (ties scored as the expected value under a random order). ExpAC@1: the true metric is ranked first, on CPU and MEM cases (and SOCKET on RE2) only.
 - Symptom rate: share of wrong answers that blame a caller of the real culprit; chance in brackets. Lower is better.
