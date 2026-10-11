@@ -125,15 +125,26 @@ structure from metrics~\cite{ikram2022rcd}. Statistical methods score each metri
 against its normal behaviour: $\varepsilon$-Diagnosis compares distributions in
 short windows~\cite{shan2019ediagnosis}, and BARO couples Bayesian online
 change-point detection with robust scoring~\cite{pham2024baro}. Sage learns causal
-models for performance debugging~\cite{gan2021sage}. RCAEval collects many of these
-methods together with failure datasets that have injected faults and known
-culprits~\cite{pham2025rcaeval}.
+models for performance debugging~\cite{gan2021sage}. More recent work learns
+temporal causal graphs with neural Granger models (RUN~\cite{lin2024run}), fuses
+metrics, logs and traces (Eadro~\cite{lee2023eadro}, MULAN~\cite{zheng2024mulan}),
+or localizes faults to code regions from multi-modal event patterns
+(Nezha~\cite{yu2023nezha}). Large language models are now applied to cloud
+incidents (RCACopilot~\cite{chen2024rcacopilot}), but on the OpenRCA benchmark the
+best model solves only a small fraction of failures~\cite{xu2025openrca}. RCAEval
+collects many of these methods together with failure datasets that have injected
+faults and known culprits~\cite{pham2025rcaeval}; its authors' large study of
+causal-inference RCA found no method that is best across settings and much room
+for improvement~\cite{pham2024causal}, and Fang et al.\ report that simple
+rule-based methods match or exceed recent models on four public
+benchmarks~\cite{fang2026rethinking}.
 
 \subsubsection{Explaining anomaly detectors}
 SHAP~\cite{lundberg2017shap} and its tree-specific form
 TreeSHAP~\cite{lundberg2020tree} assign each input a share of a model's output;
 paired with an Isolation Forest~\cite{liu2008iforest} they are a common way to
-explain multivariate anomalies. Deletion tests~\cite{samek2017evaluating} check
+explain multivariate anomalies, and explainable anomaly detection has become an
+active area of its own~\cite{li2023xadsurvey}. Deletion tests~\cite{samek2017evaluating} check
 whether removing the top-ranked inputs removes the model's response. Such tests
 measure faithfulness to the \emph{model}. Our question is whether the explanation
 is grounded in the \emph{system's} failure, which requires ground truth about the
@@ -162,16 +173,11 @@ score the output.
 PARE proceeds in four steps, summarised in Algorithm~\ref{alg:pare}.
 
 \subsubsection{Robust marginal scores}
-For each metric $c$, PARE estimates the normal level and spread from $\Ncal$ with
-the median and the scaled median absolute deviation (MAD)~\cite{rousseeuw1993mad}:
-\begin{equation}
-m_c=\med_{t\in\Ncal}x_c(t),\qquad
-s_c=1.4826\,\med_{t\in\Ncal}\left|x_c(t)-m_c\right|.
-\label{eq:mad}
-\end{equation}
-When $s_c=0$ but the metric still varies, the standard deviation is used instead;
-without this fallback a single movement would score in the millions. The marginal
-score of $c$ over an analysis window $W$ is
+For each metric $c$, PARE takes the median $m_c$ and the scaled median absolute
+deviation $s_c=1.4826\,\med_{t\in\Ncal}|x_c(t)-m_c|$ of the normal
+window~\cite{rousseeuw1993mad}; when the MAD is zero but the metric still varies,
+the standard deviation is used instead. The marginal score of $c$ over an analysis
+window $W$ is
 \begin{equation}
 M_c(W)=\frac{\left|\med_{t\in W}x_c(t)-m_c\right|}{s_c}.
 \label{eq:marginal}
@@ -180,18 +186,10 @@ Taking the median over $W$ rather than the maximum keeps a single spike from
 dominating the score.
 
 \subsubsection{Change-point re-anchoring}
-Detectors fire after a fault has begun. Let $\Wcal_{cp}=[t_a-L_b,\,t_a+L_f]$ be a
-search window ($L_b=300$\,s, $L_f=60$\,s). PARE selects the $K=5$ metrics with the
-largest $\max_{t\in\Wcal_{cp}}|x_c(t)-m_c|/s_c$ and, for each standardised series
-$\tilde{x}_c$, finds the single split that minimises the within-segment squared
-error~\cite{truong2020ruptures}:
-\begin{equation}
-\tau_c=\argmin_{\tau}\;\sum_{t<\tau}\big(\tilde{x}_c(t)-\bar{x}_{c}^{<\tau}\big)^2
-+\sum_{t\ge\tau}\big(\tilde{x}_c(t)-\bar{x}_{c}^{\ge\tau}\big)^2 .
-\label{eq:cp}
-\end{equation}
-The analysis window starts at the median split, $W=[\hat{\tau},\hat{\tau}+L]$ with
-$\hat{\tau}=\med_c\tau_c$ and $L=120$\,s.
+Detectors fire after a fault has begun. PARE takes the five metrics that move most
+in a search window from 300\,s before to 60\,s after the alarm, finds the single
+best split of each by least-squares binary segmentation~\cite{truong2020ruptures},
+and starts the analysis window $W$ (length 120\,s) at the median of these splits.
 
 \subsubsection{Residual (self) scores}
 The core idea is to ask how much of a service's movement is explained by the
@@ -206,22 +204,17 @@ after it starts. A ridge model is fitted on the normal window only,
 +\alpha\|\boldsymbol\beta\|_2^2 ,
 \label{eq:ridge}
 \end{equation}
-with $\alpha=1$, and the residual $r_c(t)=x_c(t)-\hat\beta_0-\hat{\boldsymbol\beta}^{\top}
-\boldsymbol\phi_s(t)$ is the part of the signal the callees do not explain. The
-self score is the marginal score~\eqref{eq:marginal} computed on the residual,
+with $\alpha=1$. The residual $r_c(t)=x_c(t)-\hat\beta_0-\hat{\boldsymbol\beta}^{\top}
+\boldsymbol\phi_s(t)$ is the part of the signal the callees do not explain, and the
+self score is the marginal score~\eqref{eq:marginal} computed on it,
 \begin{equation}
 S_c(W)=\frac{\left|\med_{t\in W}r_c(t)-m^r_c\right|}{s^r_c},
 \label{eq:self}
 \end{equation}
 where $m^r_c$ and $s^r_c$ are the median and scaled MAD of $r_c$ on $\Ncal$. A service
-without callees keeps $S_c=M_c$. For reporting, PARE also gives the inherited
-fraction
-\begin{equation}
-\iota_c=\operatorname{clip}\!\left(1-\frac{|\Delta r_c|}{|\Delta x_c|},\,0,\,1\right),
-\quad \Delta y=\med_{t\in W}y(t)-\med_{t\in\Ncal}y(t),
-\label{eq:inherited}
-\end{equation}
-which is the share of the metric's movement attributed to its callees.
+without callees keeps $S_c=M_c$. PARE also reports the inherited fraction of each
+metric: one minus the ratio of the residual's shift to the raw shift, clipped to
+$[0,1]$.
 
 \subsubsection{Ranking, traversal and verdict}
 Service scores aggregate their metrics, $S_s=\max_{c:\sigma(c)=s}S_c$ and
@@ -234,8 +227,8 @@ s_{k+1}=\argmax_{v\in\Ccal(s_k)}S_v\ \ \text{if}\ \max_{v\in\Ccal(s_k)}S_v>S_{s_
 \end{equation}
 The end of the walk is ranked first and the remaining services follow by $S_s$.
 If the top score is below $\theta=3$, the verdict is \emph{no clear cause} and no
-service is labelled as the cause. A service $s$ is labelled a \emph{symptom} when
-$M_s\ge3$ and $\iota_c\ge0.6$ for its top metric.
+service is labelled as the cause. A service is labelled a \emph{symptom} when
+$M_s\ge3$ and at least 60\% of its top metric's movement is inherited.
 
 \begin{algorithm}[t]
 \caption{PARE}
@@ -243,9 +236,8 @@ $M_s\ge3$ and $\iota_c\ge0.6$ for its top metric.
 \begin{algorithmic}[1]
 \REQUIRE normal window $\Ncal$, data around alarm $t_a$, map $\sigma$, graph $G$
 \ENSURE ranking $\pi$, roles, top metric of the top service
-\STATE compute $m_c, s_c$ for every metric \hfill\eqref{eq:mad}
-\STATE $\hat\tau\gets$ median of the splits of the top-$K$ metrics \hfill\eqref{eq:cp}
-\STATE $W\gets[\hat\tau,\hat\tau+L]$
+\STATE compute median $m_c$ and scaled MAD $s_c$ of every metric on $\Ncal$
+\STATE $W\gets$ 120\,s window starting at the median change point of the top-5 metrics
 \FORALL{metrics $c$}
   \STATE $M_c\gets$ marginal score on $W$ \hfill\eqref{eq:marginal}
   \IF{$\Ccal(\sigma(c))\neq\emptyset$}
@@ -289,27 +281,20 @@ every run under an \emph{alarm-only} protocol, in which the normal window ends a
 $t_a-300$\,s and no method is ever told $t_{\mathrm{inj}}$.
 
 \subsubsection{Metrics}
-For case $i$, let the culprit occupy a tie group of size $g_i$ starting at
-position $b_i$ of the ranking. Scoring ties as the expected value under a random
-order of the tied items, the probability of a hit within the top $k$ is
-\begin{equation}
-h_i(k)=\frac{\min\!\big(\max(k-b_i+1,\,0),\,g_i\big)}{g_i},
-\qquad \mathrm{AC@}k=\frac{1}{N}\sum_{i=1}^{N}h_i(k),
-\label{eq:ack}
-\end{equation}
-with $\mathrm{Avg@5}=\frac{1}{5}\sum_{k=1}^{5}\mathrm{AC@}k$. ExpAC@$k$ applies
-\eqref{eq:ack} to the metric ranking and the culprit metric $c^\ast$; it is computed
-only for CPU, memory and socket faults, where the injected resource has a metric of
-its own. Let $w_i=1-h_i(1)$ be the probability that case $i$ is answered wrongly,
-$q_i$ the share of the rank-1 tie group that lies in $\mathrm{anc}(s^\ast)$, and
-$\rho_i$ the share of non-culprit services in $\mathrm{anc}(s^\ast)$. The symptom
-rate and its chance level are
+AC@$k$ is the share of cases whose culprit service is in the top $k$, and Avg@5 the
+mean of AC@1 to AC@5. ExpAC@$k$ asks the same of the culprit \emph{metric} $c^\ast$
+and is computed only for CPU, memory and socket faults, where the injected resource
+has a metric of its own. Ties are scored as the expected value under a random order
+of the tied items. Let $w_i$ be the probability that case $i$ is answered wrongly
+under this rule, $q_i$ the share of its rank-1 tie group that lies in
+$\mathrm{anc}(s^\ast)$, and $\rho_i$ the share of non-culprit services in
+$\mathrm{anc}(s^\ast)$. The symptom rate and its chance level are
 \begin{equation}
 \mathrm{SR}=\frac{\sum_i q_i}{\sum_i w_i},\qquad
 \mathrm{SR}_0=\frac{\sum_i w_i\rho_i}{\sum_i w_i}.
 \label{eq:sr}
 \end{equation}
-$\mathrm{SR}$ is the share of wrong answers that blame a caller of the culprit;
+$\mathrm{SR}$ is the share of wrong answers that blame a caller of the culprit, and
 $\mathrm{SR}_0$ is the value that wrong answers drawn at random would reach on the
 same cases. A method is drawn to symptoms only to the extent that
 $\mathrm{SR}>\mathrm{SR}_0$.
@@ -371,7 +356,10 @@ effect. Without the residual, AC@1 is almost unchanged (0.796) but SR rises to
 change point, AC@1 rises to 0.888 at $d=0$: with an on-time alarm there is little to
 re-anchor, and an imprecise split can move the window off the fault. Replacing
 ridge with LightGBM changes little. On RE2, PARE, $n$-sigma and PARE without change
-point tie at 0.922, against 0.533 for TreeSHAP.
+point tie at 0.922, against 0.533 for TreeSHAP. The strength of a simple robust
+ranker agrees with recent evidence that rule-based methods are competitive on
+public RCA benchmarks~\cite{fang2026rethinking}; it is also why we report where
+wrong answers point, which accuracy alone does not reveal.
 
 Paired tests on the 250 cases show that $n$-sigma ranks better than PARE at $d=0$
 ($p=0.004$ after Holm correction) with a negligible effect (Cliff's
@@ -421,10 +409,10 @@ PARE gives, not how many.
 
 \subsection{E5: Faithfulness, Compactness and Stability}
 \input{tables/ieee_e5}
-For the deletion test, the system anomaly score is
-$A(X)=\frac{1}{|W|}\sum_{t\in W}\max_c|x_c(t)-m_c|/s_c$; the top $k$ metrics of a
-method's ranking are reset to $m_c$ for $k=0,\dots,10$, and the area under the
-normalised curve $A_k/A_0$ is reported (lower is more faithful). Table~\ref{tab:e5}
+For the deletion test, the system anomaly score is the mean over the window of the
+largest robust $z$-score across metrics; the top $k$ metrics of a method's ranking
+are reset to their normal medians for $k=0,\dots,10$, and the area under the
+normalised curve is reported (lower is more faithful). Table~\ref{tab:e5}
 shows that every method removes the anomaly much faster than a random metric order
 (0.41--0.69 against 0.947); PARE beats the random order in 80\% of cases. Marginal
 rankers score best ($n$-sigma 0.417, PARE without residual 0.406, PARE 0.542), as
